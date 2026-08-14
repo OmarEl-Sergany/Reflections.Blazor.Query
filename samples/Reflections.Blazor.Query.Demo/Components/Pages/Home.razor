@@ -1,0 +1,24 @@
+@page "/"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<PageTitle>Reflections.Blazor.Query</PageTitle>
+<h1>Reflections.Blazor.Query</h1>
+<p>This page exercises CSS updates through the library after a Blazor event.</p>
+<section class="debug-panel">
+    <p>First paragraph: unchanged.</p>
+    <p>Second paragraph: click the button to style me.</p>
+    <p>Third paragraph: unchanged.</p>
+</section>
+<button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
+@if (_applied) { <p role="status">Style applied with <code>Query.Select(...).Css(...)</code>.</p> }
+
+@code {
+    private bool _applied;
+    protected override void OnInitialized() => Query.Configure(JS);
+    private async Task ApplyStyle()
+    {
+        await Query.Select(".debug-panel p:nth-of-type(2)").Css("color", "red");
+        _applied = true;
+    }
+}
