@@ -66,6 +66,48 @@ namespace Reflections.Blazor.Query
         public QuerySelection Has(string selector) =>
             Push($":is({Selector}):has({ValidateSelector(selector)})");
 
+        public QuerySelection Parent(string? selector = null)
+        {
+            var parentSelector = selector is null ? "*" : ValidateSelector(selector);
+            return Push($"{parentSelector}:has(> :is({Selector}))");
+        }
+
+        public QuerySelection Parents(string? selector = null)
+        {
+            var ancestorSelector = selector is null ? "*" : ValidateSelector(selector);
+            return Push($"{ancestorSelector}:has(:is({Selector}))");
+        }
+
+        public QuerySelection Next(string? selector = null)
+        {
+            var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            return Push($":is({Selector}) + {siblingSelector}");
+        }
+
+        public QuerySelection NextAll(string? selector = null)
+        {
+            var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            return Push($":is({Selector}) ~ {siblingSelector}");
+        }
+
+        public QuerySelection Prev(string? selector = null)
+        {
+            var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            return Push($"{siblingSelector}:has(+ :is({Selector}))");
+        }
+
+        public QuerySelection PrevAll(string? selector = null)
+        {
+            var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            return Push($"{siblingSelector}:has(~ :is({Selector}))");
+        }
+
+        public QuerySelection Siblings(string? selector = null)
+        {
+            var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            return Push($"{siblingSelector}:has(~ :is({Selector})), :is({Selector}) ~ {siblingSelector}");
+        }
+
         private QuerySelection Push(string selector) => new(selector, _state, this);
 
         private static string ValidateSelector(string selector)

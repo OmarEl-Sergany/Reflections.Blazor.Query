@@ -50,6 +50,51 @@ public sealed class QuerySelectionTests
         Assert.Equal(":is(.panel) > p", state.Rules[0].Selector);
     }
 
+    [Fact]
+    public void Parent_and_ancestor_traversal_select_owners_of_the_current_selection()
+    {
+        var selection = new Query(new QueryRenderState()).Select(".item");
+
+        Assert.Equal("*:has(> :is(.item))", selection.Parent().Selector);
+        Assert.Equal("section:has(> :is(.item))", selection.Parent("section").Selector);
+        Assert.Equal("*:has(:is(.item))", selection.Parents().Selector);
+        Assert.Equal(".container:has(:is(.item))", selection.Parents(".container").Selector);
+    }
+
+    [Fact]
+    public void Forward_sibling_traversal_builds_adjacent_and_general_sibling_selectors()
+    {
+        var selection = new Query(new QueryRenderState()).Select(".item");
+
+        Assert.Equal(":is(.item) + *", selection.Next().Selector);
+        Assert.Equal(":is(.item) + .enabled", selection.Next(".enabled").Selector);
+        Assert.Equal(":is(.item) ~ *", selection.NextAll().Selector);
+        Assert.Equal(":is(.item) ~ .enabled", selection.NextAll(".enabled").Selector);
+    }
+
+    [Fact]
+    public void Reverse_and_all_sibling_traversal_use_relational_selectors()
+    {
+        var selection = new Query(new QueryRenderState()).Select(".item");
+
+        Assert.Equal("*:has(+ :is(.item))", selection.Prev().Selector);
+        Assert.Equal(".enabled:has(+ :is(.item))", selection.Prev(".enabled").Selector);
+        Assert.Equal("*:has(~ :is(.item))", selection.PrevAll().Selector);
+        Assert.Equal(".enabled:has(~ :is(.item))", selection.PrevAll(".enabled").Selector);
+        Assert.Equal("*:has(~ :is(.item)), :is(.item) ~ *", selection.Siblings().Selector);
+    }
+
+    [Fact]
+    public void Traversal_history_can_return_to_each_previous_selection()
+    {
+        var root = new Query(new QueryRenderState()).Select(".list");
+        var children = root.Children("li");
+        var siblings = children.NextAll();
+
+        Assert.Same(children, siblings.End());
+        Assert.Same(root, siblings.End().End());
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -62,5 +107,12 @@ public sealed class QuerySelectionTests
         Assert.Throws<ArgumentException>(() => selection.Filter(selector));
         Assert.Throws<ArgumentException>(() => selection.Not(selector));
         Assert.Throws<ArgumentException>(() => selection.Has(selector));
+        Assert.Throws<ArgumentException>(() => selection.Parent(selector));
+        Assert.Throws<ArgumentException>(() => selection.Parents(selector));
+        Assert.Throws<ArgumentException>(() => selection.Next(selector));
+        Assert.Throws<ArgumentException>(() => selection.NextAll(selector));
+        Assert.Throws<ArgumentException>(() => selection.Prev(selector));
+        Assert.Throws<ArgumentException>(() => selection.PrevAll(selector));
+        Assert.Throws<ArgumentException>(() => selection.Siblings(selector));
     }
 }
