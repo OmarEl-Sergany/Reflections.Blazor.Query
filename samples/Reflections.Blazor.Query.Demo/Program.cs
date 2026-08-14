@@ -7,12 +7,15 @@ namespace Reflections.Blazor.Query.Demo
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+            builder.Services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider,
+                Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider>();
 
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
-            builder.Services.AddScoped<QueryRenderState>();
-            builder.Services.AddScoped<Query>();
+            builder.Services.AddReflectionsBlazorQuery();
 
             var app = builder.Build();
 

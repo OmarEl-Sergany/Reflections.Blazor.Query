@@ -1,7 +1,4 @@
 ﻿using System;
-using Microsoft.JSInterop;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Reflections.Blazor.Query
 {
@@ -21,6 +18,8 @@ namespace Reflections.Blazor.Query
             string property,
             string value)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(property);
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
             _state.SetCss(Selector, property, value);
             return this;
         }
