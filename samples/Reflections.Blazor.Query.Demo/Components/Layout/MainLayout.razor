@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 
+<QueryHost RenderState="LayoutState" ClearOnNavigation="false">
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -11,13 +12,17 @@
         </div>
 
         <article class="content px-4">
-            @Body
+            <QueryHost>
+                @Body
+            </QueryHost>
         </article>
     </main>
 </div>
+</QueryHost>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+@inject LayoutQueryRenderState LayoutState

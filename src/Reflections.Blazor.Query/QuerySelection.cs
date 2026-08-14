@@ -7,26 +7,21 @@ namespace Reflections.Blazor.Query
 {
     public sealed class QuerySelection
     {
-        private readonly Microsoft.JSInterop.IJSRuntime _jsRuntime;
+        private readonly QueryRenderState _state;
 
-        internal QuerySelection(string selector, Microsoft.JSInterop.IJSRuntime jsRuntime)
+        internal QuerySelection(string selector, QueryRenderState state)
         {
             Selector = selector;
-            _jsRuntime = jsRuntime;
+            _state = state;
         }
 
         public string Selector { get; }
 
-        public Task<QuerySelection> Css(
+        public QuerySelection Css(
             string property,
             string value)
         {
-            return ApplyCssAsync(property, value);
-        }
-
-        private async Task<QuerySelection> ApplyCssAsync(string property, string value)
-        {
-            await _jsRuntime.InvokeVoidAsync("ReflectionsBlazorQuery.setCss", Selector, property, value);
+            _state.SetCss(Selector, property, value);
             return this;
         }
     }

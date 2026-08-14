@@ -4,16 +4,26 @@ using System.Text;
 
 namespace Reflections.Blazor.Query
 {
-    public static class Query
+    public class Query
     {
-    private static Microsoft.JSInterop.IJSRuntime? _jsRuntime;
+    private readonly QueryRenderState _state;
 
-        public static void Configure(Microsoft.JSInterop.IJSRuntime jsRuntime) => _jsRuntime = jsRuntime;
+        public Query(QueryRenderState state) => _state = state;
 
-        public static QuerySelection Select(string selector)
+        public QuerySelection Select(string selector)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);
-            return new QuerySelection(selector, _jsRuntime ?? throw new InvalidOperationException("Call Query.Configure(JS) before using Query."));
+            return new QuerySelection(selector, _state);
         }
     }
+}
+
+namespace Reflections.Blazor.Query
+{
+    public sealed class LayoutQuery : Query
+    {
+        public LayoutQuery(LayoutQueryRenderState state) : base(state) { }
+    }
+
+    public sealed class LayoutQueryRenderState : QueryRenderState { }
 }

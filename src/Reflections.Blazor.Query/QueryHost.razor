@@ -1,0 +1,29 @@
+@implements IDisposable
+@inject QueryRenderState DefaultState
+@inject NavigationManager Navigation
+<CascadingValue Value="ActiveState" IsFixed="true">@ChildContent</CascadingValue>
+<style data-reflections-blazor-query="true">@foreach (var rule in ActiveState.Rules){<text>@rule.Selector { @rule.Property: @rule.Value; }</text>}</style>
+@code {
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public QueryRenderState? RenderState { get; set; }
+    [Parameter] public bool ClearOnNavigation { get; set; } = true;
+    private QueryRenderState ActiveState => RenderState ?? DefaultState;
+
+    protected override void OnInitialized()
+    {
+        ActiveState.Changed += StateHasChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        if (ClearOnNavigation) ActiveState.Clear();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ActiveState.Changed -= StateHasChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}
