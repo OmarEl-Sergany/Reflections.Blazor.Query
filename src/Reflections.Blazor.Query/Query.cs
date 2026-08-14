@@ -10,6 +10,8 @@ namespace Reflections.Blazor.Query
 
         public Query(QueryRenderState state) => _state = state;
 
+        public IDisposable BeginBatch() => _state.BeginBatch();
+
         public QuerySelection Select(string selector)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);

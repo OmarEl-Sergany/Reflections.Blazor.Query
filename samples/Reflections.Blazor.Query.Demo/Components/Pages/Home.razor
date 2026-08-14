@@ -1,6 +1,7 @@
 @page "/"
 @rendermode InteractiveServer
 @inject Query Query
+@inject LayoutQuery LayoutQuery
 
 <PageTitle>Reflections.Blazor.Query</PageTitle>
 <h1>Reflections.Blazor.Query</h1>
@@ -20,11 +21,16 @@
     private bool _applied;
     private void ApplyStyle()
     {
-        await Query.Select(".debug-panel p:nth-of-type(2)").Css("color", "red");
-
-        Query.Select(".sidebar").Css("background", "black");
-        Query.Select(".top-row").Css("display", "none");
-        Query.Select(".page").Css("max-width", "1200px");
+        using (Query.BeginBatch())
+        {
+            Query.Select(".debug-panel p:nth-of-type(2)").Css("color", "red");
+            using (LayoutQuery.BeginBatch())
+            {
+                LayoutQuery.Select(".sidebar").Css("background", "black");
+                LayoutQuery.Select(".top-row").Css("display", "none");
+                LayoutQuery.Select(".page").Css("max-width", "1200px");
+            }
+        }
 
         _applied = true;
     }
