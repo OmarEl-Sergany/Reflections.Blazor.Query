@@ -29,15 +29,45 @@ public sealed class QueryHostContractTests
 
         Assert.Equal(1, layoutChanges);
     }
+
+    [Fact]
+    public void Page_host_clear_does_not_clear_layout_host()
+    {
+        var pageState = new QueryRenderState();
+        var layoutState = new LayoutQueryRenderState();
+        var pageStateChanges = 0;
+        var layoutChanges = 0;
+        pageState.Changed += () => pageStateChanges++;
+        layoutState.Changed += () => layoutChanges++;
+        new Query(pageState).Select(".page").Css("display", "none");
+        new LayoutQuery(layoutState).Select(".sidebar").Css("background", "black");
+
+        pageState.ClearForTest();
+
+        Assert.Equal(2, pageStateChanges);
+        Assert.Equal(1, layoutChanges);
+    }
+
+    [Fact]
+    public void Disposed_host_subscription_can_be_removed_without_changing_state()
+    {
+        var state = new QueryRenderState();
+        var changes = 0;
+        void OnChanged() => changes++;
+        state.Changed += OnChanged;
+        new Query(state).Select(".page").Css("color", "red");
+        state.Changed -= OnChanged;
+
+        new Query(state).Select(".page").Css("color", "blue");
+
+        Assert.Equal(1, changes);
+    }
 }
 
 internal static class QueryStateTestExtensions
 {
     public static void ClearForTest(this QueryRenderState state)
     {
-        using (state.BeginBatch())
-        {
-            new Query(state).Select(".temporary").Css("display", "none");
-        }
+        state.Clear();
     }
 }

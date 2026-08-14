@@ -3,11 +3,12 @@ using Reflections.Blazor.Query.Demo.WebAssembly.Components;
 using Reflections.Blazor.Query;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider,
+    Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider>();
 
-builder.Services.AddScoped<QueryRenderState>();
-builder.Services.AddScoped<Query>();
-builder.Services.AddScoped<LayoutQueryRenderState>();
-builder.Services.AddScoped<LayoutQuery>();
+builder.Services.AddReflectionsBlazorQuery();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

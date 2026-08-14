@@ -1,8 +1,8 @@
 # Reflections.Blazor.Query - Project Scope and Delivery Plan
 
-Status: Planning only
+Status: Foundation implemented; remaining work is feature delivery and browser-level validation.
 
-This plan follows the repository deployment SOP supplied with the project. No Azure DevOps work items, branches, pipelines, artifacts, test plans, or sprints are created until this plan is approved.
+This plan follows the repository deployment SOP supplied with the project. Azure DevOps tracking and CI scaffolding are now in place.
 
 ## Product goal
 
@@ -76,12 +76,16 @@ The API matrix must be maintained as a versioned document and each item must hav
 
 ### Sprint 0 - foundation and controls
 
-- Approve this scope and API matrix.
+- Approve this scope and API matrix. (Tracked; API implementation continues by tier.)
 - Protect `master`; confirm PR-only workflow and required checks.
 - Add repository structure, test projects, docs, CODEOWNERS, PR template, and pipeline skeleton.
 - Add `.env` protection and secret scanning.
-- Define generated API metadata format and operation identifiers.
-- Create deterministic render-state and scope tests.
+- Define generated API metadata format and operation identifiers. (Complete; metadata includes operations, scopes, and lifecycle capabilities.)
+- Create deterministic render-state and scope tests. (Complete; batching, navigation clearing, layout persistence, application/page/layout isolation, and host subscription disposal are covered.)
+- Provide shared DI registration through `AddReflectionsBlazorQuery`. (Complete.)
+- Add Server, WebAssembly, and Auto demo hosts and proof pages. (Complete; build verified.)
+
+Foundation verification: full solution build succeeds with 0 errors; 11 unit/component tests pass. Live browser validation also passes for Interactive Server, WebAssembly, and Auto. Server preserves layout-owned styles across navigation while page-owned styles reset. WebAssembly and Auto apply state-owned CSS after hydration, rerender successfully, and reset page state after navigating away and back.
 
 ### Sprint 1 - selection and collection semantics
 

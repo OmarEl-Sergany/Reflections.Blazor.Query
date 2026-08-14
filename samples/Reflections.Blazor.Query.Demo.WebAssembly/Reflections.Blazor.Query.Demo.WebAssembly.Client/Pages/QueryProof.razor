@@ -2,14 +2,16 @@
 @rendermode InteractiveWebAssembly
 @inject Reflections.Blazor.Query.Query Query
 
-<PageTitle>Query WebAssembly Proof</PageTitle>
-<h1>WebAssembly query proof</h1>
-<p class="query-proof-text">This text is unchanged until the button is clicked.</p>
-<button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
-@if (_applied)
-{
-    <p role="status">Style applied in Interactive WebAssembly.</p>
-}
+<QueryHost>
+    <PageTitle>Query WebAssembly Proof</PageTitle>
+    <h1>WebAssembly query proof</h1>
+    <p class="query-proof-text">This text is unchanged until the button is clicked.</p>
+    <button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
+    @if (_applied)
+    {
+        <p role="status">Style applied in Interactive WebAssembly.</p>
+    }
+</QueryHost>
 
 @code {
     private bool _applied;

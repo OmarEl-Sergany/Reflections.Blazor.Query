@@ -3,9 +3,6 @@ using Reflections.Blazor.Query;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-builder.Services.AddScoped<QueryRenderState>();
-builder.Services.AddScoped<Query>();
-builder.Services.AddScoped<LayoutQueryRenderState>();
-builder.Services.AddScoped<LayoutQuery>();
+builder.Services.AddReflectionsBlazorQuery();
 
 await builder.Build().RunAsync();

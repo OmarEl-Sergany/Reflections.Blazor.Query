@@ -15,10 +15,12 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
             internal static class QueryGeneratedMetadata
             {
                 public const string Architecture = "LibraryOwnedRenderState";
-                public const string GeneratorVersion = "0.1.0";
+                public const string GeneratorVersion = "0.2.0";
                 public static readonly string[] SupportedOperations =
                 [
-                    "Select", "Css", "BeginBatch"
+                    "Select", "Css", "BeginBatch", "Clear", "QueryHost",
+                    "PageScope", "LayoutScope", "ApplicationScope",
+                    "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata"
                 ];
             }
             """));

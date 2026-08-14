@@ -55,4 +55,48 @@ public sealed class QueryRenderStateTests
 
         Assert.Equal(2, changes);
     }
+
+    [Fact]
+    public void Navigation_clear_removes_page_rules()
+    {
+        var page = new QueryRenderState();
+        new Query(page).Select(".page").Css("color", "red");
+
+        page.ClearForTest();
+
+        Assert.Equal(0, page.RuleCountForTest());
+    }
+
+    [Fact]
+    public void Clearing_page_state_preserves_layout_state()
+    {
+        var page = new QueryRenderState();
+        var layout = new LayoutQueryRenderState();
+        new Query(page).Select(".page").Css("color", "red");
+        new LayoutQuery(layout).Select(".sidebar").Css("background", "black");
+
+        page.ClearForTest();
+
+        Assert.Equal(0, page.RuleCountForTest());
+        Assert.Equal(1, layout.RuleCountForTest());
+    }
+
+    [Fact]
+    public void Application_layout_and_page_scopes_are_distinct()
+    {
+        var application = new QueryRenderState();
+        var layout = new LayoutQueryRenderState();
+        var page = new QueryRenderState();
+
+        new Query(application).Select("html").Css("font-size", "16px");
+        new LayoutQuery(layout).Select(".sidebar").Css("background", "black");
+        new Query(page).Select(".content").Css("color", "red");
+
+        Assert.Equal(1, application.RuleCountForTest());
+        Assert.Equal(1, layout.RuleCountForTest());
+        Assert.Equal(1, page.RuleCountForTest());
+        Assert.NotSame(application, layout);
+        Assert.NotSame(application, page);
+        Assert.NotSame(layout, page);
+    }
 }
