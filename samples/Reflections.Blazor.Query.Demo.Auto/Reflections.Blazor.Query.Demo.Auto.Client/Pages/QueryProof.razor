@@ -1,0 +1,26 @@
+@page "/query-proof"
+@rendermode InteractiveAuto
+@inject Reflections.Blazor.Query.Query Query
+
+<PageTitle>Query Auto Proof</PageTitle>
+<h1>Auto query proof</h1>
+<p class="query-proof-text">This text is unchanged until the button is clicked.</p>
+<button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
+@if (_applied)
+{
+    <p role="status">Style applied in Interactive Auto.</p>
+}
+
+@code {
+    private bool _applied;
+
+    private void ApplyStyle()
+    {
+        using (Query.BeginBatch())
+        {
+            Query.Select(".query-proof-text").Css("color", "red");
+        }
+
+        _applied = true;
+    }
+}
