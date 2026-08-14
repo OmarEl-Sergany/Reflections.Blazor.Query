@@ -11,13 +11,16 @@
     <p>Third paragraph: unchanged.</p>
 </section>
 <button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
-@if (_applied) { <p role="status">Style applied with <code>Query.Select(...).Css(...)</code>.</p> }
+@if (_applied)
+{
+    <p role="status">Style applied with <code>Query.Select(...).Css(...)</code>.</p>
+}
 
 @code {
     private bool _applied;
     private void ApplyStyle()
     {
-        Query.Select(".debug-panel p:nth-of-type(2)").Css("color", "red");
+        await Query.Select(".debug-panel p:nth-of-type(2)").Css("color", "red");
 
         Query.Select(".sidebar").Css("background", "black");
         Query.Select(".top-row").Css("display", "none");
