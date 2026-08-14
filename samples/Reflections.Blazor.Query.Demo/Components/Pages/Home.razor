@@ -1,6 +1,6 @@
 @page "/"
 @rendermode InteractiveServer
-@inject IJSRuntime JS
+@inject Query Query
 
 <PageTitle>Reflections.Blazor.Query</PageTitle>
 <h1>Reflections.Blazor.Query</h1>
@@ -15,10 +15,9 @@
 
 @code {
     private bool _applied;
-    protected override void OnInitialized() => Query.Configure(JS);
-    private async Task ApplyStyle()
+    private void ApplyStyle()
     {
-        await Query.Select(".debug-panel p:nth-of-type(2)").Css("color", "red");
+        Query.Select(".debug-panel p:nth-of-type(2)").Css("color", "red");
         _applied = true;
     }
 }

@@ -11,6 +11,8 @@ namespace Reflections.Blazor.Query.Demo
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
+            builder.Services.AddScoped<QueryRenderState>();
+            builder.Services.AddScoped<Query>();
 
             var app = builder.Build();
 

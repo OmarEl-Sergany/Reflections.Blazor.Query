@@ -4,5 +4,6 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Reflections.Blazor.Query/Reflections.Blazor.Query.csproj" Id="b2ce7397-532a-4ea4-97f6-b065b44554cf" />
+    <Project Path="src/Reflections.Blazor.Query.Generators/Reflections.Blazor.Query.Generators.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,26 @@
+@implements IDisposable
+@inject QueryRenderState State
+@inject NavigationManager Navigation
+<CascadingValue Value="State" IsFixed="true">@ChildContent</CascadingValue>
+<style data-reflections-blazor-query="true">@foreach (var rule in State.Rules){<text>@rule.Selector { @rule.Property: @rule.Value; }</text>}</style>
+@code {
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        State.Changed += StateHasChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        State.Clear();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        State.Changed -= StateHasChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}
