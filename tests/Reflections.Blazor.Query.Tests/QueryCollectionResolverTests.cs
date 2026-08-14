@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Reflections.Blazor.Query;
 
 namespace Reflections.Blazor.Query.Tests;
@@ -56,6 +57,67 @@ public sealed class QueryCollectionResolverTests
         Assert.Throws<InvalidOperationException>(() => _ = selection.Length);
         Assert.Throws<InvalidOperationException>(() => selection.First());
         Assert.Throws<InvalidOperationException>(() => selection.ToArray());
+    }
+
+    [Fact]
+    public void Get_supports_all_positive_negative_and_missing_indexes()
+    {
+        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+
+        Assert.Equal(["first", "second", "third"], selection.Get());
+        Assert.Equal("second", selection.Get(1));
+        Assert.Equal("third", selection.Get(-1));
+        Assert.Null(selection.Get(20));
+        Assert.Null(selection.Get(-20));
+    }
+
+    [Fact]
+    public void Index_returns_collection_position_for_a_stable_key()
+    {
+        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+
+        Assert.Equal(0, selection.Index("first"));
+        Assert.Equal(2, selection.Index("third"));
+        Assert.Equal(-1, selection.Index("missing"));
+    }
+
+    [Fact]
+    public void Each_visits_keys_in_order_and_can_stop_early()
+    {
+        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var visited = new List<string>();
+
+        var returned = selection.Each((index, key) =>
+        {
+            visited.Add($"{index}:{key}");
+            return index < 1;
+        });
+
+        Assert.Same(selection, returned);
+        Assert.Equal(["0:first", "1:second"], visited);
+    }
+
+    [Fact]
+    public void Map_projects_resolved_keys_without_changing_the_selection()
+    {
+        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+
+        var mapped = selection.Map((index, key) => $"{index}-{key}");
+
+        Assert.Equal(["0-first", "1-second", "2-third"], mapped);
+        Assert.Equal(3, selection.Length);
+    }
+
+    [Fact]
+    public void PushStack_creates_a_resolved_selection_and_End_restores_its_source()
+    {
+        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+
+        var pushed = selection.PushStack(["third", "first"]);
+
+        Assert.Equal(["third", "first"], pushed.ToArray());
+        Assert.Equal("[data-rbq-key=\"third\"], [data-rbq-key=\"first\"]", pushed.Selector);
+        Assert.Same(selection, pushed.End());
     }
 
     private static QueryElementRegistry CreateRegistry()

@@ -141,6 +141,67 @@ namespace Reflections.Blazor.Query
 
         public string[] ToArray() => RequireResolvedKeys().ToArray();
 
+        public string[] Get() => ToArray();
+
+        public string? Get(int index)
+        {
+            var keys = RequireResolvedKeys();
+            var resolvedIndex = index < 0 ? keys.Count + index : index;
+            return resolvedIndex < 0 || resolvedIndex >= keys.Count ? null : keys[resolvedIndex];
+        }
+
+        public int Index(string elementKey)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+            var keys = RequireResolvedKeys();
+            for (var index = 0; index < keys.Count; index++)
+            {
+                if (string.Equals(keys[index], elementKey, StringComparison.Ordinal))
+                    return index;
+            }
+            return -1;
+        }
+
+        public QuerySelection Each(Action<int, string> callback)
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            var keys = RequireResolvedKeys();
+            for (var index = 0; index < keys.Count; index++)
+                callback(index, keys[index]);
+            return this;
+        }
+
+        public QuerySelection Each(Func<int, string, bool> callback)
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            var keys = RequireResolvedKeys();
+            for (var index = 0; index < keys.Count; index++)
+            {
+                if (!callback(index, keys[index]))
+                    break;
+            }
+            return this;
+        }
+
+        public IReadOnlyList<TResult> Map<TResult>(Func<int, string, TResult> callback)
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            var keys = RequireResolvedKeys();
+            var results = new TResult[keys.Count];
+            for (var index = 0; index < keys.Count; index++)
+                results[index] = callback(index, keys[index]);
+            return results;
+        }
+
+        public QuerySelection PushStack(IEnumerable<string> elementKeys)
+        {
+            ArgumentNullException.ThrowIfNull(elementKeys);
+            var keys = elementKeys.ToArray();
+            foreach (var key in keys)
+                ArgumentException.ThrowIfNullOrWhiteSpace(key);
+            return PushResolved(keys);
+        }
+
         private QuerySelection Push(string selector) => new(selector, _state, this);
 
         private QuerySelection PushResolved(IReadOnlyList<string> keys) =>
