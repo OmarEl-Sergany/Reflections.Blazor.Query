@@ -54,6 +54,23 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        public QuerySelection Prop(string name, object value)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            ArgumentNullException.ThrowIfNull(value);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetProperty(key, name, value);
+            return this;
+        }
+
+        public QuerySelection RemoveProp(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            foreach (var key in RequireResolvedKeys())
+                _state.RemoveProperty(key, name);
+            return this;
+        }
+
         public QuerySelection Add(string selector)
         {
             selector = ValidateSelector(selector);

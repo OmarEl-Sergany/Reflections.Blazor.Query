@@ -67,6 +67,23 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Prop_and_RemoveProp_update_only_resolved_owned_elements()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Prop("disabled", true);
+
+        Assert.Equal(true, state.PropertiesFor("second")["disabled"]);
+        Assert.Empty(state.PropertiesFor("first"));
+        Assert.Throws<ArgumentException>(() => selection.Prop("onclick", "unsafe"));
+
+        selection.RemoveProp("disabled");
+
+        Assert.Empty(state.PropertiesFor("second"));
+    }
+
+    [Fact]
     public void Unresolved_css_selection_rejects_collection_position_operations()
     {
         var selection = new Query(new QueryRenderState()).Select(".item");

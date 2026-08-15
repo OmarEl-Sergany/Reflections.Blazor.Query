@@ -31,6 +31,9 @@ public sealed class QueryElementComponentTests
         new Query(renderState, registry).Select(".child").Attr("title", "registered");
         cut.WaitForAssertion(() => Assert.Contains("title=\"registered\"", cut.Markup, StringComparison.Ordinal));
 
+        new Query(renderState, registry).Select(".child").Prop("hidden", true);
+        cut.WaitForAssertion(() => Assert.Contains("hidden", cut.Markup, StringComparison.Ordinal));
+
         cut.Render(parameters => parameters
             .Add(component => component.ElementKey, "renamed-child")
             .Add(component => component.ParentElementKey, "parent-two")

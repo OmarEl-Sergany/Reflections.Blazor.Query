@@ -18,7 +18,7 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
                 public const string GeneratorVersion = "0.2.0";
                 public static readonly string[] SupportedOperations =
                 [
-                    "Select", "Css", "Attr", "RemoveAttr", "BeginBatch", "Clear", "QueryHost",
+                    "Select", "Css", "Attr", "RemoveAttr", "Prop", "RemoveProp", "BeginBatch", "Clear", "QueryHost",
                     "PageScope", "LayoutScope", "ApplicationScope",
                     "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata",
                     "Add", "AddBack", "End", "Find", "Children", "Filter", "Not", "Has", "Is",

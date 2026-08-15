@@ -61,6 +61,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
         var sequence = 5;
         foreach (var attribute in (_subscribedRenderState ?? DefaultRenderState).AttributesFor(ElementKey))
             builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
+        foreach (var property in (_subscribedRenderState ?? DefaultRenderState).PropertiesFor(ElementKey))
+            builder.AddAttribute(sequence++, property.Key, property.Value);
         builder.AddContent(sequence, ChildContent);
         builder.CloseElement();
     }
