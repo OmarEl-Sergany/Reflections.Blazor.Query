@@ -128,6 +128,15 @@ namespace Reflections.Blazor.Query
             return Push($"{ancestorSelector}:has(:is({Selector}))");
         }
 
+        public QuerySelection Closest(string selector) =>
+            PushResolved(RequireRegistry().Closest(RequireResolvedKeys(), ValidateSelector(selector)));
+
+        public QuerySelection ParentsUntil(string untilSelector, string? filterSelector = null) =>
+            PushResolved(RequireRegistry().ParentsUntil(
+                RequireResolvedKeys(),
+                ValidateSelector(untilSelector),
+                filterSelector is null ? null : ValidateSelector(filterSelector)));
+
         public QuerySelection Next(string? selector = null)
         {
             var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
@@ -140,6 +149,12 @@ namespace Reflections.Blazor.Query
             return Push($":is({Selector}) ~ {siblingSelector}");
         }
 
+        public QuerySelection NextUntil(string untilSelector, string? filterSelector = null) =>
+            PushResolved(RequireRegistry().NextUntil(
+                RequireResolvedKeys(),
+                ValidateSelector(untilSelector),
+                filterSelector is null ? null : ValidateSelector(filterSelector)));
+
         public QuerySelection Prev(string? selector = null)
         {
             var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
@@ -151,6 +166,12 @@ namespace Reflections.Blazor.Query
             var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
             return Push($"{siblingSelector}:has(~ :is({Selector}))");
         }
+
+        public QuerySelection PrevUntil(string untilSelector, string? filterSelector = null) =>
+            PushResolved(RequireRegistry().PrevUntil(
+                RequireResolvedKeys(),
+                ValidateSelector(untilSelector),
+                filterSelector is null ? null : ValidateSelector(filterSelector)));
 
         public QuerySelection Siblings(string? selector = null)
         {
@@ -253,6 +274,10 @@ namespace Reflections.Blazor.Query
             ? throw new InvalidOperationException(
                 "This operation requires library-owned element metadata. Register generated element keys before evaluating selection predicates.")
             : _registry.Resolve(selector).ToHashSet(StringComparer.Ordinal);
+
+        private QueryElementRegistry RequireRegistry() => _registry ??
+            throw new InvalidOperationException(
+                "This operation requires library-owned element metadata. Register generated element keys before traversing the element hierarchy.");
 
         private IReadOnlyList<string> OrderKeys(IEnumerable<string> keys) => _registry is null
             ? keys.Distinct(StringComparer.Ordinal).ToArray()

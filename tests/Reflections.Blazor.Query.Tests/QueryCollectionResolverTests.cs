@@ -161,6 +161,37 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Closest_and_ParentsUntil_follow_owned_parent_metadata()
+    {
+        var query = new Query(new QueryRenderState(), CreateHierarchyRegistry());
+
+        Assert.Equal(["group"], query.Select(".active").Closest(".group").ToArray());
+        Assert.Equal(["group"], query.Select(".active").ParentsUntil(".panel").ToArray());
+        Assert.Empty(query.Select(".active").ParentsUntil(".panel", ".panel").ToArray());
+    }
+
+    [Fact]
+    public void NextUntil_and_PrevUntil_stop_at_owned_sibling_boundaries()
+    {
+        var query = new Query(new QueryRenderState(), CreateHierarchyRegistry());
+
+        Assert.Equal(["second"], query.Select(".first").NextUntil(".stop").ToArray());
+        Assert.Equal(["second"], query.Select(".first").NextUntil(".stop", ".active").ToArray());
+        Assert.Equal(["third"], query.Select(".fourth").PrevUntil(".stop").ToArray());
+    }
+
+    [Fact]
+    public void Hierarchy_operations_reject_unresolved_selections()
+    {
+        var selection = new Query(new QueryRenderState()).Select(".item");
+
+        Assert.Throws<InvalidOperationException>(() => selection.Closest(".panel"));
+        Assert.Throws<InvalidOperationException>(() => selection.ParentsUntil(".panel"));
+        Assert.Throws<InvalidOperationException>(() => selection.NextUntil(".stop"));
+        Assert.Throws<InvalidOperationException>(() => selection.PrevUntil(".stop"));
+    }
+
+    [Fact]
     public void Is_rejects_unresolved_selections_while_css_filters_remain_composable()
     {
         var selection = new Query(new QueryRenderState()).Select(".item");
@@ -176,6 +207,19 @@ public sealed class QueryCollectionResolverTests
         registry.Register("first", ".item", "li");
         registry.Register("second", ".item", ".active");
         registry.Register("third", ".item", "li");
+        return registry;
+    }
+
+    private static QueryElementRegistry CreateHierarchyRegistry()
+    {
+        var registry = new QueryElementRegistry();
+        registry.Register("panel", ".panel");
+        registry.RegisterWithParent("group", "panel", ".group");
+        registry.RegisterWithParent("first", "group", ".item", ".first");
+        registry.RegisterWithParent("second", "group", ".item", ".active");
+        registry.RegisterWithParent("stop", "group", ".stop");
+        registry.RegisterWithParent("third", "group", ".item");
+        registry.RegisterWithParent("fourth", "group", ".item", ".fourth");
         return registry;
     }
 }

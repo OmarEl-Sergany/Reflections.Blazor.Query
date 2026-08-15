@@ -8,6 +8,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
     [Inject] private QueryElementRegistry Registry { get; set; } = default!;
 
     [Parameter, EditorRequired] public string ElementKey { get; set; } = string.Empty;
+    [Parameter] public string? ParentElementKey { get; set; }
     [Parameter] public string TagName { get; set; } = "div";
     [Parameter] public string? Id { get; set; }
     [Parameter] public string? Class { get; set; }
@@ -25,14 +26,14 @@ public sealed class QueryElement : ComponentBase, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(TagName);
 
         var selectors = BuildSelectors();
-        var signature = $"{ElementKey}\u001f{string.Join("\u001f", selectors)}";
+        var signature = $"{ElementKey}\u001f{ParentElementKey}\u001f{string.Join("\u001f", selectors)}";
         if (signature == _registrationSignature)
             return;
 
         if (_registeredKey is not null)
             Registry.Unregister(_registeredKey);
 
-        Registry.Register(ElementKey, selectors);
+        Registry.RegisterWithParent(ElementKey, ParentElementKey, selectors);
         _registeredKey = ElementKey;
         _registrationSignature = signature;
     }

@@ -22,7 +22,8 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
                     "PageScope", "LayoutScope", "ApplicationScope",
                     "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata",
                     "Add", "AddBack", "End", "Find", "Children", "Filter", "Not", "Has", "Is",
-                    "Parent", "Parents", "Next", "NextAll", "Prev", "PrevAll", "Siblings",
+                    "Parent", "Parents", "ParentsUntil", "Closest", "Next", "NextAll", "NextUntil",
+                    "Prev", "PrevAll", "PrevUntil", "Siblings",
                     "Length", "First", "Last", "Eq", "Slice", "ToArray", "ElementRegistry",
                     "QueryElement", "GeneratedElementKey", "ElementDisposal",
                     "Each", "Map", "Get", "Index", "PushStack"
