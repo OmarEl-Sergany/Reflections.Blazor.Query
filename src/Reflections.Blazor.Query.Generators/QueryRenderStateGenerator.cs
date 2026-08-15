@@ -26,7 +26,8 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
                     "Prev", "PrevAll", "PrevUntil", "Siblings",
                     "Length", "First", "Last", "Eq", "Slice", "ToArray", "ElementRegistry",
                     "QueryElement", "GeneratedElementKey", "ElementDisposal",
-                    "Each", "Map", "Get", "Index", "PushStack"
+                    "Each", "Map", "Get", "Index", "PushStack", "SelectorParser", "SelectorMatcher",
+                    "CompoundTagIdClassSelectors"
                 ];
             }
             """));

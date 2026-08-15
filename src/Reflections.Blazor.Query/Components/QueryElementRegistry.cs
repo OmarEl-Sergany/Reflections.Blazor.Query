@@ -26,14 +26,15 @@ public sealed class QueryElementRegistry
         foreach (var selector in selectors)
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);
 
-        _entries.Add(new Entry(key, parentKey, selectors.ToHashSet(StringComparer.Ordinal)));
+        var aliases = selectors.ToHashSet(StringComparer.Ordinal);
+        _entries.Add(new Entry(key, parentKey, aliases, Selector.FromAliases(aliases)));
     }
 
     public bool Unregister(string key) =>
         _entries.RemoveAll(entry => entry.Key == key) > 0;
 
     internal IReadOnlyList<string> Resolve(string selector) =>
-        _entries.Where(entry => entry.Selectors.Contains(selector)).Select(entry => entry.Key).ToArray();
+        _entries.Where(entry => Matches(entry, selector)).Select(entry => entry.Key).ToArray();
 
     internal IReadOnlyList<string> Order(IEnumerable<string> keys)
     {
@@ -134,7 +135,7 @@ public sealed class QueryElementRegistry
         var visited = new HashSet<string>(StringComparer.Ordinal);
         for (var current = Find(key); current is not null && visited.Add(current.Key); current = Find(current.ParentKey))
         {
-            if (current.Selectors.Contains(selector))
+            if (Matches(current, selector))
                 return current.Key;
         }
 
@@ -146,9 +147,9 @@ public sealed class QueryElementRegistry
         var visited = new HashSet<string>(StringComparer.Ordinal);
         for (var current = Find(Find(key)?.ParentKey); current is not null && visited.Add(current.Key); current = Find(current.ParentKey))
         {
-            if (untilSelector is not null && current.Selectors.Contains(untilSelector))
+            if (untilSelector is not null && Matches(current, untilSelector))
                 yield break;
-            if (filterSelector is null || current.Selectors.Contains(filterSelector))
+            if (Matches(current, filterSelector))
                 yield return current.Key;
         }
     }
@@ -168,9 +169,9 @@ public sealed class QueryElementRegistry
         for (var siblingIndex = index + step; siblingIndex >= 0 && siblingIndex < siblings.Length; siblingIndex += step)
         {
             var sibling = siblings[siblingIndex];
-            if (sibling.Selectors.Contains(untilSelector))
+            if (Matches(sibling, untilSelector))
                 yield break;
-            if (filterSelector is null || sibling.Selectors.Contains(filterSelector))
+            if (Matches(sibling, filterSelector))
                 yield return sibling.Key;
         }
     }
@@ -208,11 +209,13 @@ public sealed class QueryElementRegistry
     }
 
     private static bool Matches(Entry entry, string? selector) =>
-        selector is null || entry.Selectors.Contains(selector);
+        selector is null
+        || entry.Selectors.Contains(selector)
+        || SelectorParser.TryParse(selector, out var parsed) && SelectorMatcher.Matches(entry.Metadata, parsed);
 
     private Entry? Find(string? key) => key is null
         ? null
         : _entries.FirstOrDefault(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
 
-    private sealed record Entry(string Key, string? ParentKey, HashSet<string> Selectors);
+    private sealed record Entry(string Key, string? ParentKey, HashSet<string> Selectors, Selector Metadata);
 }

@@ -93,6 +93,8 @@ Foundation verification: full solution build succeeds with 0 errors; 11 unit/com
 - Implement `Find`, `Children`, `Closest`, `Parent`, `Parents`, `ParentsUntil`, `Next*`, `Prev*`, `Siblings`, `Filter`, `Not`, `Has`, `Is`, `Index`.
 - Add zero/one/many match tests and navigation-scope tests.
 
+Managed selector subset: `*`, tag, id, class, and compound tag/id/class selectors resolve through generated element metadata. Combinators, pseudo-classes, attribute selectors, and arbitrary browser selector expressions remain CSS-only until an explicit managed matcher contract is designed.
+
 ### Sprint 2 - attributes, properties, data, and text
 
 - Implement `Attr`, `Prop`, `Data`, `RemoveAttr`, `RemoveProp`, `RemoveData`, `Text_Get`, `Text_Set`, `Html`, `Val`, and dimensions.

@@ -17,6 +17,21 @@ public sealed class QueryElementRegistryTests
     }
 
     [Fact]
+    public void Registration_resolves_supported_compound_tag_id_and_class_selectors()
+    {
+        var registry = new QueryElementRegistry();
+        registry.Register("one", "p", "#first", ".item", ".active");
+        registry.Register("two", "p", ".item");
+
+        Assert.Equal(["one"], registry.Resolve("p.item.active"));
+        Assert.Equal(["one"], registry.Resolve("#first.item"));
+        Assert.Equal(["one", "two"], registry.Resolve("p.item"));
+        Assert.Equal(["one", "two"], registry.Resolve("*"));
+        Assert.Empty(registry.Resolve("div.item"));
+        Assert.Empty(registry.Resolve("p > .item"));
+    }
+
+    [Fact]
     public void Unregister_removes_disposed_element_metadata()
     {
         var registry = new QueryElementRegistry();
