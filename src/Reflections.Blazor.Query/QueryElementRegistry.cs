@@ -25,5 +25,25 @@ public sealed class QueryElementRegistry
     internal IReadOnlyList<string> Resolve(string selector) =>
         _entries.Where(entry => entry.Selectors.Contains(selector)).Select(entry => entry.Key).ToArray();
 
+    internal IReadOnlyList<string> Order(IEnumerable<string> keys)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+
+        var source = keys.ToArray();
+        var distinctKeys = source.ToHashSet(StringComparer.Ordinal);
+        var ordered = _entries
+            .Where(entry => distinctKeys.Remove(entry.Key))
+            .Select(entry => entry.Key)
+            .ToList();
+
+        foreach (var key in source)
+        {
+            if (distinctKeys.Remove(key))
+                ordered.Add(key);
+        }
+
+        return ordered;
+    }
+
     private sealed record Entry(string Key, HashSet<string> Selectors);
 }

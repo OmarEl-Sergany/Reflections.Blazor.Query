@@ -136,6 +136,31 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Add_merges_resolved_keys_in_registry_order()
+    {
+        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".active");
+
+        var combined = selection.Add(".item");
+
+        Assert.Equal(["first", "second", "third"], combined.ToArray());
+        Assert.Equal(
+            "[data-rbq-key=\"first\"], [data-rbq-key=\"second\"], [data-rbq-key=\"third\"]",
+            combined.Selector);
+        Assert.Same(selection, combined.End());
+    }
+
+    [Fact]
+    public void AddBack_merges_resolved_previous_selection_in_registry_order()
+    {
+        var root = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var current = root.Eq(-1);
+
+        Assert.Equal(["first", "second", "third"], current.AddBack().ToArray());
+        Assert.Equal(["second", "third"], current.AddBack(".active").ToArray());
+        Assert.Same(current, current.AddBack().End());
+    }
+
+    [Fact]
     public void Is_rejects_unresolved_selections_while_css_filters_remain_composable()
     {
         var selection = new Query(new QueryRenderState()).Select(".item");

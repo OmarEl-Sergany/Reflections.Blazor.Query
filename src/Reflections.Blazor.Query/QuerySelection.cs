@@ -39,14 +39,29 @@ namespace Reflections.Blazor.Query
 
         public QuerySelection Add(string selector)
         {
-            ValidateSelector(selector);
-            return Push($"{Selector}, {selector}");
+            selector = ValidateSelector(selector);
+            if (_resolvedKeys is null)
+                return Push($"{Selector}, {selector}");
+
+            return PushResolved(OrderKeys(_resolvedKeys.Concat(ResolveKeys(selector))));
         }
 
         public QuerySelection AddBack(string? selector = null)
         {
             if (_previous is null)
                 return this;
+
+            if (_resolvedKeys is not null && _previous._resolvedKeys is not null)
+            {
+                var previousKeys = _previous._resolvedKeys;
+                if (selector is not null)
+                {
+                    var matchingKeys = ResolveKeys(ValidateSelector(selector));
+                    previousKeys = previousKeys.Where(matchingKeys.Contains).ToArray();
+                }
+
+                return PushResolved(OrderKeys(_resolvedKeys.Concat(previousKeys)));
+            }
 
             var previousSelector = selector is null
                 ? _previous.Selector
@@ -238,6 +253,10 @@ namespace Reflections.Blazor.Query
             ? throw new InvalidOperationException(
                 "This operation requires library-owned element metadata. Register generated element keys before evaluating selection predicates.")
             : _registry.Resolve(selector).ToHashSet(StringComparer.Ordinal);
+
+        private IReadOnlyList<string> OrderKeys(IEnumerable<string> keys) => _registry is null
+            ? keys.Distinct(StringComparer.Ordinal).ToArray()
+            : _registry.Order(keys);
 
         private IReadOnlyList<string> RequireResolvedKeys() => _resolvedKeys ??
             throw new InvalidOperationException(
