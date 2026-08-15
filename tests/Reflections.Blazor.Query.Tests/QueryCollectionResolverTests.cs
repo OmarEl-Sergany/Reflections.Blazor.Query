@@ -84,6 +84,23 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Data_and_RemoveData_use_json_normalized_owned_state()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Data("payload", new DataPayload("selected", 2));
+
+        Assert.Equal(new DataPayload("selected", 2), selection.Data<DataPayload>("payload"));
+        Assert.Equal("selected", state.DataFor("second")["payload"].GetProperty("Name").GetString());
+        Assert.Empty(state.DataFor("first"));
+
+        selection.RemoveData("payload");
+
+        Assert.Null(selection.Data<DataPayload>("payload"));
+    }
+
+    [Fact]
     public void Unresolved_css_selection_rejects_collection_position_operations()
     {
         var selection = new Query(new QueryRenderState()).Select(".item");
@@ -260,6 +277,8 @@ public sealed class QueryCollectionResolverTests
         registry.Register("third", ".item", "li");
         return registry;
     }
+
+    private sealed record DataPayload(string Name, int Count);
 
     private static QueryElementRegistry CreateHierarchyRegistry()
     {

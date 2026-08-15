@@ -4,6 +4,7 @@ public class QueryRenderState
     private readonly Dictionary<(string, string), string> _styles = new();
     private readonly Dictionary<(string Key, string Name), string> _attributes = new();
     private readonly Dictionary<(string Key, string Name), object> _properties = new();
+    private readonly Dictionary<(string Key, string Name), System.Text.Json.JsonElement> _data = new();
     private int _batchDepth;
     private bool _dirty;
     public event Action? Changed;
@@ -16,6 +17,10 @@ public class QueryRenderState
         .Where(property => string.Equals(property.Key.Key, elementKey, StringComparison.Ordinal))
         .OrderBy(property => property.Key.Name, StringComparer.Ordinal)
         .ToDictionary(property => property.Key.Name, property => property.Value, StringComparer.Ordinal);
+    internal IReadOnlyDictionary<string, System.Text.Json.JsonElement> DataFor(string elementKey) => _data
+        .Where(data => string.Equals(data.Key.Key, elementKey, StringComparison.Ordinal))
+        .OrderBy(data => data.Key.Name, StringComparer.Ordinal)
+        .ToDictionary(data => data.Key.Name, data => data.Value, StringComparer.Ordinal);
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
     internal void SetCss(string selector, string property, string value) { _styles[(selector, property)] = value; NotifyChanged(); }
     internal void SetAttribute(string elementKey, string name, string value)
@@ -44,7 +49,28 @@ public class QueryRenderState
         ValidateBindableName(name);
         if (_properties.Remove((elementKey, name))) NotifyChanged();
     }
-    public void Clear() { if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0) return; _styles.Clear(); _attributes.Clear(); _properties.Clear(); NotifyChanged(); }
+    internal void SetData<T>(string elementKey, string name, T value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        _data[(elementKey, name)] = System.Text.Json.JsonSerializer.SerializeToElement(value);
+        NotifyChanged();
+    }
+    internal T? GetData<T>(string elementKey, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return _data.TryGetValue((elementKey, name), out var value)
+            ? System.Text.Json.JsonSerializer.Deserialize<T>(value.GetRawText())
+            : default;
+    }
+    internal void RemoveData(string elementKey, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (_data.Remove((elementKey, name))) NotifyChanged();
+    }
+    public void Clear() { if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0) return; _styles.Clear(); _attributes.Clear(); _properties.Clear(); _data.Clear(); NotifyChanged(); }
     private static void ValidateAttribute(string elementKey, string name, string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);

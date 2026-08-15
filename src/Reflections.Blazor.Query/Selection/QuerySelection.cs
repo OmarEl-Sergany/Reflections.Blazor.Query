@@ -71,6 +71,29 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        public QuerySelection Data<T>(string name, T value)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetData(key, name, value);
+            return this;
+        }
+
+        public T? Data<T>(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null ? default : _state.GetData<T>(key, name);
+        }
+
+        public QuerySelection RemoveData(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            foreach (var key in RequireResolvedKeys())
+                _state.RemoveData(key, name);
+            return this;
+        }
+
         public QuerySelection Add(string selector)
         {
             selector = ValidateSelector(selector);
