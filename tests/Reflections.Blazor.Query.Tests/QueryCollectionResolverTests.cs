@@ -192,6 +192,23 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Existing_traversal_operations_resolve_through_owned_hierarchy_metadata()
+    {
+        var query = new Query(new QueryRenderState(), CreateHierarchyRegistry());
+
+        Assert.Equal(["first", "second", "third", "fourth"], query.Select(".group").Children(".item").ToArray());
+        Assert.Equal(["leaf"], query.Select(".group").Find(".leaf").ToArray());
+        Assert.Equal(["group"], query.Select(".group").Has(".leaf").ToArray());
+        Assert.Equal(["second"], query.Select(".leaf").Parent(".active").ToArray());
+        Assert.Equal(["group"], query.Select(".leaf").Parents(".group").ToArray());
+        Assert.Equal(["second"], query.Select(".first").Next(".active").ToArray());
+        Assert.Equal(["second", "third", "fourth"], query.Select(".first").NextAll(".item").ToArray());
+        Assert.Equal(["third"], query.Select(".fourth").Prev(".item").ToArray());
+        Assert.Equal(["first", "second", "third"], query.Select(".fourth").PrevAll(".item").ToArray());
+        Assert.Equal(["first", "second", "third", "fourth"], query.Select(".stop").Siblings(".item").ToArray());
+    }
+
+    [Fact]
     public void Is_rejects_unresolved_selections_while_css_filters_remain_composable()
     {
         var selection = new Query(new QueryRenderState()).Select(".item");
@@ -217,6 +234,7 @@ public sealed class QueryCollectionResolverTests
         registry.RegisterWithParent("group", "panel", ".group");
         registry.RegisterWithParent("first", "group", ".item", ".first");
         registry.RegisterWithParent("second", "group", ".item", ".active");
+        registry.RegisterWithParent("leaf", "second", ".leaf");
         registry.RegisterWithParent("stop", "group", ".stop");
         registry.RegisterWithParent("third", "group", ".item");
         registry.RegisterWithParent("fourth", "group", ".item", ".fourth");

@@ -73,13 +73,19 @@ namespace Reflections.Blazor.Query
 
         public QuerySelection Find(string selector)
         {
-            ValidateSelector(selector);
+            selector = ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().Descendants(_resolvedKeys, selector));
+
             return Push($":is({Selector}) {selector}");
         }
 
         public QuerySelection Children(string? selector = null)
         {
             var childSelector = selector is null ? "*" : ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().Children(_resolvedKeys, selector));
+
             return Push($":is({Selector}) > {childSelector}");
         }
 
@@ -113,18 +119,30 @@ namespace Reflections.Blazor.Query
             return keys.Any(matchingKeys.Contains);
         }
 
-        public QuerySelection Has(string selector) =>
-            Push($":is({Selector}):has({ValidateSelector(selector)})");
+        public QuerySelection Has(string selector)
+        {
+            selector = ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().WithDescendant(_resolvedKeys, selector));
+
+            return Push($":is({Selector}):has({selector})");
+        }
 
         public QuerySelection Parent(string? selector = null)
         {
             var parentSelector = selector is null ? "*" : ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().Parent(_resolvedKeys, selector));
+
             return Push($"{parentSelector}:has(> :is({Selector}))");
         }
 
         public QuerySelection Parents(string? selector = null)
         {
             var ancestorSelector = selector is null ? "*" : ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().Parents(_resolvedKeys, selector));
+
             return Push($"{ancestorSelector}:has(:is({Selector}))");
         }
 
@@ -140,12 +158,18 @@ namespace Reflections.Blazor.Query
         public QuerySelection Next(string? selector = null)
         {
             var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().Next(_resolvedKeys, selector));
+
             return Push($":is({Selector}) + {siblingSelector}");
         }
 
         public QuerySelection NextAll(string? selector = null)
         {
             var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().NextAll(_resolvedKeys, selector));
+
             return Push($":is({Selector}) ~ {siblingSelector}");
         }
 
@@ -158,12 +182,18 @@ namespace Reflections.Blazor.Query
         public QuerySelection Prev(string? selector = null)
         {
             var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().Prev(_resolvedKeys, selector));
+
             return Push($"{siblingSelector}:has(+ :is({Selector}))");
         }
 
         public QuerySelection PrevAll(string? selector = null)
         {
             var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().PrevAll(_resolvedKeys, selector));
+
             return Push($"{siblingSelector}:has(~ :is({Selector}))");
         }
 
@@ -176,6 +206,9 @@ namespace Reflections.Blazor.Query
         public QuerySelection Siblings(string? selector = null)
         {
             var siblingSelector = selector is null ? "*" : ValidateSelector(selector);
+            if (_resolvedKeys is not null)
+                return PushResolved(RequireRegistry().Siblings(_resolvedKeys, selector));
+
             return Push($"{siblingSelector}:has(~ :is({Selector})), :is({Selector}) ~ {siblingSelector}");
         }
 
