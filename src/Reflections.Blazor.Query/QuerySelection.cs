@@ -5,17 +5,20 @@ namespace Reflections.Blazor.Query
     public sealed class QuerySelection
     {
         private readonly QueryRenderState _state;
+        private readonly QueryElementRegistry? _registry;
         private readonly QuerySelection? _previous;
         private readonly IReadOnlyList<string>? _resolvedKeys;
 
         internal QuerySelection(
             string selector,
             QueryRenderState state,
+            QueryElementRegistry? registry = null,
             QuerySelection? previous = null,
             IReadOnlyList<string>? resolvedKeys = null)
         {
             Selector = selector;
             _state = state;
+            _registry = registry;
             _previous = previous;
             _resolvedKeys = resolvedKeys;
         }
@@ -65,11 +68,35 @@ namespace Reflections.Blazor.Query
             return Push($":is({Selector}) > {childSelector}");
         }
 
-        public QuerySelection Filter(string selector) =>
-            Push($":is({Selector}):is({ValidateSelector(selector)})");
+        public QuerySelection Filter(string selector)
+        {
+            selector = ValidateSelector(selector);
+            if (_resolvedKeys is null)
+                return Push($":is({Selector}):is({selector})");
 
-        public QuerySelection Not(string selector) =>
-            Push($":is({Selector}):not({ValidateSelector(selector)})");
+            var keys = RequireResolvedKeys();
+            var matchingKeys = ResolveKeys(selector);
+            return PushResolved(keys.Where(matchingKeys.Contains).ToArray());
+        }
+
+        public QuerySelection Not(string selector)
+        {
+            selector = ValidateSelector(selector);
+            if (_resolvedKeys is null)
+                return Push($":is({Selector}):not({selector})");
+
+            var keys = RequireResolvedKeys();
+            var matchingKeys = ResolveKeys(selector);
+            return PushResolved(keys.Where(key => !matchingKeys.Contains(key)).ToArray());
+        }
+
+        public bool Is(string selector)
+        {
+            selector = ValidateSelector(selector);
+            var keys = RequireResolvedKeys();
+            var matchingKeys = ResolveKeys(selector);
+            return keys.Any(matchingKeys.Contains);
+        }
 
         public QuerySelection Has(string selector) =>
             Push($":is({Selector}):has({ValidateSelector(selector)})");
@@ -202,10 +229,15 @@ namespace Reflections.Blazor.Query
             return PushResolved(keys);
         }
 
-        private QuerySelection Push(string selector) => new(selector, _state, this);
+        private QuerySelection Push(string selector) => new(selector, _state, _registry, this);
 
         private QuerySelection PushResolved(IReadOnlyList<string> keys) =>
-            new(ToKeySelector(keys), _state, this, keys);
+            new(ToKeySelector(keys), _state, _registry, this, keys);
+
+        private HashSet<string> ResolveKeys(string selector) => _registry is null
+            ? throw new InvalidOperationException(
+                "This operation requires library-owned element metadata. Register generated element keys before evaluating selection predicates.")
+            : _registry.Resolve(selector).ToHashSet(StringComparer.Ordinal);
 
         private IReadOnlyList<string> RequireResolvedKeys() => _resolvedKeys ??
             throw new InvalidOperationException(

@@ -20,7 +20,7 @@ namespace Reflections.Blazor.Query
         public QuerySelection Select(string selector)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);
-            return new QuerySelection(selector, _state, resolvedKeys: _registry?.Resolve(selector));
+            return new QuerySelection(selector, _state, _registry, resolvedKeys: _registry?.Resolve(selector));
         }
     }
 }

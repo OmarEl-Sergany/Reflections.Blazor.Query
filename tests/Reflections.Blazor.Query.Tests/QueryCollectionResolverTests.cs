@@ -120,6 +120,31 @@ public sealed class QueryCollectionResolverTests
         Assert.Same(selection, pushed.End());
     }
 
+    [Fact]
+    public void Filter_Not_and_Is_use_library_owned_element_metadata()
+    {
+        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+
+        var filtered = selection.Filter(".active");
+        var excluded = selection.Not(".active");
+
+        Assert.Equal(["second"], filtered.ToArray());
+        Assert.Equal("[data-rbq-key=\"second\"]", filtered.Selector);
+        Assert.Equal(["first", "third"], excluded.ToArray());
+        Assert.True(selection.Is(".active"));
+        Assert.False(selection.Is(".missing"));
+    }
+
+    [Fact]
+    public void Is_rejects_unresolved_selections_while_css_filters_remain_composable()
+    {
+        var selection = new Query(new QueryRenderState()).Select(".item");
+
+        Assert.Throws<InvalidOperationException>(() => selection.Is(".active"));
+        Assert.Equal(":is(.item):is(.active)", selection.Filter(".active").Selector);
+        Assert.Equal(":is(.item):not(.active)", selection.Not(".active").Selector);
+    }
+
     private static QueryElementRegistry CreateRegistry()
     {
         var registry = new QueryElementRegistry();
