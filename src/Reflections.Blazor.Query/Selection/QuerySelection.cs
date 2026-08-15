@@ -37,6 +37,23 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        public QuerySelection Attr(string name, string value)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            ArgumentNullException.ThrowIfNull(value);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetAttribute(key, name, value);
+            return this;
+        }
+
+        public QuerySelection RemoveAttr(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            foreach (var key in RequireResolvedKeys())
+                _state.RemoveAttribute(key, name);
+            return this;
+        }
+
         public QuerySelection Add(string selector)
         {
             selector = ValidateSelector(selector);

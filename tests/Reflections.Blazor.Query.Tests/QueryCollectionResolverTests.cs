@@ -50,6 +50,23 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Attr_and_RemoveAttr_update_only_resolved_owned_elements()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Attr("title", "selected");
+
+        Assert.Equal("selected", state.AttributesFor("second")["title"]);
+        Assert.Empty(state.AttributesFor("first"));
+        Assert.Throws<ArgumentException>(() => selection.Attr("data-rbq-key", "replacement"));
+
+        selection.RemoveAttr("title");
+
+        Assert.Empty(state.AttributesFor("second"));
+    }
+
+    [Fact]
     public void Unresolved_css_selection_rejects_collection_position_operations()
     {
         var selection = new Query(new QueryRenderState()).Select(".item");
