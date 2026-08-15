@@ -4,7 +4,7 @@ namespace Reflections.Blazor.Query;
 
 public static class QueryServiceCollectionExtensions
 {
-    public static IServiceCollection AddReflectionsBlazorQuery(this IServiceCollection services)
+    public static IServiceCollection AddBlazorQuery(this IServiceCollection services)
     {
         services.AddScoped<QueryRenderState>();
         services.AddScoped<QueryElementRegistry>();
