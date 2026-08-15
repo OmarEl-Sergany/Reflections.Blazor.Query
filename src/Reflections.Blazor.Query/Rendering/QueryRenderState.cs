@@ -5,6 +5,7 @@ public class QueryRenderState
     private readonly Dictionary<(string Key, string Name), string> _attributes = new();
     private readonly Dictionary<(string Key, string Name), object> _properties = new();
     private readonly Dictionary<(string Key, string Name), System.Text.Json.JsonElement> _data = new();
+    private readonly Dictionary<string, QueryContent> _content = new(StringComparer.Ordinal);
     private int _batchDepth;
     private bool _dirty;
     public event Action? Changed;
@@ -21,6 +22,7 @@ public class QueryRenderState
         .Where(data => string.Equals(data.Key.Key, elementKey, StringComparison.Ordinal))
         .OrderBy(data => data.Key.Name, StringComparer.Ordinal)
         .ToDictionary(data => data.Key.Name, data => data.Value, StringComparer.Ordinal);
+    internal QueryContent? ContentFor(string elementKey) => _content.TryGetValue(elementKey, out var content) ? content : null;
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
     internal void SetCss(string selector, string property, string value) { _styles[(selector, property)] = value; NotifyChanged(); }
     internal void SetAttribute(string elementKey, string name, string value)
@@ -70,7 +72,9 @@ public class QueryRenderState
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         if (_data.Remove((elementKey, name))) NotifyChanged();
     }
-    public void Clear() { if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0) return; _styles.Clear(); _attributes.Clear(); _properties.Clear(); _data.Clear(); NotifyChanged(); }
+    internal void SetText(string elementKey, string value) => SetContent(elementKey, new QueryContent(value, false));
+    internal void SetHtml(string elementKey, string value) => SetContent(elementKey, new QueryContent(value, true));
+    public void Clear() { if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0 && _content.Count == 0) return; _styles.Clear(); _attributes.Clear(); _properties.Clear(); _data.Clear(); _content.Clear(); NotifyChanged(); }
     private static void ValidateAttribute(string elementKey, string name, string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
@@ -86,6 +90,12 @@ public class QueryRenderState
             throw new ArgumentException("Event-like names are reserved for the library event API.", nameof(name));
     }
     private void NotifyChanged() { _dirty = true; if (_batchDepth == 0) Flush(); }
+    private void SetContent(string elementKey, QueryContent content)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        _content[elementKey] = content;
+        NotifyChanged();
+    }
     private void Flush() { if (!_dirty) return; _dirty = false; Changed?.Invoke(); }
     private sealed class Batch(QueryRenderState owner) : IDisposable
     {
@@ -94,3 +104,4 @@ public class QueryRenderState
     }
 }
 public sealed record QueryStyleRule(string Selector, string Property, string Value);
+internal sealed record QueryContent(string Value, bool IsHtml);

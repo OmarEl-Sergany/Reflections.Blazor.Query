@@ -48,4 +48,35 @@ public sealed class QueryElementComponentTests
 
         Assert.Empty(new Query(new QueryRenderState(), registry).Select(".updated").ToArray());
     }
+
+    [Fact]
+    public void QueryElement_renders_owned_text_html_and_value_without_external_dom_mutation()
+    {
+        using var context = new BunitContext();
+        var registry = new QueryElementRegistry();
+        var renderState = new QueryRenderState();
+        context.Services.AddSingleton(registry);
+        context.Services.AddSingleton(renderState);
+
+        var cut = context.Render<QueryElement>(parameters => parameters
+            .Add(component => component.ElementKey, "input")
+            .Add(component => component.TagName, "input")
+            .Add(component => component.Class, "field"));
+        var selection = new Query(renderState, registry).Select(".field");
+
+        selection.Val("chosen");
+        cut.WaitForAssertion(() => Assert.Contains("value=\"chosen\"", cut.Markup, StringComparison.Ordinal));
+
+        cut.Render(parameters => parameters
+            .Add(component => component.ElementKey, "content")
+            .Add(component => component.TagName, "div")
+            .Add(component => component.Class, "content")
+            .AddChildContent("Initial"));
+        selection = new Query(renderState, registry).Select(".content");
+        selection.Text("<strong>encoded</strong>");
+        cut.WaitForAssertion(() => Assert.Contains("&lt;strong&gt;encoded&lt;/strong&gt;", cut.Markup, StringComparison.Ordinal));
+
+        selection.Html("<strong>trusted</strong>");
+        cut.WaitForAssertion(() => Assert.Contains("<strong>trusted</strong>", cut.Markup, StringComparison.Ordinal));
+    }
 }

@@ -94,6 +94,45 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        public QuerySelection Text(string value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetText(key, value);
+            return this;
+        }
+
+        public string? Text()
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null ? null : _state.ContentFor(key)?.Value;
+        }
+
+        public QuerySelection Html(string value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetHtml(key, value);
+            return this;
+        }
+
+        public string? Html()
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            var content = key is null ? null : _state.ContentFor(key);
+            return content is { IsHtml: true } ? content.Value : null;
+        }
+
+        public QuerySelection Val(string value) => Prop("value", value);
+
+        public string? Val()
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is not null && _state.PropertiesFor(key).TryGetValue("value", out var value)
+                ? value as string
+                : null;
+        }
+
         public QuerySelection Add(string selector)
         {
             selector = ValidateSelector(selector);

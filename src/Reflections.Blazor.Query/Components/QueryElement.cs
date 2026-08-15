@@ -63,7 +63,13 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
         foreach (var property in (_subscribedRenderState ?? DefaultRenderState).PropertiesFor(ElementKey))
             builder.AddAttribute(sequence++, property.Key, property.Value);
-        builder.AddContent(sequence, ChildContent);
+        var content = (_subscribedRenderState ?? DefaultRenderState).ContentFor(ElementKey);
+        if (content is { IsHtml: true })
+            builder.AddMarkupContent(sequence, content.Value);
+        else if (content is not null)
+            builder.AddContent(sequence, content.Value);
+        else
+            builder.AddContent(sequence, ChildContent);
         builder.CloseElement();
     }
 

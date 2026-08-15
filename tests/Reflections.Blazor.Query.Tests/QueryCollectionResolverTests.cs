@@ -101,6 +101,23 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Text_Html_and_Val_use_resolved_owned_render_state()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Text("<strong>encoded</strong>");
+        Assert.Equal("<strong>encoded</strong>", selection.Text());
+        Assert.Null(selection.Html());
+
+        selection.Html("<strong>trusted</strong>").Val("chosen");
+
+        Assert.Equal("<strong>trusted</strong>", selection.Html());
+        Assert.Equal("chosen", selection.Val());
+        Assert.Null(new Query(state, CreateRegistry()).Select(".item").Eq(0).Text());
+    }
+
+    [Fact]
     public void Unresolved_css_selection_rejects_collection_position_operations()
     {
         var selection = new Query(new QueryRenderState()).Select(".item");
