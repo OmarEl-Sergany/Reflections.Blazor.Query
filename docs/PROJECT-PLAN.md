@@ -27,7 +27,8 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 - [x] Implement render-owned `Height(double)` and `Width(double)` writes using generated-key CSS rules.
 - [ ] Add page/layout/application navigation and disposal coverage for cancellation, cache invalidation, and late-result rejection.
 - [x] Manually verify the `HeightAsync` / `WidthAsync` queue and JS module in Interactive Server, WebAssembly, and Auto.
-- [ ] Extend manual and automated browser coverage to position APIs across WebAssembly and Auto, then cover all metrics plus navigation/disposal cases.
+- [x] Manually verify typed `OffsetAsync`, `PositionAsync`, and external-parent `OffsetParentAsync` results in Interactive Server, WebAssembly, and Auto.
+- [ ] Add automated browser coverage for every measurement metric, navigation, disposal, cancellation, and late-result behavior.
 
 ### 🗺️ Long-term roadmap (Epic 4464)
 

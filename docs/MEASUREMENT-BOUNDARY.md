@@ -101,6 +101,6 @@ Late JavaScript results must be ignored after their request or host has been can
 
 ## Manual browser validation
 
-The initial live validation was performed against local Interactive Server, Interactive WebAssembly, and Interactive Auto demo hosts. Each host rendered a `QueryElement`, invoked the queued `WidthAsync` path through a Blazor event, displayed a browser-calculated result, and produced no console warnings or errors. The Server demo also exercised `HeightAsync`, `OffsetAsync`, `PositionAsync`, and the external-parent `OffsetParentAsync` unavailable result.
+The initial live validation was performed against local Interactive Server, Interactive WebAssembly, and Interactive Auto demo hosts. Each host rendered a `QueryElement`, invoked the queued `WidthAsync` path through a Blazor event, displayed a browser-calculated result, and produced no console warnings or errors. All three hosts also exercised `OffsetAsync`, `PositionAsync`, and the external-parent `OffsetParentAsync` unavailable result; the Server demo additionally exercised `HeightAsync`.
 
 This is implementation evidence, not a replacement for automated browser coverage. The remaining browser suite must cover every metric plus navigation, disposal, cancellation, and late-result behavior.
