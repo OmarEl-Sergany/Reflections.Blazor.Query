@@ -6,6 +6,8 @@ Dimensions and positions are browser-computed observations. They cannot be deriv
 
 JavaScript is an observation adapter, never a second renderer. It must not set attributes, properties, classes, styles, content, structure, or event handlers on Blazor-owned nodes.
 
+The implementation uses an isolated custom JS module and generated `data-rbq-key` values. It does not expose or track `ElementReference`, DOM nodes, or `IJSObjectReference` as part of the public query API. This keeps selection semantics stable across Server, WebAssembly, and Auto while enforcing ownership at the interop boundary.
+
 ## API contract
 
 The following APIs are asynchronous measurement reads:
@@ -62,12 +64,25 @@ No API returns an arbitrary `ElementReference`, DOM node, or JavaScript object r
 - Layout and application caches follow their respective scope lifetimes.
 - Future `ResizeObserver` support may invalidate snapshots; it must remain read-only and be disposed with the owning host.
 
+### Disposal lifecycle rules
+
+| Trigger | Pending requests | Measurement cache | Required cleanup |
+| --- | --- | --- | --- |
+| Page navigation | Cancel page-scoped requests. | Invalidate page-scoped snapshots. | Clear page render state through the existing host navigation policy. |
+| Same layout survives navigation | Keep layout-scoped requests and snapshots. | Retain while the layout instance is mounted. | Do not clear layout state merely because page content changed. |
+| Application lifetime | Keep application-scoped work until explicit application disposal. | Retain for the configured application scope. | Dispose only on explicit application shutdown/disposal. |
+| `QueryElement.Dispose` | Complete requests for that key as cancelled or unavailable. | Invalidate that element key. | Unregister the key from `QueryElementRegistry`. |
+| `QueryHost.Dispose` | Cancel all queue work owned by that host. | Invalidate the host scope cache. | Unsubscribe navigation and render callbacks; dispose observer/module resources; reject late completions. |
+
+Late JavaScript results must be ignored after their request or host has been cancelled or disposed. Completion of a valid measurement updates only the measurement cache; it never calls `StateHasChanged` implicitly.
+
 ## Security and performance constraints
 
 - The JS module accepts only library-generated element keys and requested measurement kinds.
 - It resolves only `[data-rbq-key]` elements owned by the library.
 - It performs all reads in a batch and performs no writes, avoiding read/write layout-thrashing cycles.
 - Missing, disposed, or non-owned elements produce typed unavailable results rather than browser exceptions.
+- The JS module resolves only an exact library-owned key and must not accept arbitrary selectors or public element references.
 - Server, WebAssembly, and Auto must share the same DTO and batching contract.
 
 ## Acceptance criteria
@@ -76,6 +91,8 @@ No API returns an arbitrary `ElementReference`, DOM node, or JavaScript object r
 - Duplicate requests coalesce.
 - Measurement reads cause no DOM mutation and no implicit rerender.
 - Page navigation and host disposal cancel or invalidate outstanding work deterministically.
+- `QueryElement` disposal invalidates its key and prevents late measurement completion from repopulating the cache.
+- `QueryHost` disposal unsubscribes callbacks and disposes every host-owned observer/module resource.
 - Results are correct for zero, one, and multiple owned elements.
 - Browser-level coverage passes in Interactive Server, WebAssembly, and Auto.
 - `Offset`, `Position`, and `OffsetParent` semantics are documented and tested before being advertised as jQuery-compatible.

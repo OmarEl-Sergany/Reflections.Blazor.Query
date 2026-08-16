@@ -23,7 +23,8 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 ### Immediate backlog
 
 - [ ] Implement dimension and position metrics through the read-only JS interop boundary.
-- [ ] Extend page/layout navigation coverage to all Sprint 2 state categories.
+- [ ] Implement the generated-key measurement queue, coalesced `QueryHost.OnAfterRenderAsync` flush, and immutable snapshot DTOs; public APIs must not expose `ElementReference`.
+- [ ] Add page/layout/application navigation and disposal coverage for cancellation, cache invalidation, and late-result rejection.
 - [ ] Verify the measurement contract in Interactive Server, WebAssembly, and Auto.
 
 ### 🗺️ Long-term roadmap (Epic 4464)
@@ -73,6 +74,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - Every operation updates state and produces Blazor-owned render output.
 - No operation writes to a Blazor-owned DOM node through JavaScript.
 - Browser layout metrics are an explicit read-only interop boundary. Measurement results are snapshots held in a dedicated library-owned measurement cache, not render-driving mutation state.
+- Measurement interop identifies only generated `data-rbq-key` values through an isolated JS module; `ElementReference` and browser handles are not public query abstractions.
 - Event subscriptions, queues, animation state, and async operations must have deterministic disposal and cancellation.
 - Operations must define behavior for zero matches, one match, and multiple matches.
 
