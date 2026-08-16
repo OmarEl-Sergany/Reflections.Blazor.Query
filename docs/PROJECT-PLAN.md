@@ -1,8 +1,47 @@
-# Reflections.Blazor.Query - Project Scope and Delivery Plan
+# Reflections.Blazor.Query — Implementation Plan
 
-Status: Foundation implemented; remaining work is feature delivery and browser-level validation.
+This plan follows the Azure DevOps hierarchy and repository delivery policy. Foundation and selection/traversal are implemented; the active work is Feature 4467.
 
-This plan follows the repository deployment SOP supplied with the project. Azure DevOps tracking and CI scaffolding are now in place.
+## 🚀 Active Phase: Sprint 2 (Feature 4467)
+
+**Current focus:** Attributes, properties, data, text, and dimensions.
+
+- **Assigned to:** `DEVOPS22-SVR\Omar`
+- **Branch:** `feature/4467-attributes-data`
+- **Status:** 52/52 tests passing ✅ · 0 warnings · 0 errors
+
+### Implemented matrix
+
+- **Attr / RemoveAttr:** Manages render-owned attribute state for each resolved element key.
+- **Prop / RemoveProp:** Tracks typed property state and protects reserved keys and event-like names.
+- **Data / RemoveData:** Stores JSON-normalized library state isolated from DOM `data-*` attributes.
+- **Text:** State-driven text content rendered with Blazor HTML encoding.
+- **Html:** Explicit caller-supplied markup rendered through the component tree; this is a documented trust boundary.
+- **Val:** Owns and reads the rendered `value` property. Blazor two-way event binding remains a future forms concern.
+- **Clear:** Atomically clears styles, attributes, properties, data, and content state.
+
+### Immediate backlog
+
+- [ ] Implement dimension and position metrics through the read-only JS interop boundary.
+- [ ] Extend page/layout navigation coverage to all Sprint 2 state categories.
+- [ ] Verify the measurement contract in Interactive Server, WebAssembly, and Auto.
+
+### 🗺️ Long-term roadmap (Epic 4464)
+
+#### Sprint 3 — Classes & DOM Structure (Feature 4468)
+
+- [ ] Class manipulation: `AddClass`, `RemoveClass`, `ToggleClass`, `HasClass`.
+- [ ] Structural state trees: `Append`, `Prepend`, `Before`, `After`, `Wrap`, and their supported counterparts.
+
+#### Sprint 4 — Events & Forms (Feature 4469)
+
+- [ ] Fluent event binding: `On`, `Off`, `One`, and `Trigger`.
+- [ ] Form-state handlers: `Serialize` and `SerializeArray`.
+
+#### Sprint 5 — Effects & Queues (Feature 4470)
+
+- [ ] C#-driven render-state transitions: `Animate`, `FadeIn`, and `SlideUp`.
+- [ ] Queue tracking: `Queue`, `Delay`, `Stop`, and `Finish`.
 
 ## Product goal
 
@@ -96,27 +135,28 @@ Foundation verification: full solution build succeeds with 0 errors; 11 unit/com
 
 Managed selector subset: `*`, tag, id, class, and compound tag/id/class selectors resolve through generated element metadata. Combinators, pseudo-classes, attribute selectors, and arbitrary browser selector expressions remain CSS-only until an explicit managed matcher contract is designed.
 
-### Sprint 2 - attributes, properties, data, and text
+### Sprint 2 - attributes, properties, data, text, and dimensions (Feature 4467)
 
-- Implement `Attr`, `Prop`, `Data`, `RemoveAttr`, `RemoveProp`, `RemoveData`, `Text_Get`, `Text_Set`, `Html`, `Val`, and dimensions.
+- `Attr`, `Prop`, `Data`, `RemoveAttr`, `RemoveProp`, `RemoveData`, `Text_Get`, `Text_Set`, `Html`, and `Val` are implemented and tested.
+- Implement dimensions and position reads, plus render-owned `Height_Set` and `Width_Set` writes.
 - Define safe value serialization and element ownership rules.
 - Add render output snapshots and accessibility checks.
 
 Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `Height_Get`, `Width_Get`, `InnerHeight`, `InnerWidth`, `OuterHeight`, `OuterWidth`, `Offset`, `OffsetParent`, and `Position` are asynchronous, read-only browser observations. `Height_Set` and `Width_Set` remain render-state CSS writes. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
 
-### Sprint 3 - classes and structural manipulation
+### Sprint 3 - classes and structural manipulation (Feature 4468)
 
 - Implement class operations and `Show`/`Hide`/`Toggle`.
 - Implement append/prepend/before/after/replace/wrap/remove/empty/detach/clone operations.
 - Define stable keys and reconciliation behavior for repeated and reordered elements.
 
-### Sprint 4 - events and form behavior
+### Sprint 4 - events and form behavior (Feature 4469)
 
 - Implement event registration, delegation semantics, one-time handlers, trigger behavior, and disposal.
 - Integrate Blazor event callbacks and prevent duplicate subscriptions after rerender.
 - Add keyboard, pointer, focus, form, resize, and scroll coverage.
 
-### Sprint 5 - effects, queues, and async behavior
+### Sprint 5 - effects, queues, and async behavior (Feature 4470)
 
 - Implement queues, delays, effects, animation cancellation, and promises.
 - Validate behavior during navigation, component disposal, and reconnect.
