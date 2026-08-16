@@ -33,6 +33,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - Application scope: optional, explicit, and long-lived.
 - Every operation updates state and produces Blazor-owned render output.
 - No operation writes to a Blazor-owned DOM node through JavaScript.
+- Browser layout metrics are an explicit read-only interop boundary. Measurement results are snapshots held in a dedicated library-owned measurement cache, not render-driving mutation state.
 - Event subscriptions, queues, animation state, and async operations must have deterministic disposal and cancellation.
 - Operations must define behavior for zero matches, one match, and multiple matches.
 
@@ -100,6 +101,8 @@ Managed selector subset: `*`, tag, id, class, and compound tag/id/class selector
 - Implement `Attr`, `Prop`, `Data`, `RemoveAttr`, `RemoveProp`, `RemoveData`, `Text_Get`, `Text_Set`, `Html`, `Val`, and dimensions.
 - Define safe value serialization and element ownership rules.
 - Add render output snapshots and accessibility checks.
+
+Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `Height_Get`, `Width_Get`, `InnerHeight`, `InnerWidth`, `OuterHeight`, `OuterWidth`, `Offset`, `OffsetParent`, and `Position` are asynchronous, read-only browser observations. `Height_Set` and `Width_Set` remain render-state CSS writes. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
 
 ### Sprint 3 - classes and structural manipulation
 
@@ -178,6 +181,7 @@ Area paths:
 - Browser tests for interactive Server, WebAssembly, and Auto where available.
 - Compatibility tests for zero, one, and many elements.
 - Navigation tests for page reset and layout persistence.
+- Measurement tests for request coalescing, post-render flush timing, zero/one/many selections, navigation/disposal invalidation, and Server/WebAssembly/Auto behavior.
 - Performance tests for batched operations, large selections, and repeated rerenders.
 - Accessibility tests for forms, focus, keyboard interactions, and generated markup.
 
