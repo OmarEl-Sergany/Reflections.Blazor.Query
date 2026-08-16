@@ -13,11 +13,11 @@ The implementation uses an isolated custom JS module and generated `data-rbq-key
 The following APIs are asynchronous measurement reads:
 
 - `HeightAsync`, `WidthAsync` (**implemented**)
-- `InnerHeight`, `InnerWidth`
-- `OuterHeight`, `OuterWidth`
+- `InnerHeightAsync`, `InnerWidthAsync` (**implemented**)
+- `OuterHeightAsync`, `OuterWidthAsync` (**implemented; margins excluded**)
 - `Offset`, `OffsetParent`, `Position`
 
-The implementation names use `Async` suffixes to make the browser boundary visible to consumers. The initial `HeightAsync` / `WidthAsync` APIs return the first resolved owned element's nullable CSS-pixel snapshot; empty or unavailable selections return `null`. They do not return browser handles.
+The implementation names use `Async` suffixes to make the browser boundary visible to consumers. The implemented APIs return the first resolved owned element's nullable CSS-pixel snapshot; empty or unavailable selections return `null`. `HeightAsync` / `WidthAsync` and outer dimensions use the border box. Inner dimensions exclude border widths. They do not return browser handles.
 
 `Height_Set` and `Width_Set` are separate render-state write operations. They emit library-owned CSS state and must not call JavaScript.
 
@@ -39,7 +39,7 @@ flowchart LR
 5. One JS module invocation reads all requested values using browser layout APIs and returns serializable DTOs.
 6. The measurement service completes callers and records the result in its snapshot cache.
 
-The initial implementation supports `HeightAsync` and `WidthAsync`, uses `getBoundingClientRect()`, and is covered by fake-bridge and bUnit host-flush tests. Inner/outer dimensions and position semantics remain deliberately deferred.
+The initial implementation supports height, width, inner, and outer dimensions, uses `getBoundingClientRect()` plus computed border widths, and is covered by fake-bridge and bUnit host-flush tests. Margin-inclusive outer dimensions and all position semantics remain deliberately deferred.
 
 The cache is read-only from the rendering pipeline. Completing a measurement does not call `StateHasChanged`; any consumer that needs to render a result decides explicitly when to do so.
 

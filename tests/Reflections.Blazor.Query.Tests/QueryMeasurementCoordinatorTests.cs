@@ -96,6 +96,36 @@ public sealed class QueryMeasurementCoordinatorTests
     }
 
     [Fact]
+    public async Task Inner_and_outer_measurements_use_distinct_coalesced_metric_requests()
+    {
+        var bridge = new FakeMeasurementBridge(
+        [
+            new MeasurementReading("panel", MeasurementKind.InnerHeight, 90),
+            new MeasurementReading("panel", MeasurementKind.InnerWidth, 190),
+            new MeasurementReading("panel", MeasurementKind.OuterHeight, 100),
+            new MeasurementReading("panel", MeasurementKind.OuterWidth, 200)
+        ]);
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var registry = new QueryElementRegistry();
+        registry.Register("panel", ".panel");
+        var selection = new Query(new QueryRenderState(), registry, coordinator).Select(".panel");
+
+        var innerHeight = selection.InnerHeightAsync().AsTask();
+        var innerWidth = selection.InnerWidthAsync().AsTask();
+        var outerHeight = selection.OuterHeightAsync().AsTask();
+        var outerWidth = selection.OuterWidthAsync().AsTask();
+        await coordinator.FlushAsync();
+
+        Assert.Equal(90, await innerHeight);
+        Assert.Equal(190, await innerWidth);
+        Assert.Equal(100, await outerHeight);
+        Assert.Equal(200, await outerWidth);
+        Assert.Equal(
+            [MeasurementKind.InnerHeight, MeasurementKind.InnerWidth, MeasurementKind.OuterHeight, MeasurementKind.OuterWidth],
+            bridge.Batches[0].Select(request => request.Kind));
+    }
+
+    [Fact]
     public async Task Concurrent_flushes_do_not_duplicate_an_in_flight_batch()
     {
         var bridge = new DelayedMeasurementBridge();

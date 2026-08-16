@@ -142,6 +142,18 @@ namespace Reflections.Blazor.Query
         public ValueTask<double?> WidthAsync(CancellationToken cancellationToken = default) =>
             MeasureFirstAsync(MeasurementKind.Width, cancellationToken);
 
+        public ValueTask<double?> InnerHeightAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.InnerHeight, cancellationToken);
+
+        public ValueTask<double?> InnerWidthAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.InnerWidth, cancellationToken);
+
+        public ValueTask<double?> OuterHeightAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.OuterHeight, cancellationToken);
+
+        public ValueTask<double?> OuterWidthAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.OuterWidth, cancellationToken);
+
         public QuerySelection Add(string selector)
         {
             selector = ValidateSelector(selector);
