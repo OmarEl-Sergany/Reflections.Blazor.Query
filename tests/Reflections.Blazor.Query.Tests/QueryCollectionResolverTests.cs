@@ -50,6 +50,31 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Height_and_Width_write_generated_key_css_rules_for_resolved_elements_only()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Height(48.5).Width(320);
+
+        Assert.Contains(state.Rules, rule => rule is
+        {
+            Selector: "[data-rbq-key=\"second\"]",
+            Property: "height",
+            Value: "48.5px"
+        });
+        Assert.Contains(state.Rules, rule => rule is
+        {
+            Selector: "[data-rbq-key=\"second\"]",
+            Property: "width",
+            Value: "320px"
+        });
+        Assert.DoesNotContain(state.Rules, rule => rule.Selector.Contains("first", StringComparison.Ordinal));
+        Assert.Throws<ArgumentOutOfRangeException>(() => selection.Height(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => selection.Width(double.NaN));
+    }
+
+    [Fact]
     public void Attr_and_RemoveAttr_update_only_resolved_owned_elements()
     {
         var state = new QueryRenderState();

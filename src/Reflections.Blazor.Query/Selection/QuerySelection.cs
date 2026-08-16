@@ -1,5 +1,7 @@
 ﻿using System;
 
+using System.Globalization;
+
 namespace Reflections.Blazor.Query
 {
     public sealed class QuerySelection
@@ -153,6 +155,10 @@ namespace Reflections.Blazor.Query
 
         public ValueTask<double?> OuterWidthAsync(CancellationToken cancellationToken = default) =>
             MeasureFirstAsync(MeasurementKind.OuterWidth, cancellationToken);
+
+        public QuerySelection Height(double pixels) => SetOwnedLength("height", pixels);
+
+        public QuerySelection Width(double pixels) => SetOwnedLength("width", pixels);
 
         public QuerySelection Add(string selector)
         {
@@ -428,6 +434,17 @@ namespace Reflections.Blazor.Query
                 : (_measurements ?? throw new InvalidOperationException(
                     "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
                     .RequestAsync(_state, key, kind, cancellationToken);
+        }
+
+        private QuerySelection SetOwnedLength(string property, double pixels)
+        {
+            if (!double.IsFinite(pixels) || pixels < 0)
+                throw new ArgumentOutOfRangeException(nameof(pixels), "CSS pixel lengths must be finite and non-negative.");
+
+            var value = pixels.ToString("0.################", CultureInfo.InvariantCulture) + "px";
+            foreach (var key in RequireResolvedKeys())
+                _state.SetCss($"[data-rbq-key=\"{EscapeKey(key)}\"]", property, value);
+            return this;
         }
 
         private HashSet<string> ResolveKeys(string selector) => _registry is null

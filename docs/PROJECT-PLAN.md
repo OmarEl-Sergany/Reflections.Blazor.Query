@@ -8,7 +8,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 - **Assigned to:** `DEVOPS22-SVR\Omar`
 - **Branch:** `feature/4467-attributes-data`
-- **Status:** 59/59 tests passing ✅ · 0 warnings · 0 errors
+- **Status:** 60/60 tests passing ✅ · 0 warnings · 0 errors
 
 ### Implemented matrix
 
@@ -24,6 +24,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 - [ ] Design and implement `Offset`, `Position`, and `OffsetParent` under the existing read-only batch boundary.
 - [x] Implement the generated-key measurement queue, coalesced `QueryHost.OnAfterRenderAsync` flush, immutable snapshot DTOs, and no-public-`ElementReference` boundary.
+- [x] Implement render-owned `Height(double)` and `Width(double)` writes using generated-key CSS rules.
 - [ ] Add page/layout/application navigation and disposal coverage for cancellation, cache invalidation, and late-result rejection.
 - [ ] Verify the measurement contract in Interactive Server, WebAssembly, and Auto.
 
@@ -146,7 +147,7 @@ Managed selector subset: `*`, tag, id, class, and compound tag/id/class selector
 - Define safe value serialization and element ownership rules.
 - Add render output snapshots and accessibility checks.
 
-Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `HeightAsync`, `WidthAsync`, `InnerHeightAsync`, `InnerWidthAsync`, `OuterHeightAsync`, and `OuterWidthAsync` are implemented as asynchronous, read-only browser observations. `Offset`, `OffsetParent`, and `Position` remain pending. `Height_Set` and `Width_Set` remain planned render-state CSS writes. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
+Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `HeightAsync`, `WidthAsync`, `InnerHeightAsync`, `InnerWidthAsync`, `OuterHeightAsync`, and `OuterWidthAsync` are implemented as asynchronous, read-only browser observations. `Height(double)` and `Width(double)` are implemented as generated-key render-owned CSS writes. `Offset`, `OffsetParent`, and `Position` remain pending. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
 
 ### Sprint 3 - classes and structural manipulation (Feature 4468)
 

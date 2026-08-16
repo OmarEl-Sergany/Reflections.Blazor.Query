@@ -19,7 +19,7 @@ The following APIs are asynchronous measurement reads:
 
 The implementation names use `Async` suffixes to make the browser boundary visible to consumers. The implemented APIs return the first resolved owned element's nullable CSS-pixel snapshot; empty or unavailable selections return `null`. `HeightAsync` / `WidthAsync` and outer dimensions use the border box. Inner dimensions exclude border widths. They do not return browser handles.
 
-`Height_Set` and `Width_Set` are separate render-state write operations. They emit library-owned CSS state and must not call JavaScript.
+`Height(double)` and `Width(double)` are implemented as separate render-state write operations. They accept finite non-negative CSS pixel values, emit generated-key CSS rules for each resolved owned element, and never call JavaScript.
 
 ## Data flow
 
