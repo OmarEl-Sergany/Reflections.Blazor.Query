@@ -33,6 +33,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 - [ ] Class manipulation: `AddClass`, `RemoveClass`, `ToggleClass`, `HasClass`.
 - [ ] Structural state trees: `Append`, `Prepend`, `Before`, `After`, `Wrap`, and their supported counterparts.
+- [ ] Logical component query capabilities using generated `ComponentScopeKey` metadata; no per-component DI lifetime.
 
 #### Sprint 4 — Events & Forms (Feature 4469)
 
@@ -71,6 +72,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - Page scope: cleared on navigation.
 - Layout scope: survives navigation while the layout remains active.
 - Application scope: optional, explicit, and long-lived.
+- Reusable component isolation is a planned logical query capability constrained by generated `ComponentScopeKey` metadata, not a nested DI scope. See [Component Scoping Boundaries](COMPONENT-SCOPING.md).
 - Every operation updates state and produces Blazor-owned render output.
 - No operation writes to a Blazor-owned DOM node through JavaScript.
 - Browser layout metrics are an explicit read-only interop boundary. Measurement results are snapshots held in a dedicated library-owned measurement cache, not render-driving mutation state.
@@ -151,6 +153,7 @@ Measurement architecture is specified in [Measurement and Position Boundary](MEA
 - Implement class operations and `Show`/`Hide`/`Toggle`.
 - Implement append/prepend/before/after/replace/wrap/remove/empty/detach/clone operations.
 - Define stable keys and reconciliation behavior for repeated and reordered elements.
+- Add `IQueryScope` / `IQueryScopeFactory`, generated/cascaded component scope keys, constrained subtree selection, and repeated-component disposal coverage.
 
 ### Sprint 4 - events and form behavior (Feature 4469)
 
