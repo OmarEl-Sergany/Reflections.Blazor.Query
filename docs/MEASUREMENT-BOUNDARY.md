@@ -15,7 +15,7 @@ The following APIs are asynchronous measurement reads:
 - `HeightAsync`, `WidthAsync` (**implemented**)
 - `InnerHeightAsync`, `InnerWidthAsync` (**implemented**)
 - `OuterHeightAsync`, `OuterWidthAsync` (**implemented; margins excluded**)
-- `Offset`, `OffsetParent`, `Position`
+- `OffsetAsync`, `OffsetParentAsync`, `PositionAsync` (**implemented**)
 
 The implementation names use `Async` suffixes to make the browser boundary visible to consumers. The implemented APIs return the first resolved owned element's nullable CSS-pixel snapshot; empty or unavailable selections return `null`. `HeightAsync` / `WidthAsync` and outer dimensions use the border box. Inner dimensions exclude border widths. They do not return browser handles.
 
@@ -39,7 +39,7 @@ flowchart LR
 5. One JS module invocation reads all requested values using browser layout APIs and returns serializable DTOs.
 6. The measurement service completes callers and records the result in its snapshot cache.
 
-The initial implementation supports height, width, inner, and outer dimensions, uses `getBoundingClientRect()` plus computed border widths, and is covered by fake-bridge and bUnit host-flush tests. Margin-inclusive outer dimensions and all position semantics remain deliberately deferred.
+The initial implementation supports dimensions plus typed offset, position, and owned offset-parent snapshots. It uses `getBoundingClientRect()` plus computed border widths and is covered by fake-bridge and bUnit host-flush tests. Margin-inclusive outer dimensions remain deliberately deferred.
 
 The cache is read-only from the rendering pipeline. Completing a measurement does not call `StateHasChanged`; any consumer that needs to render a result decides explicitly when to do so.
 
@@ -50,9 +50,9 @@ The cache is read-only from the rendering pipeline. Completing a measurement doe
 | Height/Width | `getBoundingClientRect()` | Border-box CSS pixels from the post-render layout snapshot. |
 | InnerHeight/InnerWidth | layout size minus borders | Defined from computed layout values and returned as CSS pixels. |
 | OuterHeight/OuterWidth | `getBoundingClientRect()` | Border-box size; margin inclusion, if supported, is an explicit option. |
-| Offset | rect plus `scrollX` / `scrollY` | Document-relative CSS-pixel coordinates. |
-| Position | rect relative to resolved offset parent | Requires a separately tested offset-parent algorithm. |
-| OffsetParent | read-only ancestor resolution | Returns an owned-element key when the ancestor is library-owned; otherwise returns an explicit external/unavailable result. |
+| OffsetAsync | rect plus `scrollX` / `scrollY` | Document-relative border-box origin in CSS pixels, returned as `QueryPoint`. |
+| PositionAsync | rect relative to DOM `offsetParent` | Border-box origin relative to the offset parent's padding box, adjusted for its scroll offset; returns `null` when there is no DOM offset parent. |
+| OffsetParentAsync | read-only DOM `offsetParent` resolution | Returns the stable key only when that parent carries a library-owned `data-rbq-key`; otherwise returns `null`. |
 
 No API returns an arbitrary `ElementReference`, DOM node, or JavaScript object reference as a public result.
 
@@ -101,6 +101,6 @@ Late JavaScript results must be ignored after their request or host has been can
 
 ## Manual browser validation
 
-The initial live validation was performed against local Interactive Server, Interactive WebAssembly, and Interactive Auto demo hosts. Each host rendered a `QueryElement`, invoked the queued `WidthAsync` path through a Blazor event, displayed a browser-calculated result, and produced no console warnings or errors. The Server demo also exercised `HeightAsync` in the same request cycle.
+The initial live validation was performed against local Interactive Server, Interactive WebAssembly, and Interactive Auto demo hosts. Each host rendered a `QueryElement`, invoked the queued `WidthAsync` path through a Blazor event, displayed a browser-calculated result, and produced no console warnings or errors. The Server demo also exercised `HeightAsync`, `OffsetAsync`, `PositionAsync`, and the external-parent `OffsetParentAsync` unavailable result.
 
 This is implementation evidence, not a replacement for automated browser coverage. The remaining browser suite must cover every metric plus navigation, disposal, cancellation, and late-result behavior.

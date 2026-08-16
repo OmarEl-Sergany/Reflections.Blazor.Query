@@ -126,6 +126,34 @@ public sealed class QueryMeasurementCoordinatorTests
     }
 
     [Fact]
+    public async Task Offset_position_and_owned_offset_parent_use_typed_coalesced_snapshots()
+    {
+        var bridge = new FakeMeasurementBridge(
+        [
+            new MeasurementReading("child", MeasurementKind.Offset, Point: new QueryPoint(100, 200)),
+            new MeasurementReading("child", MeasurementKind.Position, Point: new QueryPoint(12, 24)),
+            new MeasurementReading("child", MeasurementKind.OffsetParent, RelatedElementKey: "parent")
+        ]);
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var registry = new QueryElementRegistry();
+        registry.Register("parent", ".parent");
+        registry.RegisterWithParent("child", "parent", ".child");
+        var selection = new Query(new QueryRenderState(), registry, coordinator).Select(".child");
+
+        var offset = selection.OffsetAsync().AsTask();
+        var position = selection.PositionAsync().AsTask();
+        var offsetParent = selection.OffsetParentAsync().AsTask();
+        await coordinator.FlushAsync();
+
+        Assert.Equal(new QueryPoint(100, 200), await offset);
+        Assert.Equal(new QueryPoint(12, 24), await position);
+        Assert.Equal("parent", await offsetParent);
+        Assert.Equal(
+            [MeasurementKind.Offset, MeasurementKind.Position, MeasurementKind.OffsetParent],
+            bridge.Batches[0].Select(request => request.Kind));
+    }
+
+    [Fact]
     public async Task Concurrent_flushes_do_not_duplicate_an_in_flight_batch()
     {
         var bridge = new DelayedMeasurementBridge();

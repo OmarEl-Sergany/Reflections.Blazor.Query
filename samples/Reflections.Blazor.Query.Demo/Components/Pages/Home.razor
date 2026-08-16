@@ -13,6 +13,7 @@
 </section>
 <button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
 <button class="btn btn-outline-primary ms-2" @onclick="MeasureTargetAsync">Measure target</button>
+<button class="btn btn-outline-secondary ms-2" @onclick="MeasurePositionAsync">Measure position</button>
 @if (_applied)
 {
     <p role="status">Style applied with <code>Query.Select(...).Css(...)</code>.</p>
@@ -21,10 +22,17 @@
 {
     <p role="status">Target size: @_measurement.Value.Width px × @_measurement.Value.Height px.</p>
 }
+@if (_offset is not null)
+{
+    <p role="status">Target offset: @_offset.Left px, @_offset.Top px; position: @_position?.Left px, @_position?.Top px; owned offset parent: @(_offsetParent ?? "unavailable").</p>
+}
 
 @code {
     private bool _applied;
     private (double? Width, double? Height)? _measurement;
+    private QueryPoint? _offset;
+    private QueryPoint? _position;
+    private string? _offsetParent;
     private void ApplyStyle()
     {
         using (Query.BeginBatch())
@@ -45,5 +53,13 @@
     {
         var target = Query.Select(".query-item").Eq(1);
         _measurement = (await target.WidthAsync(), await target.HeightAsync());
+    }
+
+    private async Task MeasurePositionAsync()
+    {
+        var target = Query.Select(".query-item").Eq(1);
+        _offset = await target.OffsetAsync();
+        _position = await target.PositionAsync();
+        _offsetParent = await target.OffsetParentAsync();
     }
 }

@@ -156,6 +156,15 @@ namespace Reflections.Blazor.Query
         public ValueTask<double?> OuterWidthAsync(CancellationToken cancellationToken = default) =>
             MeasureFirstAsync(MeasurementKind.OuterWidth, cancellationToken);
 
+        public ValueTask<QueryPoint?> OffsetAsync(CancellationToken cancellationToken = default) =>
+            MeasurePointFirstAsync(MeasurementKind.Offset, cancellationToken);
+
+        public ValueTask<QueryPoint?> PositionAsync(CancellationToken cancellationToken = default) =>
+            MeasurePointFirstAsync(MeasurementKind.Position, cancellationToken);
+
+        public ValueTask<string?> OffsetParentAsync(CancellationToken cancellationToken = default) =>
+            MeasureRelatedKeyFirstAsync(MeasurementKind.OffsetParent, cancellationToken);
+
         public QuerySelection Height(double pixels) => SetOwnedLength("height", pixels);
 
         public QuerySelection Width(double pixels) => SetOwnedLength("width", pixels);
@@ -434,6 +443,26 @@ namespace Reflections.Blazor.Query
                 : (_measurements ?? throw new InvalidOperationException(
                     "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
                     .RequestAsync(_state, key, kind, cancellationToken);
+        }
+
+        private ValueTask<QueryPoint?> MeasurePointFirstAsync(MeasurementKind kind, CancellationToken cancellationToken)
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null
+                ? ValueTask.FromResult<QueryPoint?>(null)
+                : (_measurements ?? throw new InvalidOperationException(
+                    "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
+                    .RequestPointAsync(_state, key, kind, cancellationToken);
+        }
+
+        private ValueTask<string?> MeasureRelatedKeyFirstAsync(MeasurementKind kind, CancellationToken cancellationToken)
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null
+                ? ValueTask.FromResult<string?>(null)
+                : (_measurements ?? throw new InvalidOperationException(
+                    "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
+                    .RequestRelatedKeyAsync(_state, key, kind, cancellationToken);
         }
 
         private QuerySelection SetOwnedLength(string property, double pixels)

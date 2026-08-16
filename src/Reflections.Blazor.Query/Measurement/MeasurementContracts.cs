@@ -7,12 +7,22 @@ public enum MeasurementKind
     InnerHeight,
     InnerWidth,
     OuterHeight,
-    OuterWidth
+    OuterWidth,
+    Offset,
+    Position,
+    OffsetParent
 }
 
 public sealed record MeasurementRequest(string ElementKey, MeasurementKind Kind);
 
-public sealed record MeasurementReading(string ElementKey, MeasurementKind Kind, double? Value);
+public sealed record QueryPoint(double Left, double Top);
+
+public sealed record MeasurementReading(
+    string ElementKey,
+    MeasurementKind Kind,
+    double? Value = null,
+    QueryPoint? Point = null,
+    string? RelatedElementKey = null);
 
 public interface IQueryMeasurementBridge
 {

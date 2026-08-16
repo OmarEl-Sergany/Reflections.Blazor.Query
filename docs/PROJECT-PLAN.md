@@ -8,7 +8,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 - **Assigned to:** `DEVOPS22-SVR\Omar`
 - **Branch:** `feature/4467-attributes-data`
-- **Status:** 60/60 tests passing ✅ · 0 warnings · 0 errors · manual browser validation passed
+- **Status:** 61/61 tests passing ✅ · 0 warnings · 0 errors · manual browser validation passed
 
 ### Implemented matrix
 
@@ -22,12 +22,12 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 ### Immediate backlog
 
-- [ ] Design and implement `Offset`, `Position`, and `OffsetParent` under the existing read-only batch boundary.
+- [x] Implement `OffsetAsync`, `PositionAsync`, and `OffsetParentAsync` under the existing read-only batch boundary.
 - [x] Implement the generated-key measurement queue, coalesced `QueryHost.OnAfterRenderAsync` flush, immutable snapshot DTOs, and no-public-`ElementReference` boundary.
 - [x] Implement render-owned `Height(double)` and `Width(double)` writes using generated-key CSS rules.
 - [ ] Add page/layout/application navigation and disposal coverage for cancellation, cache invalidation, and late-result rejection.
 - [x] Manually verify the `HeightAsync` / `WidthAsync` queue and JS module in Interactive Server, WebAssembly, and Auto.
-- [ ] Add automated browser coverage for all measurement metrics and navigation/disposal cases.
+- [ ] Extend manual and automated browser coverage to position APIs across WebAssembly and Auto, then cover all metrics plus navigation/disposal cases.
 
 ### 🗺️ Long-term roadmap (Epic 4464)
 
@@ -148,7 +148,7 @@ Managed selector subset: `*`, tag, id, class, and compound tag/id/class selector
 - Define safe value serialization and element ownership rules.
 - Add render output snapshots and accessibility checks.
 
-Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `HeightAsync`, `WidthAsync`, `InnerHeightAsync`, `InnerWidthAsync`, `OuterHeightAsync`, and `OuterWidthAsync` are implemented as asynchronous, read-only browser observations. `Height(double)` and `Width(double)` are implemented as generated-key render-owned CSS writes. `Offset`, `OffsetParent`, and `Position` remain pending. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
+Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `HeightAsync`, `WidthAsync`, `InnerHeightAsync`, `InnerWidthAsync`, `OuterHeightAsync`, `OuterWidthAsync`, `OffsetAsync`, `PositionAsync`, and `OffsetParentAsync` are implemented as asynchronous, read-only browser observations. `Height(double)` and `Width(double)` are generated-key render-owned CSS writes. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
 
 ### Sprint 3 - classes and structural manipulation (Feature 4468)
 

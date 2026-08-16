@@ -3,7 +3,7 @@ namespace Reflections.Blazor.Query;
 public sealed class QueryMeasurementCoordinator(IQueryMeasurementBridge bridge) : IAsyncDisposable
 {
     private readonly object _gate = new();
-    private readonly Dictionary<MeasurementCacheKey, double?> _cache = new();
+    private readonly Dictionary<MeasurementCacheKey, MeasurementReading> _cache = new();
     private readonly Dictionary<MeasurementCacheKey, PendingMeasurement> _pending = new();
     private bool _disposed;
 
@@ -14,13 +14,37 @@ public sealed class QueryMeasurementCoordinator(IQueryMeasurementBridge bridge) 
         string elementKey,
         MeasurementKind kind,
         CancellationToken cancellationToken = default)
+        => RequestReadingAsync(renderState, elementKey, kind, cancellationToken)
+            .MapAsync(reading => reading.Value);
+
+    public ValueTask<QueryPoint?> RequestPointAsync(
+        QueryRenderState renderState,
+        string elementKey,
+        MeasurementKind kind,
+        CancellationToken cancellationToken = default) =>
+        RequestReadingAsync(renderState, elementKey, kind, cancellationToken)
+            .MapAsync(reading => reading.Point);
+
+    public ValueTask<string?> RequestRelatedKeyAsync(
+        QueryRenderState renderState,
+        string elementKey,
+        MeasurementKind kind,
+        CancellationToken cancellationToken = default) =>
+        RequestReadingAsync(renderState, elementKey, kind, cancellationToken)
+            .MapAsync(reading => reading.RelatedElementKey);
+
+    private ValueTask<MeasurementReading> RequestReadingAsync(
+        QueryRenderState renderState,
+        string elementKey,
+        MeasurementKind kind,
+        CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(renderState);
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
 
         var key = new MeasurementCacheKey(renderState, elementKey, kind);
-        Task<double?> task;
+        Task<MeasurementReading> task;
         var notify = false;
         lock (_gate)
         {
@@ -41,8 +65,8 @@ public sealed class QueryMeasurementCoordinator(IQueryMeasurementBridge bridge) 
             Requested?.Invoke();
 
         return cancellationToken.CanBeCanceled
-            ? new ValueTask<double?>(task.WaitAsync(cancellationToken))
-            : new ValueTask<double?>(task);
+            ? new ValueTask<MeasurementReading>(task.WaitAsync(cancellationToken))
+            : new ValueTask<MeasurementReading>(task);
     }
 
     public async ValueTask FlushAsync(CancellationToken cancellationToken = default)
@@ -78,7 +102,7 @@ public sealed class QueryMeasurementCoordinator(IQueryMeasurementBridge bridge) 
 
         var values = readings.ToDictionary(
             reading => (reading.ElementKey, reading.Kind),
-            reading => reading.Value);
+            reading => reading);
         Complete(batch, values);
     }
 
@@ -120,7 +144,7 @@ public sealed class QueryMeasurementCoordinator(IQueryMeasurementBridge bridge) 
 
     private void Complete(
         IEnumerable<PendingMeasurement> batch,
-        IReadOnlyDictionary<(string ElementKey, MeasurementKind Kind), double?> values)
+        IReadOnlyDictionary<(string ElementKey, MeasurementKind Kind), MeasurementReading> values)
     {
         lock (_gate)
         {
@@ -129,9 +153,10 @@ public sealed class QueryMeasurementCoordinator(IQueryMeasurementBridge bridge) 
                 if (!_pending.Remove(item.Key))
                     continue;
 
-                var value = values.GetValueOrDefault((item.Key.ElementKey, item.Key.Kind));
-                _cache[item.Key] = value;
-                item.Completion.TrySetResult(value);
+                var reading = values.GetValueOrDefault((item.Key.ElementKey, item.Key.Kind))
+                    ?? new MeasurementReading(item.Key.ElementKey, item.Key.Kind);
+                _cache[item.Key] = reading;
+                item.Completion.TrySetResult(reading);
             }
         }
     }
@@ -185,7 +210,15 @@ public sealed class QueryMeasurementCoordinator(IQueryMeasurementBridge bridge) 
     private sealed class PendingMeasurement(MeasurementCacheKey key)
     {
         public MeasurementCacheKey Key { get; } = key;
-        public TaskCompletionSource<double?> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<MeasurementReading> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool IsFlushing { get; set; }
     }
+}
+
+internal static class MeasurementValueTaskExtensions
+{
+    public static async ValueTask<TValue> MapAsync<TValue>(
+        this ValueTask<MeasurementReading> source,
+        Func<MeasurementReading, TValue> map) =>
+        map(await source);
 }
