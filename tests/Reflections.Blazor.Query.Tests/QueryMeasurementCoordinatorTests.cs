@@ -1,0 +1,145 @@
+using Reflections.Blazor.Query;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Reflections.Blazor.Query.Tests;
+
+public sealed class QueryMeasurementCoordinatorTests
+{
+    [Fact]
+    public async Task Duplicate_requests_coalesce_into_one_post_render_batch_and_cache_the_snapshot()
+    {
+        var bridge = new FakeMeasurementBridge([new MeasurementReading("panel", MeasurementKind.Height, 42)]);
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var state = new QueryRenderState();
+        var notifications = 0;
+        coordinator.Requested += () => notifications++;
+
+        var first = coordinator.RequestAsync(state, "panel", MeasurementKind.Height).AsTask();
+        var duplicate = coordinator.RequestAsync(state, "panel", MeasurementKind.Height).AsTask();
+
+        Assert.Equal(1, notifications);
+        Assert.False(first.IsCompleted);
+        await coordinator.FlushAsync();
+
+        Assert.Equal(42, await first);
+        Assert.Equal(42, await duplicate);
+        Assert.Single(bridge.Batches);
+        Assert.Single(bridge.Batches[0]);
+
+        Assert.Equal(42, await coordinator.RequestAsync(state, "panel", MeasurementKind.Height));
+        Assert.Single(bridge.Batches);
+    }
+
+    [Fact]
+    public async Task Invalidation_isolated_by_render_state_and_element_key()
+    {
+        var bridge = new FakeMeasurementBridge(
+        [
+            new MeasurementReading("one", MeasurementKind.Width, 10),
+            new MeasurementReading("two", MeasurementKind.Width, 20),
+            new MeasurementReading("layout-one", MeasurementKind.Width, 10)
+        ]);
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var page = new QueryRenderState();
+        var layout = new LayoutQueryRenderState();
+
+        var pageOne = coordinator.RequestAsync(page, "one", MeasurementKind.Width).AsTask();
+        var pageTwo = coordinator.RequestAsync(page, "two", MeasurementKind.Width).AsTask();
+        var layoutOne = coordinator.RequestAsync(layout, "layout-one", MeasurementKind.Width).AsTask();
+        await coordinator.FlushAsync();
+        await Task.WhenAll(pageOne, pageTwo, layoutOne);
+
+        coordinator.InvalidateElement(page, "one");
+        var refreshedPageOne = coordinator.RequestAsync(page, "one", MeasurementKind.Width).AsTask();
+        Assert.Equal(20, await coordinator.RequestAsync(page, "two", MeasurementKind.Width));
+        Assert.Equal(10, await coordinator.RequestAsync(layout, "layout-one", MeasurementKind.Width));
+        await coordinator.FlushAsync();
+
+        Assert.Equal(10, await refreshedPageOne);
+        Assert.Equal(2, bridge.Batches.Count);
+        Assert.Single(bridge.Batches[1]);
+    }
+
+    [Fact]
+    public async Task Navigation_or_element_disposal_cancels_pending_measurement_without_late_cache_population()
+    {
+        var bridge = new FakeMeasurementBridge([new MeasurementReading("panel", MeasurementKind.Height, 42)]);
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var state = new QueryRenderState();
+
+        var pending = coordinator.RequestAsync(state, "panel", MeasurementKind.Height).AsTask();
+        coordinator.InvalidateElement(state, "panel");
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+        await coordinator.FlushAsync();
+        Assert.Empty(bridge.Batches);
+    }
+
+    [Fact]
+    public async Task Query_selection_measurements_use_the_first_resolved_owned_element()
+    {
+        var bridge = new FakeMeasurementBridge([new MeasurementReading("second", MeasurementKind.Width, 128)]);
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var registry = new QueryElementRegistry();
+        registry.Register("first", ".item");
+        registry.Register("second", ".item");
+        var selection = new Query(new QueryRenderState(), registry, coordinator).Select(".item").Eq(1);
+
+        var width = selection.WidthAsync().AsTask();
+        await coordinator.FlushAsync();
+
+        Assert.Equal(128, await width);
+    }
+
+    [Fact]
+    public async Task Concurrent_flushes_do_not_duplicate_an_in_flight_batch()
+    {
+        var bridge = new DelayedMeasurementBridge();
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var pending = coordinator.RequestAsync(new QueryRenderState(), "panel", MeasurementKind.Height).AsTask();
+
+        var firstFlush = coordinator.FlushAsync().AsTask();
+        await bridge.Started.Task;
+        var secondFlush = coordinator.FlushAsync().AsTask();
+        bridge.Complete([new MeasurementReading("panel", MeasurementKind.Height, 42)]);
+        await Task.WhenAll(firstFlush, secondFlush);
+
+        Assert.Single(bridge.Batches);
+        Assert.Equal(42, await pending);
+    }
+
+    private sealed class FakeMeasurementBridge(params IReadOnlyList<MeasurementReading> readings) : IQueryMeasurementBridge
+    {
+        public List<IReadOnlyList<MeasurementRequest>> Batches { get; } = [];
+
+        public ValueTask<IReadOnlyList<MeasurementReading>> MeasureAsync(
+            IReadOnlyList<MeasurementRequest> requests,
+            CancellationToken cancellationToken)
+        {
+            Batches.Add(requests.ToArray());
+            return ValueTask.FromResult(readings);
+        }
+    }
+
+    private sealed class DelayedMeasurementBridge : IQueryMeasurementBridge
+    {
+        private readonly TaskCompletionSource<IReadOnlyList<MeasurementReading>> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public List<IReadOnlyList<MeasurementRequest>> Batches { get; } = [];
+
+        public ValueTask<IReadOnlyList<MeasurementReading>> MeasureAsync(
+            IReadOnlyList<MeasurementRequest> requests,
+            CancellationToken cancellationToken)
+        {
+            Batches.Add(requests.ToArray());
+            Started.TrySetResult();
+            return new ValueTask<IReadOnlyList<MeasurementReading>>(_completion.Task);
+        }
+
+        public void Complete(IReadOnlyList<MeasurementReading> readings) => _completion.TrySetResult(readings);
+    }
+}

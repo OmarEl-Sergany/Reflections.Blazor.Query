@@ -1,5 +1,6 @@
 using Bunit;
 using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Reflections.Blazor.Query;
@@ -18,6 +19,7 @@ public sealed class QueryHostNavigationComponentTests
         var layoutState = new LayoutQueryRenderState();
         context.Services.AddSingleton<NavigationManager>(navigation);
         context.Services.AddSingleton<QueryRenderState>(pageState);
+        context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
 
         new Query(pageState).Select(".page-target").Css("color", "red");
         new LayoutQuery(layoutState).Select(".layout-target").Css("color", "blue");
@@ -38,6 +40,35 @@ public sealed class QueryHostNavigationComponentTests
 
         pageHost.WaitForAssertion(() => Assert.DoesNotContain("color: red", pageHost.Markup, StringComparison.Ordinal));
         layoutHost.WaitForAssertion(() => Assert.Contains("color: blue", layoutHost.Markup, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task QueryHost_flushes_queued_measurements_after_a_render()
+    {
+        using var context = new BunitContext();
+        var navigation = new TestNavigationManager();
+        var pageState = new QueryRenderState();
+        var bridge = new TestMeasurementBridge([new MeasurementReading("panel", MeasurementKind.Height, 42)]);
+        var measurements = new QueryMeasurementCoordinator(bridge);
+        context.Services.AddSingleton<NavigationManager>(navigation);
+        context.Services.AddSingleton<QueryRenderState>(pageState);
+        context.Services.AddSingleton(measurements);
+
+        context.Render<QueryHost>(parameters => parameters
+            .Add(component => component.RenderState, pageState)
+            .AddChildContent("<main>Page content</main>"));
+
+        var height = measurements.RequestAsync(
+            pageState,
+            "panel",
+            MeasurementKind.Height,
+            Xunit.TestContext.Current.CancellationToken).AsTask();
+
+        await Task.WhenAny(height, Task.Delay(TimeSpan.FromSeconds(2), Xunit.TestContext.Current.CancellationToken));
+
+        Assert.True(height.IsCompletedSuccessfully);
+        Assert.Equal(42, await height);
+        Assert.Single(bridge.Batches);
     }
 
     private sealed class TestNavigationManager : NavigationManager

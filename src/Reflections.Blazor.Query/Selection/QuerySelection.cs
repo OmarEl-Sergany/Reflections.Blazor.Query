@@ -6,6 +6,7 @@ namespace Reflections.Blazor.Query
     {
         private readonly QueryRenderState _state;
         private readonly QueryElementRegistry? _registry;
+        private readonly QueryMeasurementCoordinator? _measurements;
         private readonly QuerySelection? _previous;
         private readonly IReadOnlyList<string>? _resolvedKeys;
 
@@ -13,12 +14,14 @@ namespace Reflections.Blazor.Query
             string selector,
             QueryRenderState state,
             QueryElementRegistry? registry = null,
+            QueryMeasurementCoordinator? measurements = null,
             QuerySelection? previous = null,
             IReadOnlyList<string>? resolvedKeys = null)
         {
             Selector = selector;
             _state = state;
             _registry = registry;
+            _measurements = measurements;
             _previous = previous;
             _resolvedKeys = resolvedKeys;
         }
@@ -132,6 +135,12 @@ namespace Reflections.Blazor.Query
                 ? value as string
                 : null;
         }
+
+        public ValueTask<double?> HeightAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.Height, cancellationToken);
+
+        public ValueTask<double?> WidthAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.Width, cancellationToken);
 
         public QuerySelection Add(string selector)
         {
@@ -394,10 +403,20 @@ namespace Reflections.Blazor.Query
             return PushResolved(keys);
         }
 
-        private QuerySelection Push(string selector) => new(selector, _state, _registry, this);
+        private QuerySelection Push(string selector) => new(selector, _state, _registry, _measurements, this);
 
         private QuerySelection PushResolved(IReadOnlyList<string> keys) =>
-            new(ToKeySelector(keys), _state, _registry, this, keys);
+            new(ToKeySelector(keys), _state, _registry, _measurements, this, keys);
+
+        private ValueTask<double?> MeasureFirstAsync(MeasurementKind kind, CancellationToken cancellationToken)
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null
+                ? ValueTask.FromResult<double?>(null)
+                : (_measurements ?? throw new InvalidOperationException(
+                    "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
+                    .RequestAsync(_state, key, kind, cancellationToken);
+        }
 
         private HashSet<string> ResolveKeys(string selector) => _registry is null
             ? throw new InvalidOperationException(

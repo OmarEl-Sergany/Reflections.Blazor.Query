@@ -8,7 +8,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 - **Assigned to:** `DEVOPS22-SVR\Omar`
 - **Branch:** `feature/4467-attributes-data`
-- **Status:** 52/52 tests passing ✅ · 0 warnings · 0 errors
+- **Status:** 58/58 tests passing ✅ · 0 warnings · 0 errors
 
 ### Implemented matrix
 
@@ -22,8 +22,8 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 ### Immediate backlog
 
-- [ ] Implement dimension and position metrics through the read-only JS interop boundary.
-- [ ] Implement the generated-key measurement queue, coalesced `QueryHost.OnAfterRenderAsync` flush, and immutable snapshot DTOs; public APIs must not expose `ElementReference`.
+- [ ] Expand the delivered `HeightAsync` / `WidthAsync` read-only measurement slice to inner/outer dimensions and position metrics.
+- [x] Implement the generated-key measurement queue, coalesced `QueryHost.OnAfterRenderAsync` flush, immutable snapshot DTOs, and no-public-`ElementReference` boundary.
 - [ ] Add page/layout/application navigation and disposal coverage for cancellation, cache invalidation, and late-result rejection.
 - [ ] Verify the measurement contract in Interactive Server, WebAssembly, and Auto.
 
@@ -146,7 +146,7 @@ Managed selector subset: `*`, tag, id, class, and compound tag/id/class selector
 - Define safe value serialization and element ownership rules.
 - Add render output snapshots and accessibility checks.
 
-Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `Height_Get`, `Width_Get`, `InnerHeight`, `InnerWidth`, `OuterHeight`, `OuterWidth`, `Offset`, `OffsetParent`, and `Position` are asynchronous, read-only browser observations. `Height_Set` and `Width_Set` remain render-state CSS writes. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
+Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `HeightAsync` and `WidthAsync` are implemented as asynchronous, read-only browser observations. `InnerHeight`, `InnerWidth`, `OuterHeight`, `OuterWidth`, `Offset`, `OffsetParent`, and `Position` remain pending. `Height_Set` and `Width_Set` remain planned render-state CSS writes. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
 
 ### Sprint 3 - classes and structural manipulation (Feature 4468)
 
