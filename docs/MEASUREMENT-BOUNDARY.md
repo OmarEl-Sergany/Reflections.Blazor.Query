@@ -98,3 +98,9 @@ Late JavaScript results must be ignored after their request or host has been can
 - Results are correct for zero, one, and multiple owned elements.
 - Browser-level coverage passes in Interactive Server, WebAssembly, and Auto.
 - `Offset`, `Position`, and `OffsetParent` semantics are documented and tested before being advertised as jQuery-compatible.
+
+## Manual browser validation
+
+The initial live validation was performed against local Interactive Server, Interactive WebAssembly, and Interactive Auto demo hosts. Each host rendered a `QueryElement`, invoked the queued `WidthAsync` path through a Blazor event, displayed a browser-calculated result, and produced no console warnings or errors. The Server demo also exercised `HeightAsync` in the same request cycle.
+
+This is implementation evidence, not a replacement for automated browser coverage. The remaining browser suite must cover every metric plus navigation, disposal, cancellation, and late-result behavior.

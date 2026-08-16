@@ -8,7 +8,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 - **Assigned to:** `DEVOPS22-SVR\Omar`
 - **Branch:** `feature/4467-attributes-data`
-- **Status:** 60/60 tests passing ✅ · 0 warnings · 0 errors
+- **Status:** 60/60 tests passing ✅ · 0 warnings · 0 errors · manual browser validation passed
 
 ### Implemented matrix
 
@@ -26,7 +26,8 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 - [x] Implement the generated-key measurement queue, coalesced `QueryHost.OnAfterRenderAsync` flush, immutable snapshot DTOs, and no-public-`ElementReference` boundary.
 - [x] Implement render-owned `Height(double)` and `Width(double)` writes using generated-key CSS rules.
 - [ ] Add page/layout/application navigation and disposal coverage for cancellation, cache invalidation, and late-result rejection.
-- [ ] Verify the measurement contract in Interactive Server, WebAssembly, and Auto.
+- [x] Manually verify the `HeightAsync` / `WidthAsync` queue and JS module in Interactive Server, WebAssembly, and Auto.
+- [ ] Add automated browser coverage for all measurement metrics and navigation/disposal cases.
 
 ### 🗺️ Long-term roadmap (Epic 4464)
 

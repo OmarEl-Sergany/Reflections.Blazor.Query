@@ -12,13 +12,19 @@
     <QueryElement TagName="p" ElementKey="home-paragraph-3" Class="query-item">Third paragraph: unchanged.</QueryElement>
 </section>
 <button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
+<button class="btn btn-outline-primary ms-2" @onclick="MeasureTargetAsync">Measure target</button>
 @if (_applied)
 {
     <p role="status">Style applied with <code>Query.Select(...).Css(...)</code>.</p>
 }
+@if (_measurement is not null)
+{
+    <p role="status">Target size: @_measurement.Value.Width px × @_measurement.Value.Height px.</p>
+}
 
 @code {
     private bool _applied;
+    private (double? Width, double? Height)? _measurement;
     private void ApplyStyle()
     {
         using (Query.BeginBatch())
@@ -33,5 +39,11 @@
         }
 
         _applied = true;
+    }
+
+    private async Task MeasureTargetAsync()
+    {
+        var target = Query.Select(".query-item").Eq(1);
+        _measurement = (await target.WidthAsync(), await target.HeightAsync());
     }
 }
