@@ -5,16 +5,30 @@
 <QueryHost>
     <PageTitle>Query Auto Proof</PageTitle>
     <h1>Auto query proof</h1>
-    <p class="query-proof-text">This text is unchanged until the button is clicked.</p>
+    <QueryElement TagName="p" ElementKey="auto-query-proof-text" Class="query-proof-text">This text is unchanged until the button is clicked.</QueryElement>
     <button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
+    <button class="btn btn-outline-primary ms-2" @onclick="MeasureAsync">Measure target</button>
+    <button class="btn btn-outline-secondary ms-2" @onclick="MeasurePositionAsync">Measure position</button>
     @if (_applied)
     {
         <p role="status">Style applied in Interactive Auto.</p>
+    }
+    @if (_width is not null)
+    {
+        <p role="status">Target width: @_width px.</p>
+    }
+    @if (_offset is not null)
+    {
+        <p role="status">Target offset: @_offset.Left px, @_offset.Top px; position: @_position?.Left px, @_position?.Top px; owned offset parent: @(_offsetParent ?? "unavailable").</p>
     }
 </QueryHost>
 
 @code {
     private bool _applied;
+    private double? _width;
+    private QueryPoint? _offset;
+    private QueryPoint? _position;
+    private string? _offsetParent;
 
     private void ApplyStyle()
     {
@@ -24,5 +38,16 @@
         }
 
         _applied = true;
+    }
+
+    private async Task MeasureAsync() =>
+        _width = await Query.Select(".query-proof-text").WidthAsync();
+
+    private async Task MeasurePositionAsync()
+    {
+        var target = Query.Select(".query-proof-text");
+        _offset = await target.OffsetAsync();
+        _position = await target.PositionAsync();
+        _offsetParent = await target.OffsetParentAsync();
     }
 }

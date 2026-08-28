@@ -50,6 +50,99 @@ public sealed class QueryCollectionResolverTests
     }
 
     [Fact]
+    public void Height_and_Width_write_generated_key_css_rules_for_resolved_elements_only()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Height(48.5).Width(320);
+
+        Assert.Contains(state.Rules, rule => rule is
+        {
+            Selector: "[data-rbq-key=\"second\"]",
+            Property: "height",
+            Value: "48.5px"
+        });
+        Assert.Contains(state.Rules, rule => rule is
+        {
+            Selector: "[data-rbq-key=\"second\"]",
+            Property: "width",
+            Value: "320px"
+        });
+        Assert.DoesNotContain(state.Rules, rule => rule.Selector.Contains("first", StringComparison.Ordinal));
+        Assert.Throws<ArgumentOutOfRangeException>(() => selection.Height(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => selection.Width(double.NaN));
+    }
+
+    [Fact]
+    public void Attr_and_RemoveAttr_update_only_resolved_owned_elements()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Attr("title", "selected");
+
+        Assert.Equal("selected", state.AttributesFor("second")["title"]);
+        Assert.Empty(state.AttributesFor("first"));
+        Assert.Throws<ArgumentException>(() => selection.Attr("data-rbq-key", "replacement"));
+
+        selection.RemoveAttr("title");
+
+        Assert.Empty(state.AttributesFor("second"));
+    }
+
+    [Fact]
+    public void Prop_and_RemoveProp_update_only_resolved_owned_elements()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Prop("disabled", true);
+
+        Assert.Equal(true, state.PropertiesFor("second")["disabled"]);
+        Assert.Empty(state.PropertiesFor("first"));
+        Assert.Throws<ArgumentException>(() => selection.Prop("onclick", "unsafe"));
+
+        selection.RemoveProp("disabled");
+
+        Assert.Empty(state.PropertiesFor("second"));
+    }
+
+    [Fact]
+    public void Data_and_RemoveData_use_json_normalized_owned_state()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Data("payload", new DataPayload("selected", 2));
+
+        Assert.Equal(new DataPayload("selected", 2), selection.Data<DataPayload>("payload"));
+        Assert.Equal("selected", state.DataFor("second")["payload"].GetProperty("Name").GetString());
+        Assert.Empty(state.DataFor("first"));
+
+        selection.RemoveData("payload");
+
+        Assert.Null(selection.Data<DataPayload>("payload"));
+    }
+
+    [Fact]
+    public void Text_Html_and_Val_use_resolved_owned_render_state()
+    {
+        var state = new QueryRenderState();
+        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+
+        selection.Text("<strong>encoded</strong>");
+        Assert.Equal("<strong>encoded</strong>", selection.Text());
+        Assert.Null(selection.Html());
+
+        selection.Html("<strong>trusted</strong>").Val("chosen");
+
+        Assert.Equal("<strong>trusted</strong>", selection.Html());
+        Assert.Equal("chosen", selection.Val());
+        Assert.Null(new Query(state, CreateRegistry()).Select(".item").Eq(0).Text());
+    }
+
+    [Fact]
     public void Unresolved_css_selection_rejects_collection_position_operations()
     {
         var selection = new Query(new QueryRenderState()).Select(".item");
@@ -226,6 +319,8 @@ public sealed class QueryCollectionResolverTests
         registry.Register("third", ".item", "li");
         return registry;
     }
+
+    private sealed record DataPayload(string Name, int Count);
 
     private static QueryElementRegistry CreateHierarchyRegistry()
     {

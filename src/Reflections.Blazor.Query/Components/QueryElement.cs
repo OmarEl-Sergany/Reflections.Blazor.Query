@@ -6,6 +6,9 @@ namespace Reflections.Blazor.Query;
 public sealed class QueryElement : ComponentBase, IDisposable
 {
     [Inject] private QueryElementRegistry Registry { get; set; } = default!;
+    [Inject] private QueryRenderState DefaultRenderState { get; set; } = default!;
+    [Inject] private QueryMeasurementCoordinator Measurements { get; set; } = default!;
+    [CascadingParameter] private QueryRenderState? CascadedRenderState { get; set; }
 
     [Parameter, EditorRequired] public string ElementKey { get; set; } = string.Empty;
     [Parameter] public string? ParentElementKey { get; set; }
@@ -19,11 +22,20 @@ public sealed class QueryElement : ComponentBase, IDisposable
 
     private string? _registrationSignature;
     private string? _registeredKey;
+    private QueryRenderState? _subscribedRenderState;
 
     protected override void OnParametersSet()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ElementKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(TagName);
+
+        var renderState = CascadedRenderState ?? DefaultRenderState;
+        if (!ReferenceEquals(renderState, _subscribedRenderState))
+        {
+            _subscribedRenderState?.Changed -= OnRenderStateChanged;
+            _subscribedRenderState = renderState;
+            _subscribedRenderState.Changed += OnRenderStateChanged;
+        }
 
         var selectors = BuildSelectors();
         var signature = $"{ElementKey}\u001f{ParentElementKey}\u001f{string.Join("\u001f", selectors)}";
@@ -47,15 +59,33 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(3, "id", Id);
         if (!string.IsNullOrWhiteSpace(Class))
             builder.AddAttribute(4, "class", Class);
-        builder.AddContent(5, ChildContent);
+        var sequence = 5;
+        foreach (var attribute in (_subscribedRenderState ?? DefaultRenderState).AttributesFor(ElementKey))
+            builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
+        foreach (var property in (_subscribedRenderState ?? DefaultRenderState).PropertiesFor(ElementKey))
+            builder.AddAttribute(sequence++, property.Key, property.Value);
+        var content = (_subscribedRenderState ?? DefaultRenderState).ContentFor(ElementKey);
+        if (content is { IsHtml: true })
+            builder.AddMarkupContent(sequence, content.Value);
+        else if (content is not null)
+            builder.AddContent(sequence, content.Value);
+        else
+            builder.AddContent(sequence, ChildContent);
         builder.CloseElement();
     }
 
     public void Dispose()
     {
         if (_registeredKey is not null)
+        {
             Registry.Unregister(_registeredKey);
+            Measurements.InvalidateElement(_subscribedRenderState ?? DefaultRenderState, _registeredKey);
+        }
+        if (_subscribedRenderState is not null)
+            _subscribedRenderState.Changed -= OnRenderStateChanged;
     }
+
+    private void OnRenderStateChanged() => _ = InvokeAsync(StateHasChanged);
 
     private string[] BuildSelectors()
     {

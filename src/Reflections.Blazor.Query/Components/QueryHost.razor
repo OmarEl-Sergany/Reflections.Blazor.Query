@@ -1,6 +1,7 @@
 @implements IDisposable
 @inject QueryRenderState DefaultState
 @inject NavigationManager Navigation
+@inject QueryMeasurementCoordinator Measurements
 <CascadingValue Value="ActiveState" IsFixed="true">@ChildContent</CascadingValue>
 <style data-reflections-blazor-query="true">@foreach (var rule in ActiveState.Rules){<text>@rule.Selector { @rule.Property: @rule.Value; }</text>}</style>
 @code {
@@ -12,14 +13,22 @@
     protected override void OnInitialized()
     {
         ActiveState.Changed += OnStateChanged;
+        Measurements.Requested += OnMeasurementRequested;
         Navigation.LocationChanged += OnLocationChanged;
     }
 
     private void OnStateChanged() => _ = InvokeAsync(StateHasChanged);
+    private void OnMeasurementRequested() => _ = InvokeAsync(StateHasChanged);
+
+    protected override Task OnAfterRenderAsync(bool firstRender) => Measurements.FlushAsync().AsTask();
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
-        if (ClearOnNavigation) ActiveState.Clear();
+        if (ClearOnNavigation)
+        {
+            ActiveState.Clear();
+            Measurements.Invalidate(ActiveState);
+        }
         if (!ClearOnNavigation)
             _ = InvokeAsync(StateHasChanged);
     }
@@ -27,6 +36,8 @@
     public void Dispose()
     {
         ActiveState.Changed -= OnStateChanged;
+        Measurements.Requested -= OnMeasurementRequested;
         Navigation.LocationChanged -= OnLocationChanged;
+        Measurements.Invalidate(ActiveState);
     }
 }

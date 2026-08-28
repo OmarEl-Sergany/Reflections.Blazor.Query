@@ -1,11 +1,14 @@
 ﻿using System;
 
+using System.Globalization;
+
 namespace Reflections.Blazor.Query
 {
     public sealed class QuerySelection
     {
         private readonly QueryRenderState _state;
         private readonly QueryElementRegistry? _registry;
+        private readonly QueryMeasurementCoordinator? _measurements;
         private readonly QuerySelection? _previous;
         private readonly IReadOnlyList<string>? _resolvedKeys;
 
@@ -13,12 +16,14 @@ namespace Reflections.Blazor.Query
             string selector,
             QueryRenderState state,
             QueryElementRegistry? registry = null,
+            QueryMeasurementCoordinator? measurements = null,
             QuerySelection? previous = null,
             IReadOnlyList<string>? resolvedKeys = null)
         {
             Selector = selector;
             _state = state;
             _registry = registry;
+            _measurements = measurements;
             _previous = previous;
             _resolvedKeys = resolvedKeys;
         }
@@ -36,6 +41,133 @@ namespace Reflections.Blazor.Query
             _state.SetCss(Selector, property, value);
             return this;
         }
+
+        public QuerySelection Attr(string name, string value)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            ArgumentNullException.ThrowIfNull(value);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetAttribute(key, name, value);
+            return this;
+        }
+
+        public QuerySelection RemoveAttr(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            foreach (var key in RequireResolvedKeys())
+                _state.RemoveAttribute(key, name);
+            return this;
+        }
+
+        public QuerySelection Prop(string name, object value)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            ArgumentNullException.ThrowIfNull(value);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetProperty(key, name, value);
+            return this;
+        }
+
+        public QuerySelection RemoveProp(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            foreach (var key in RequireResolvedKeys())
+                _state.RemoveProperty(key, name);
+            return this;
+        }
+
+        public QuerySelection Data<T>(string name, T value)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetData(key, name, value);
+            return this;
+        }
+
+        public T? Data<T>(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null ? default : _state.GetData<T>(key, name);
+        }
+
+        public QuerySelection RemoveData(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            foreach (var key in RequireResolvedKeys())
+                _state.RemoveData(key, name);
+            return this;
+        }
+
+        public QuerySelection Text(string value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetText(key, value);
+            return this;
+        }
+
+        public string? Text()
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null ? null : _state.ContentFor(key)?.Value;
+        }
+
+        public QuerySelection Html(string value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            foreach (var key in RequireResolvedKeys())
+                _state.SetHtml(key, value);
+            return this;
+        }
+
+        public string? Html()
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            var content = key is null ? null : _state.ContentFor(key);
+            return content is { IsHtml: true } ? content.Value : null;
+        }
+
+        public QuerySelection Val(string value) => Prop("value", value);
+
+        public string? Val()
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is not null && _state.PropertiesFor(key).TryGetValue("value", out var value)
+                ? value as string
+                : null;
+        }
+
+        public ValueTask<double?> HeightAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.Height, cancellationToken);
+
+        public ValueTask<double?> WidthAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.Width, cancellationToken);
+
+        public ValueTask<double?> InnerHeightAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.InnerHeight, cancellationToken);
+
+        public ValueTask<double?> InnerWidthAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.InnerWidth, cancellationToken);
+
+        public ValueTask<double?> OuterHeightAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.OuterHeight, cancellationToken);
+
+        public ValueTask<double?> OuterWidthAsync(CancellationToken cancellationToken = default) =>
+            MeasureFirstAsync(MeasurementKind.OuterWidth, cancellationToken);
+
+        public ValueTask<QueryPoint?> OffsetAsync(CancellationToken cancellationToken = default) =>
+            MeasurePointFirstAsync(MeasurementKind.Offset, cancellationToken);
+
+        public ValueTask<QueryPoint?> PositionAsync(CancellationToken cancellationToken = default) =>
+            MeasurePointFirstAsync(MeasurementKind.Position, cancellationToken);
+
+        public ValueTask<string?> OffsetParentAsync(CancellationToken cancellationToken = default) =>
+            MeasureRelatedKeyFirstAsync(MeasurementKind.OffsetParent, cancellationToken);
+
+        public QuerySelection Height(double pixels) => SetOwnedLength("height", pixels);
+
+        public QuerySelection Width(double pixels) => SetOwnedLength("width", pixels);
 
         public QuerySelection Add(string selector)
         {
@@ -298,10 +430,51 @@ namespace Reflections.Blazor.Query
             return PushResolved(keys);
         }
 
-        private QuerySelection Push(string selector) => new(selector, _state, _registry, this);
+        private QuerySelection Push(string selector) => new(selector, _state, _registry, _measurements, this);
 
         private QuerySelection PushResolved(IReadOnlyList<string> keys) =>
-            new(ToKeySelector(keys), _state, _registry, this, keys);
+            new(ToKeySelector(keys), _state, _registry, _measurements, this, keys);
+
+        private ValueTask<double?> MeasureFirstAsync(MeasurementKind kind, CancellationToken cancellationToken)
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null
+                ? ValueTask.FromResult<double?>(null)
+                : (_measurements ?? throw new InvalidOperationException(
+                    "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
+                    .RequestAsync(_state, key, kind, cancellationToken);
+        }
+
+        private ValueTask<QueryPoint?> MeasurePointFirstAsync(MeasurementKind kind, CancellationToken cancellationToken)
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null
+                ? ValueTask.FromResult<QueryPoint?>(null)
+                : (_measurements ?? throw new InvalidOperationException(
+                    "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
+                    .RequestPointAsync(_state, key, kind, cancellationToken);
+        }
+
+        private ValueTask<string?> MeasureRelatedKeyFirstAsync(MeasurementKind kind, CancellationToken cancellationToken)
+        {
+            var key = RequireResolvedKeys().FirstOrDefault();
+            return key is null
+                ? ValueTask.FromResult<string?>(null)
+                : (_measurements ?? throw new InvalidOperationException(
+                    "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
+                    .RequestRelatedKeyAsync(_state, key, kind, cancellationToken);
+        }
+
+        private QuerySelection SetOwnedLength(string property, double pixels)
+        {
+            if (!double.IsFinite(pixels) || pixels < 0)
+                throw new ArgumentOutOfRangeException(nameof(pixels), "CSS pixel lengths must be finite and non-negative.");
+
+            var value = pixels.ToString("0.################", CultureInfo.InvariantCulture) + "px";
+            foreach (var key in RequireResolvedKeys())
+                _state.SetCss($"[data-rbq-key=\"{EscapeKey(key)}\"]", property, value);
+            return this;
+        }
 
         private HashSet<string> ResolveKeys(string selector) => _registry is null
             ? throw new InvalidOperationException(
