@@ -113,6 +113,40 @@ public sealed class QueryClassesAndStructureComponentTests
     }
 
     [Fact]
+    public void QueryElement_renders_virtual_children_created_through_AppendElement_and_reacts_to_owned_operations()
+    {
+        using var context = new BunitContext();
+        var registry = new QueryElementRegistry();
+        var renderState = new QueryRenderState();
+        context.Services.AddSingleton(registry);
+        context.Services.AddSingleton(renderState);
+        context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+
+        var cut = context.Render<QueryElement>(parameters => parameters
+            .Add(component => component.ElementKey, "list")
+            .Add(component => component.TagName, "ul")
+            .Add(component => component.Class, "list"));
+        var list = new Query(renderState, registry).Select(".list");
+
+        var firstItem = list.AppendElement("li", "item", "first");
+        list.AppendElement("li", "item", "second");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("<li", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("first", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("second", cut.Markup, StringComparison.Ordinal);
+            Assert.True(cut.Markup.IndexOf("first", StringComparison.Ordinal) < cut.Markup.IndexOf("second", StringComparison.Ordinal));
+        });
+
+        firstItem.AddClass("active");
+        cut.WaitForAssertion(() => Assert.Contains("class=\"item active\"", cut.Markup, StringComparison.Ordinal));
+
+        firstItem.Remove();
+        cut.WaitForAssertion(() => Assert.DoesNotContain("first", cut.Markup, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void QueryElement_renders_nothing_once_removed()
     {
         using var context = new BunitContext();

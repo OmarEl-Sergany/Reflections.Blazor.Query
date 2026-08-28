@@ -12,6 +12,8 @@ public class QueryRenderState
     private readonly HashSet<string> _removedKeys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<QueryContent>> _prepended = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<QueryContent>> _appended = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, QueryVirtualNode> _virtualNodes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _virtualChildKeys = new(StringComparer.Ordinal);
     private int _batchDepth;
     private bool _dirty;
     public event Action? Changed;
@@ -39,7 +41,71 @@ public class QueryRenderState
         _prepended.TryGetValue(elementKey, out var fragments) ? fragments : [];
     internal IReadOnlyList<QueryContent> AppendedFor(string elementKey) =>
         _appended.TryGetValue(elementKey, out var fragments) ? fragments : [];
+    internal bool IsVirtual(string elementKey) => _virtualNodes.ContainsKey(elementKey);
+    internal QueryVirtualNode? VirtualNodeFor(string elementKey) =>
+        _virtualNodes.TryGetValue(elementKey, out var node) ? node : null;
+    internal IReadOnlyList<string> VirtualChildKeysFor(string parentKey) =>
+        _virtualChildKeys.TryGetValue(parentKey, out var keys) ? keys : [];
+    internal IReadOnlyList<string> AllVirtualKeys => _virtualNodes.Keys.ToArray();
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
+    internal void CreateVirtualChild(
+        string key,
+        string parentKey,
+        string tagName,
+        string? className,
+        string? text,
+        bool isHtml,
+        bool atStart)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        if (_virtualNodes.ContainsKey(key))
+            throw new InvalidOperationException($"The virtual element key '{key}' is already registered.");
+
+        _virtualNodes[key] = new QueryVirtualNode(key, parentKey, tagName, className, text, isHtml);
+        var siblings = _virtualChildKeys.TryGetValue(parentKey, out var existing) ? existing : _virtualChildKeys[parentKey] = [];
+        if (atStart)
+            siblings.Insert(0, key);
+        else
+            siblings.Add(key);
+        NotifyChanged();
+    }
+    internal void CreateVirtualSibling(
+        string key,
+        string anchorKey,
+        string parentKey,
+        string tagName,
+        string? className,
+        string? text,
+        bool isHtml,
+        bool before)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(anchorKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        if (_virtualNodes.ContainsKey(key))
+            throw new InvalidOperationException($"The virtual element key '{key}' is already registered.");
+
+        _virtualNodes[key] = new QueryVirtualNode(key, parentKey, tagName, className, text, isHtml);
+        var siblings = _virtualChildKeys.TryGetValue(parentKey, out var existing) ? existing : _virtualChildKeys[parentKey] = [];
+        var anchorIndex = siblings.IndexOf(anchorKey);
+        var insertIndex = anchorIndex < 0 ? siblings.Count : before ? anchorIndex : anchorIndex + 1;
+        siblings.Insert(insertIndex, key);
+        NotifyChanged();
+    }
+    internal void RemoveVirtualNode(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (!_virtualNodes.Remove(key, out var node))
+            return;
+        foreach (var descendantKey in VirtualChildKeysFor(key).ToArray())
+            RemoveVirtualNode(descendantKey);
+        if (_virtualChildKeys.TryGetValue(node.ParentKey, out var siblings))
+            siblings.Remove(key);
+        NotifyChanged();
+    }
     internal void AddClass(string elementKey, string className)
     {
         ValidateClassName(elementKey, className);
@@ -146,7 +212,7 @@ public class QueryRenderState
     {
         if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0 && _content.Count == 0
             && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0
-            && _prepended.Count == 0 && _appended.Count == 0)
+            && _prepended.Count == 0 && _appended.Count == 0 && _virtualNodes.Count == 0 && _virtualChildKeys.Count == 0)
             return;
         _styles.Clear();
         _attributes.Clear();
@@ -159,6 +225,8 @@ public class QueryRenderState
         _removedKeys.Clear();
         _prepended.Clear();
         _appended.Clear();
+        _virtualNodes.Clear();
+        _virtualChildKeys.Clear();
         NotifyChanged();
     }
     private static void ValidateAttribute(string elementKey, string name, string value)
@@ -200,3 +268,4 @@ public class QueryRenderState
 }
 public sealed record QueryStyleRule(string Selector, string Property, string Value);
 internal sealed record QueryContent(string Value, bool IsHtml);
+internal sealed record QueryVirtualNode(string Key, string ParentKey, string TagName, string? ClassName, string? Text, bool IsHtml);

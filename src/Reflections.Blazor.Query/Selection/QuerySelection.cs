@@ -269,8 +269,50 @@ namespace Reflections.Blazor.Query
         public QuerySelection Remove()
         {
             foreach (var key in RequireResolvedKeys())
-                _state.Remove(key);
+            {
+                if (_state.IsVirtual(key))
+                {
+                    _state.RemoveVirtualNode(key);
+                    _registry?.Unregister(key);
+                }
+                else
+                {
+                    _state.Remove(key);
+                }
+            }
             return this;
+        }
+
+        public QuerySelection AppendElement(string tagName, string? className = null, string? text = null, bool isHtml = false)
+        {
+            var results = new List<string>();
+            foreach (var parentKey in RequireResolvedKeys())
+                results.Add(CreateChild(parentKey, tagName, className, text, isHtml, atStart: false));
+            return PushResolved(results);
+        }
+
+        public QuerySelection PrependElement(string tagName, string? className = null, string? text = null, bool isHtml = false)
+        {
+            var results = new List<string>();
+            foreach (var parentKey in RequireResolvedKeys())
+                results.Add(CreateChild(parentKey, tagName, className, text, isHtml, atStart: true));
+            return PushResolved(results);
+        }
+
+        public QuerySelection InsertElementBefore(string tagName, string? className = null, string? text = null, bool isHtml = false)
+        {
+            var results = new List<string>();
+            foreach (var anchorKey in RequireResolvedKeys())
+                results.Add(CreateSibling(anchorKey, tagName, className, text, isHtml, before: true));
+            return PushResolved(results);
+        }
+
+        public QuerySelection InsertElementAfter(string tagName, string? className = null, string? text = null, bool isHtml = false)
+        {
+            var results = new List<string>();
+            foreach (var anchorKey in RequireResolvedKeys())
+                results.Add(CreateSibling(anchorKey, tagName, className, text, isHtml, before: false));
+            return PushResolved(results);
         }
 
         public QuerySelection Empty()
@@ -590,6 +632,40 @@ namespace Reflections.Blazor.Query
                 _state.SetCss($"[data-rbq-key=\"{EscapeKey(key)}\"]", property, value);
             return this;
         }
+
+        private string CreateChild(string parentKey, string tagName, string? className, string? text, bool isHtml, bool atStart)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+            var key = NewVirtualKey();
+            _state.CreateVirtualChild(key, parentKey, tagName, className, text, isHtml, atStart);
+            RequireRegistry().RegisterWithParent(key, parentKey, BuildVirtualSelectors(tagName, className));
+            return key;
+        }
+
+        private string CreateSibling(string anchorKey, string tagName, string? className, string? text, bool isHtml, bool before)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+            var parentKey = RequireRegistry().Parent([anchorKey]).FirstOrDefault()
+                ?? throw new InvalidOperationException(
+                    "Before/After insertion requires the anchor element to have a registered parent element.");
+            var key = NewVirtualKey();
+            _state.CreateVirtualSibling(key, anchorKey, parentKey, tagName, className, text, isHtml, before);
+            RequireRegistry().RegisterWithParent(key, parentKey, BuildVirtualSelectors(tagName, className));
+            return key;
+        }
+
+        private static string[] BuildVirtualSelectors(string tagName, string? className)
+        {
+            var selectors = new HashSet<string>(StringComparer.Ordinal) { tagName };
+            if (!string.IsNullOrWhiteSpace(className))
+            {
+                foreach (var name in className.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    selectors.Add($".{name}");
+            }
+            return [.. selectors];
+        }
+
+        private static string NewVirtualKey() => $"rbq-vnode-{Guid.NewGuid():N}";
 
         private bool HasClassOn(string key, string className)
         {

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Reflections.Blazor.Query;
 
@@ -177,6 +178,102 @@ public sealed class QueryClassesAndStructureTests
 
         Assert.Empty(state.AppendedFor("list"));
         Assert.Empty(state.PrependedFor("list"));
+    }
+
+    [Fact]
+    public void AppendElement_creates_a_registered_child_selectable_by_tag_and_class()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+
+        var created = query.Select(".list").AppendElement("li", "item", "one");
+        var newKey = created.ToArray().Single();
+
+        Assert.True(state.IsVirtual(newKey));
+        Assert.Equal(["one"], query.Select(".list").Children().Map((_, key) => state.ContentFor(key)?.Value ?? state.VirtualNodeFor(key)!.Text));
+        Assert.Contains(newKey, registry.Resolve("li.item"));
+        Assert.Equal(["list"], registry.Parent([newKey]));
+    }
+
+    [Fact]
+    public void AppendElement_and_PrependElement_control_ordering_among_virtual_children()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+
+        query.Select(".list").AppendElement("li", text: "b");
+        query.Select(".list").AppendElement("li", text: "c");
+        query.Select(".list").PrependElement("li", text: "a");
+
+        var order = state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text);
+        Assert.Equal(["a", "b", "c"], order);
+    }
+
+    [Fact]
+    public void InsertElementBefore_and_InsertElementAfter_position_relative_to_an_existing_virtual_sibling()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var middleSelection = query.Select(".list").AppendElement("li", text: "middle");
+
+        middleSelection.InsertElementBefore("li", text: "before");
+        middleSelection.InsertElementAfter("li", text: "after");
+
+        var order = state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text);
+        Assert.Equal(["before", "middle", "after"], order);
+    }
+
+    [Fact]
+    public void InsertElementBefore_throws_when_anchor_has_no_registered_parent()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("orphan", ".orphan");
+
+        Assert.Throws<InvalidOperationException>(() => query.Select(".orphan").InsertElementBefore("div"));
+    }
+
+    [Fact]
+    public void Remove_on_a_virtual_element_fully_detaches_it_from_state_and_registry()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var childSelection = query.Select(".list").AppendElement("li", "item");
+        var child = childSelection.ToArray().Single();
+
+        childSelection.Remove();
+
+        Assert.False(state.IsVirtual(child));
+        Assert.Empty(state.VirtualChildKeysFor("list"));
+        Assert.Empty(registry.Resolve("li.item"));
+    }
+
+    [Fact]
+    public void Removing_a_virtual_parent_cascades_to_its_virtual_children()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var groupSelection = query.Select(".list").AppendElement("ul", "group");
+        var group = groupSelection.ToArray().Single();
+        groupSelection.AppendElement("li", text: "nested");
+        var nestedKey = state.VirtualChildKeysFor(group).Single();
+
+        state.RemoveVirtualNode(group);
+
+        Assert.False(state.IsVirtual(group));
+        Assert.False(state.IsVirtual(nestedKey));
+    }
+
+    [Fact]
+    public void Clear_removes_virtual_elements_from_state()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        query.Select(".list").AppendElement("li", text: "one");
+
+        state.Clear();
+
+        Assert.Empty(state.AllVirtualKeys);
+        Assert.Empty(state.VirtualChildKeysFor("list"));
     }
 
     [Fact]

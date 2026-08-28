@@ -82,6 +82,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddContent(sequence++, ChildContent);
         foreach (var fragment in renderState.AppendedFor(ElementKey))
             AddFragment(builder, ref sequence, fragment);
+        foreach (var childKey in renderState.VirtualChildKeysFor(ElementKey))
+            RenderVirtualNode(builder, ref sequence, renderState, childKey);
         builder.CloseElement();
     }
 
@@ -91,6 +93,38 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddMarkupContent(sequence++, fragment.Value);
         else
             builder.AddContent(sequence++, fragment.Value);
+    }
+
+    private static void RenderVirtualNode(RenderTreeBuilder builder, ref int sequence, QueryRenderState renderState, string elementKey)
+    {
+        var node = renderState.VirtualNodeFor(elementKey);
+        if (node is null || renderState.IsRemoved(elementKey))
+            return;
+
+        builder.OpenElement(sequence++, node.TagName);
+        builder.SetKey(elementKey);
+        builder.AddAttribute(sequence++, "data-rbq-key", elementKey);
+        var className = BuildClassName(renderState, elementKey, node.ClassName);
+        if (!string.IsNullOrEmpty(className))
+            builder.AddAttribute(sequence++, "class", className);
+        if (renderState.IsHidden(elementKey))
+            builder.AddAttribute(sequence++, "style", "display: none;");
+        foreach (var attribute in renderState.AttributesFor(elementKey))
+            builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
+        foreach (var property in renderState.PropertiesFor(elementKey))
+            builder.AddAttribute(sequence++, property.Key, property.Value);
+        foreach (var fragment in renderState.PrependedFor(elementKey))
+            AddFragment(builder, ref sequence, fragment);
+        var content = renderState.ContentFor(elementKey) ?? (node.Text is null ? null : new QueryContent(node.Text, node.IsHtml));
+        if (content is { IsHtml: true })
+            builder.AddMarkupContent(sequence++, content.Value);
+        else if (content is not null)
+            builder.AddContent(sequence++, content.Value);
+        foreach (var fragment in renderState.AppendedFor(elementKey))
+            AddFragment(builder, ref sequence, fragment);
+        foreach (var childKey in renderState.VirtualChildKeysFor(elementKey))
+            RenderVirtualNode(builder, ref sequence, renderState, childKey);
+        builder.CloseElement();
     }
 
     public void Dispose()
@@ -121,20 +155,22 @@ public sealed class QueryElement : ComponentBase, IDisposable
         return "display: none;";
     }
 
-    private string? BuildClassName(QueryRenderState renderState)
+    private string? BuildClassName(QueryRenderState renderState) => BuildClassName(renderState, ElementKey, Class);
+
+    private static string? BuildClassName(QueryRenderState renderState, string elementKey, string? staticClass)
     {
-        var removed = renderState.RemovedClassesFor(ElementKey);
+        var removed = renderState.RemovedClassesFor(elementKey);
         var classes = new List<string>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        if (!string.IsNullOrWhiteSpace(Class))
+        if (!string.IsNullOrWhiteSpace(staticClass))
         {
-            foreach (var className in Class.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (var className in staticClass.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (!removed.Contains(className) && seen.Add(className))
                     classes.Add(className);
             }
         }
-        foreach (var className in renderState.AddedClassesFor(ElementKey))
+        foreach (var className in renderState.AddedClassesFor(elementKey))
         {
             if (seen.Add(className))
                 classes.Add(className);

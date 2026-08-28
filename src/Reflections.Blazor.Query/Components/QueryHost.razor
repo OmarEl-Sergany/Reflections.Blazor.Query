@@ -2,6 +2,7 @@
 @inject QueryRenderState DefaultState
 @inject NavigationManager Navigation
 @inject QueryMeasurementCoordinator Measurements
+@inject QueryElementRegistry Registry
 <CascadingValue Value="ActiveState" IsFixed="true">@ChildContent</CascadingValue>
 <style data-reflections-blazor-query="true">@foreach (var rule in ActiveState.Rules){<text>@rule.Selector { @rule.Property: @rule.Value; }</text>}</style>
 @code {
@@ -26,7 +27,10 @@
     {
         if (ClearOnNavigation)
         {
+            var virtualKeys = ActiveState.AllVirtualKeys;
             ActiveState.Clear();
+            foreach (var key in virtualKeys)
+                Registry.Unregister(key);
             Measurements.Invalidate(ActiveState);
         }
         if (!ClearOnNavigation)
