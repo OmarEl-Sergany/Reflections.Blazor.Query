@@ -1,0 +1,22 @@
+trigger:
+- master
+pr:
+- master
+pool:
+  vmImage: windows-latest
+variables:
+  BuildConfiguration: Release
+steps:
+- task: UseDotNet@2
+  inputs:
+    packageType: sdk
+    version: 10.x
+- script: dotnet restore Reflections.Blazor.Query.slnx
+- script: dotnet build Reflections.Blazor.Query.slnx --configuration $(BuildConfiguration) --no-restore
+- script: dotnet test Reflections.Blazor.Query.slnx --configuration $(BuildConfiguration) --no-build
+- script: dotnet pack src/Reflections.Blazor.Query/Reflections.Blazor.Query.csproj --configuration $(BuildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/packages
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: $(Build.ArtifactStagingDirectory)
+    ArtifactName: Reflections.Blazor.Query
+    publishLocation: Container
