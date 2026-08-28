@@ -52,19 +52,26 @@ public sealed class QueryElement : ComponentBase, IDisposable
 
     protected override void BuildRenderTree(RenderTreeBuilder builder)
     {
+        var renderState = _subscribedRenderState ?? DefaultRenderState;
+        if (renderState.IsRemoved(ElementKey))
+            return;
+
         builder.OpenElement(0, TagName);
         builder.AddMultipleAttributes(1, AdditionalAttributes);
         builder.AddAttribute(2, "data-rbq-key", ElementKey);
         if (!string.IsNullOrWhiteSpace(Id))
             builder.AddAttribute(3, "id", Id);
-        if (!string.IsNullOrWhiteSpace(Class))
-            builder.AddAttribute(4, "class", Class);
-        var sequence = 5;
-        foreach (var attribute in (_subscribedRenderState ?? DefaultRenderState).AttributesFor(ElementKey))
+        var sequence = 4;
+        var className = BuildClassName(renderState);
+        if (!string.IsNullOrEmpty(className))
+            builder.AddAttribute(sequence++, "class", className);
+        if (renderState.IsHidden(ElementKey))
+            builder.AddAttribute(sequence++, "style", "display: none;");
+        foreach (var attribute in renderState.AttributesFor(ElementKey))
             builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
-        foreach (var property in (_subscribedRenderState ?? DefaultRenderState).PropertiesFor(ElementKey))
+        foreach (var property in renderState.PropertiesFor(ElementKey))
             builder.AddAttribute(sequence++, property.Key, property.Value);
-        var content = (_subscribedRenderState ?? DefaultRenderState).ContentFor(ElementKey);
+        var content = renderState.ContentFor(ElementKey);
         if (content is { IsHtml: true })
             builder.AddMarkupContent(sequence, content.Value);
         else if (content is not null)
@@ -86,6 +93,27 @@ public sealed class QueryElement : ComponentBase, IDisposable
     }
 
     private void OnRenderStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private string? BuildClassName(QueryRenderState renderState)
+    {
+        var removed = renderState.RemovedClassesFor(ElementKey);
+        var classes = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        if (!string.IsNullOrWhiteSpace(Class))
+        {
+            foreach (var className in Class.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!removed.Contains(className) && seen.Add(className))
+                    classes.Add(className);
+            }
+        }
+        foreach (var className in renderState.AddedClassesFor(ElementKey))
+        {
+            if (seen.Add(className))
+                classes.Add(className);
+        }
+        return classes.Count == 0 ? null : string.Join(' ', classes);
+    }
 
     private string[] BuildSelectors()
     {

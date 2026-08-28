@@ -169,6 +169,89 @@ namespace Reflections.Blazor.Query
 
         public QuerySelection Width(double pixels) => SetOwnedLength("width", pixels);
 
+        public QuerySelection AddClass(string className)
+        {
+            foreach (var name in SplitClassNames(className))
+                foreach (var key in RequireResolvedKeys())
+                    _state.AddClass(key, name);
+            return this;
+        }
+
+        public QuerySelection RemoveClass(string className)
+        {
+            foreach (var name in SplitClassNames(className))
+                foreach (var key in RequireResolvedKeys())
+                    _state.RemoveClass(key, name);
+            return this;
+        }
+
+        public QuerySelection ToggleClass(string className, bool? force = null)
+        {
+            foreach (var name in SplitClassNames(className))
+            {
+                foreach (var key in RequireResolvedKeys())
+                {
+                    var shouldAdd = force ?? !HasClassOn(key, name);
+                    if (shouldAdd)
+                        _state.AddClass(key, name);
+                    else
+                        _state.RemoveClass(key, name);
+                }
+            }
+            return this;
+        }
+
+        public bool HasClass(string className)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(className);
+            return RequireResolvedKeys().Any(key => HasClassOn(key, className));
+        }
+
+        public QuerySelection Show()
+        {
+            foreach (var key in RequireResolvedKeys())
+                _state.Show(key);
+            return this;
+        }
+
+        public QuerySelection Hide()
+        {
+            foreach (var key in RequireResolvedKeys())
+                _state.Hide(key);
+            return this;
+        }
+
+        public QuerySelection Toggle(bool? show = null)
+        {
+            foreach (var key in RequireResolvedKeys())
+            {
+                var shouldShow = show ?? _state.IsHidden(key);
+                if (shouldShow)
+                    _state.Show(key);
+                else
+                    _state.Hide(key);
+            }
+            return this;
+        }
+
+        public QuerySelection Remove()
+        {
+            foreach (var key in RequireResolvedKeys())
+                _state.Remove(key);
+            return this;
+        }
+
+        public QuerySelection Empty()
+        {
+            foreach (var key in RequireResolvedKeys())
+            {
+                _state.Empty(key);
+                foreach (var descendantKey in RequireRegistry().AllDescendants([key]))
+                    _state.Remove(descendantKey);
+            }
+            return this;
+        }
+
         public QuerySelection Add(string selector)
         {
             selector = ValidateSelector(selector);
@@ -474,6 +557,24 @@ namespace Reflections.Blazor.Query
             foreach (var key in RequireResolvedKeys())
                 _state.SetCss($"[data-rbq-key=\"{EscapeKey(key)}\"]", property, value);
             return this;
+        }
+
+        private bool HasClassOn(string key, string className)
+        {
+            if (_state.RemovedClassesFor(key).Contains(className))
+                return false;
+            if (_state.AddedClassesFor(key).Contains(className))
+                return true;
+            return _registry?.BaseClassesFor(key).Contains(className) ?? false;
+        }
+
+        private static string[] SplitClassNames(string className)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(className);
+            var names = className.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (names.Length == 0)
+                throw new ArgumentException("At least one class name is required.", nameof(className));
+            return names;
         }
 
         private HashSet<string> ResolveKeys(string selector) => _registry is null

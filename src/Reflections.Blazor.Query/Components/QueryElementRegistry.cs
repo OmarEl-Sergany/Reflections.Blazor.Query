@@ -33,6 +33,13 @@ public sealed class QueryElementRegistry
     public bool Unregister(string key) =>
         _entries.RemoveAll(entry => entry.Key == key) > 0;
 
+    internal IReadOnlySet<string> BaseClassesFor(string key) =>
+        Find(key)?.Selectors
+            .Where(selector => selector.StartsWith('.'))
+            .Select(selector => selector[1..])
+            .ToHashSet(StringComparer.Ordinal)
+        ?? new HashSet<string>();
+
     internal IReadOnlyList<string> Resolve(string selector) =>
         _entries.Where(entry => Matches(entry, selector)).Select(entry => entry.Key).ToArray();
 
@@ -72,6 +79,14 @@ public sealed class QueryElementRegistry
         var ancestors = keys.ToHashSet(StringComparer.Ordinal);
         return Order(_entries
             .Where(entry => Matches(entry, selector) && IsDescendantOf(entry, ancestors))
+            .Select(entry => entry.Key));
+    }
+
+    internal IReadOnlyList<string> AllDescendants(IEnumerable<string> keys)
+    {
+        var ancestors = keys.ToHashSet(StringComparer.Ordinal);
+        return Order(_entries
+            .Where(entry => IsDescendantOf(entry, ancestors))
             .Select(entry => entry.Key));
     }
 
