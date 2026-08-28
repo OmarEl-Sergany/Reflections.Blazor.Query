@@ -283,6 +283,53 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        public QuerySelection Detach()
+        {
+            foreach (var key in RequireResolvedKeys())
+            {
+                if (_state.IsVirtual(key))
+                {
+                    _state.DetachVirtualChild(key);
+                    _registry?.SetParent(key, null);
+                }
+                else
+                {
+                    // A Razor-declared element cannot be relocated; this only preserves its state while
+                    // hiding it from render, matching Remove(). It cannot later be re-attached elsewhere.
+                    _state.Remove(key);
+                }
+            }
+            return this;
+        }
+
+        public QuerySelection Clone()
+        {
+            var results = new List<string>();
+            foreach (var key in RequireResolvedKeys())
+                results.Add(CloneVirtual(key));
+            return PushResolved(results);
+        }
+
+        public QuerySelection AppendTo(QuerySelection target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            var targetKey = target.RequireResolvedKeys().FirstOrDefault()
+                ?? throw new InvalidOperationException("AppendTo requires the target selection to resolve to at least one element.");
+            foreach (var key in RequireResolvedKeys())
+                AttachTo(key, targetKey, atStart: false);
+            return this;
+        }
+
+        public QuerySelection PrependTo(QuerySelection target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            var targetKey = target.RequireResolvedKeys().FirstOrDefault()
+                ?? throw new InvalidOperationException("PrependTo requires the target selection to resolve to at least one element.");
+            foreach (var key in RequireResolvedKeys())
+                AttachTo(key, targetKey, atStart: true);
+            return this;
+        }
+
         public QuerySelection AppendElement(string tagName, string? className = null, string? text = null, bool isHtml = false)
         {
             var results = new List<string>();
@@ -666,6 +713,50 @@ namespace Reflections.Blazor.Query
         }
 
         private static string NewVirtualKey() => $"rbq-vnode-{Guid.NewGuid():N}";
+
+        private void AttachTo(string key, string targetKey, bool atStart)
+        {
+            if (!_state.IsVirtual(key))
+                throw new InvalidOperationException(
+                    "AppendTo/PrependTo can only move a library-created element (created via AppendElement, PrependElement, or Clone). " +
+                    "A Razor-declared QueryElement always renders in the slot its caller wrote in markup and cannot be relocated.");
+
+            _state.AttachVirtualChild(key, targetKey, atStart);
+            RequireRegistry().SetParent(key, targetKey);
+        }
+
+        private string CloneVirtual(string sourceKey)
+        {
+            if (!_state.IsVirtual(sourceKey))
+                throw new InvalidOperationException(
+                    "Clone() is only supported for library-created elements (created via AppendElement, PrependElement, InsertElementBefore, or InsertElementAfter). " +
+                    "Cloning a Razor-declared QueryElement would require two elements to share a data-rbq-key, which is not supported.");
+
+            var node = _state.VirtualNodeFor(sourceKey)!;
+            var newKey = NewVirtualKey();
+            _state.CreateDetachedVirtualNode(newKey, node.TagName, node.ClassName, node.Text, node.IsHtml);
+
+            foreach (var attribute in _state.AttributesFor(sourceKey))
+                _state.SetAttribute(newKey, attribute.Key, attribute.Value);
+            foreach (var property in _state.PropertiesFor(sourceKey))
+                _state.SetProperty(newKey, property.Key, property.Value);
+            foreach (var className in _state.AddedClassesFor(sourceKey))
+                _state.AddClass(newKey, className);
+            var content = _state.ContentFor(sourceKey);
+            if (content is { IsHtml: true })
+                _state.SetHtml(newKey, content.Value);
+            else if (content is not null)
+                _state.SetText(newKey, content.Value);
+            foreach (var fragment in _state.PrependedFor(sourceKey).Reverse())
+                _state.PrependContent(newKey, fragment.Value, fragment.IsHtml);
+            foreach (var fragment in _state.AppendedFor(sourceKey))
+                _state.AppendContent(newKey, fragment.Value, fragment.IsHtml);
+            if (_state.IsHidden(sourceKey))
+                _state.Hide(newKey);
+
+            RequireRegistry().Register(newKey, BuildVirtualSelectors(node.TagName, node.ClassName));
+            return newKey;
+        }
 
         private bool HasClassOn(string key, string className)
         {

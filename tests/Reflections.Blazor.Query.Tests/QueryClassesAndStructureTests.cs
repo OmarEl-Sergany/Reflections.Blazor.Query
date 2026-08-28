@@ -264,6 +264,120 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
+    public void AppendTo_moves_a_virtual_element_between_parents()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("listA", ".listA");
+        registry.Register("listB", ".listB");
+        var item = query.Select(".listA").AppendElement("li", text: "roaming");
+
+        item.AppendTo(query.Select(".listB"));
+
+        Assert.Empty(state.VirtualChildKeysFor("listA"));
+        Assert.Equal([item.ToArray().Single()], state.VirtualChildKeysFor("listB"));
+        Assert.Equal(["listB"], registry.Parent(item.ToArray()));
+    }
+
+    [Fact]
+    public void PrependTo_inserts_a_virtual_element_at_the_start_of_the_target()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        query.Select(".list").AppendElement("li", text: "existing");
+        var moved = query.Select(".list").AppendElement("li", text: "moved");
+        moved.Detach();
+
+        moved.PrependTo(query.Select(".list"));
+
+        var order = state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text);
+        Assert.Equal(["moved", "existing"], order);
+    }
+
+    [Fact]
+    public void AppendTo_throws_when_source_is_a_real_Razor_declared_element()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("real", ".real");
+        registry.Register("target", ".target");
+
+        Assert.Throws<InvalidOperationException>(() => query.Select(".real").AppendTo(query.Select(".target")));
+    }
+
+    [Fact]
+    public void Detach_orphans_a_virtual_element_without_deleting_it()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var item = query.Select(".list").AppendElement("li", "item", "text");
+        var key = item.ToArray().Single();
+
+        item.Detach();
+
+        Assert.True(state.IsVirtual(key));
+        Assert.Empty(state.VirtualChildKeysFor("list"));
+        Assert.Contains(key, registry.Resolve("li.item"));
+    }
+
+    [Fact]
+    public void Detached_element_can_be_reattached_via_AppendTo()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var item = query.Select(".list").AppendElement("li", text: "text");
+        item.Detach();
+
+        item.AppendTo(query.Select(".list"));
+
+        Assert.Equal([item.ToArray().Single()], state.VirtualChildKeysFor("list"));
+    }
+
+    [Fact]
+    public void Clone_duplicates_a_virtual_elements_state_under_a_new_key()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var original = query.Select(".list").AppendElement("li", "item", "hello");
+        original.AddClass("active").Attr("data-role", "row").Hide();
+
+        var clone = original.Clone();
+        var cloneKey = clone.ToArray().Single();
+        var originalKey = original.ToArray().Single();
+
+        Assert.NotEqual(originalKey, cloneKey);
+        Assert.True(state.IsVirtual(cloneKey));
+        Assert.Null(state.VirtualNodeFor(cloneKey)!.ParentKey);
+        Assert.Equal("hello", state.VirtualNodeFor(cloneKey)!.Text);
+        Assert.True(clone.HasClass("active"));
+        Assert.True(clone.HasClass("item"));
+        Assert.Equal("row", state.AttributesFor(cloneKey)["data-role"]);
+        Assert.True(state.IsHidden(cloneKey));
+        Assert.Contains(cloneKey, registry.Resolve("li.item"));
+    }
+
+    [Fact]
+    public void Clone_is_unattached_until_explicitly_attached()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var original = query.Select(".list").AppendElement("li", text: "hello");
+
+        var clone = original.Clone();
+
+        Assert.Single(state.VirtualChildKeysFor("list"));
+        clone.AppendTo(query.Select(".list"));
+        Assert.Equal(2, state.VirtualChildKeysFor("list").Count);
+    }
+
+    [Fact]
+    public void Clone_throws_for_a_real_Razor_declared_element()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("real", ".real");
+
+        Assert.Throws<InvalidOperationException>(() => query.Select(".real").Clone());
+    }
+
+    [Fact]
     public void Clear_removes_virtual_elements_from_state()
     {
         var (query, registry, state) = CreateQuery();

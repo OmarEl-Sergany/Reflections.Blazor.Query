@@ -33,6 +33,19 @@ public sealed class QueryElementRegistry
     public bool Unregister(string key) =>
         _entries.RemoveAll(entry => entry.Key == key) > 0;
 
+    internal void SetParent(string key, string? parentKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (string.IsNullOrWhiteSpace(parentKey))
+            parentKey = null;
+        if (string.Equals(key, parentKey, StringComparison.Ordinal))
+            throw new ArgumentException("An element cannot be its own parent.", nameof(parentKey));
+        var index = _entries.FindIndex(entry => entry.Key == key);
+        if (index < 0)
+            throw new InvalidOperationException($"The query element key '{key}' is not registered.");
+        _entries[index] = _entries[index] with { ParentKey = parentKey };
+    }
+
     internal IReadOnlySet<string> BaseClassesFor(string key) =>
         Find(key)?.Selectors
             .Where(selector => selector.StartsWith('.'))

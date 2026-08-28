@@ -102,9 +102,62 @@ public class QueryRenderState
             return;
         foreach (var descendantKey in VirtualChildKeysFor(key).ToArray())
             RemoveVirtualNode(descendantKey);
-        if (_virtualChildKeys.TryGetValue(node.ParentKey, out var siblings))
+        if (node.ParentKey is not null && _virtualChildKeys.TryGetValue(node.ParentKey, out var siblings))
             siblings.Remove(key);
+        _virtualChildKeys.Remove(key);
         NotifyChanged();
+    }
+    internal string CreateDetachedVirtualNode(string key, string tagName, string? className, string? text, bool isHtml)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        if (_virtualNodes.ContainsKey(key))
+            throw new InvalidOperationException($"The virtual element key '{key}' is already registered.");
+
+        _virtualNodes[key] = new QueryVirtualNode(key, null, tagName, className, text, isHtml);
+        NotifyChanged();
+        return key;
+    }
+    internal void DetachVirtualChild(string key)
+    {
+        var node = RequireVirtualNode(key);
+        if (node.ParentKey is not null && _virtualChildKeys.TryGetValue(node.ParentKey, out var siblings))
+            siblings.Remove(key);
+        _virtualNodes[key] = node with { ParentKey = null };
+        NotifyChanged();
+    }
+    internal void AttachVirtualChild(string key, string parentKey, bool atStart)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentKey);
+        RequireVirtualNode(key);
+        DetachVirtualChild(key);
+        _virtualNodes[key] = _virtualNodes[key] with { ParentKey = parentKey };
+        var siblings = _virtualChildKeys.TryGetValue(parentKey, out var existing) ? existing : _virtualChildKeys[parentKey] = [];
+        if (atStart)
+            siblings.Insert(0, key);
+        else
+            siblings.Add(key);
+        NotifyChanged();
+    }
+    internal void AttachVirtualSibling(string key, string anchorKey, string parentKey, bool before)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(anchorKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentKey);
+        RequireVirtualNode(key);
+        DetachVirtualChild(key);
+        _virtualNodes[key] = _virtualNodes[key] with { ParentKey = parentKey };
+        var siblings = _virtualChildKeys.TryGetValue(parentKey, out var existing) ? existing : _virtualChildKeys[parentKey] = [];
+        var anchorIndex = siblings.IndexOf(anchorKey);
+        var insertIndex = anchorIndex < 0 ? siblings.Count : before ? anchorIndex : anchorIndex + 1;
+        siblings.Insert(insertIndex, key);
+        NotifyChanged();
+    }
+    private QueryVirtualNode RequireVirtualNode(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        return _virtualNodes.TryGetValue(key, out var node)
+            ? node
+            : throw new InvalidOperationException($"'{key}' is not a library-created (virtual) element.");
     }
     internal void AddClass(string elementKey, string className)
     {
@@ -268,4 +321,4 @@ public class QueryRenderState
 }
 public sealed record QueryStyleRule(string Selector, string Property, string Value);
 internal sealed record QueryContent(string Value, bool IsHtml);
-internal sealed record QueryVirtualNode(string Key, string ParentKey, string TagName, string? ClassName, string? Text, bool IsHtml);
+internal sealed record QueryVirtualNode(string Key, string? ParentKey, string TagName, string? ClassName, string? Text, bool IsHtml);

@@ -147,6 +147,48 @@ public sealed class QueryClassesAndStructureComponentTests
     }
 
     [Fact]
+    public void QueryElement_moves_a_virtual_element_between_two_rendered_parents_via_AppendTo()
+    {
+        using var context = new BunitContext();
+        var registry = new QueryElementRegistry();
+        var renderState = new QueryRenderState();
+        context.Services.AddSingleton(registry);
+        context.Services.AddSingleton(renderState);
+        context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "listA");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "ul");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "listA");
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(4);
+            builder.AddComponentParameter(5, nameof(QueryElement.ElementKey), "listB");
+            builder.AddComponentParameter(6, nameof(QueryElement.TagName), "ul");
+            builder.AddComponentParameter(7, nameof(QueryElement.Class), "listB");
+            builder.CloseComponent();
+        });
+        var query = new Query(renderState, registry);
+        var item = query.Select(".listA").AppendElement("li", text: "roaming");
+
+        cut.WaitForAssertion(() =>
+        {
+            var listAMarkup = cut.Markup[..cut.Markup.IndexOf("</ul>", StringComparison.Ordinal)];
+            Assert.Contains("roaming", listAMarkup, StringComparison.Ordinal);
+        });
+
+        item.AppendTo(query.Select(".listB"));
+
+        cut.WaitForAssertion(() =>
+        {
+            var listAMarkup = cut.Markup[..cut.Markup.IndexOf("</ul>", StringComparison.Ordinal)];
+            Assert.DoesNotContain("roaming", listAMarkup, StringComparison.Ordinal);
+            Assert.Contains("roaming", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public void QueryElement_renders_nothing_once_removed()
     {
         using var context = new BunitContext();
