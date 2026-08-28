@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components;
+
 namespace Reflections.Blazor.Query;
 public class QueryRenderState
 {
@@ -14,6 +16,10 @@ public class QueryRenderState
     private readonly Dictionary<string, List<QueryContent>> _appended = new(StringComparer.Ordinal);
     private readonly Dictionary<string, QueryVirtualNode> _virtualNodes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _virtualChildKeys = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RenderFragment> _realElementFragments = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _relocatedParent = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<string>> _relocatedChildrenByHost = new(StringComparer.Ordinal);
+    private readonly List<Func<Action, Task>> _dispatchers = [];
     private int _batchDepth;
     private bool _dirty;
     public event Action? Changed;
@@ -47,7 +53,73 @@ public class QueryRenderState
     internal IReadOnlyList<string> VirtualChildKeysFor(string parentKey) =>
         _virtualChildKeys.TryGetValue(parentKey, out var keys) ? keys : [];
     internal IReadOnlyList<string> AllVirtualKeys => _virtualNodes.Keys.ToArray();
+    internal bool IsRealElement(string elementKey) => _realElementFragments.ContainsKey(elementKey);
+    internal bool IsRelocatedElsewhere(string elementKey) => _relocatedParent.ContainsKey(elementKey);
+    internal RenderFragment? RealElementFragmentFor(string elementKey) =>
+        _realElementFragments.TryGetValue(elementKey, out var fragment) ? fragment : null;
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
+    internal void RegisterDispatch(Func<Action, Task> dispatch)
+    {
+        if (!_dispatchers.Contains(dispatch))
+            _dispatchers.Add(dispatch);
+    }
+    internal void UnregisterDispatch(Func<Action, Task> dispatch) => _dispatchers.Remove(dispatch);
+    internal void RegisterRealElement(string key, RenderFragment fragment)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(fragment);
+        _realElementFragments[key] = fragment;
+        // A host may already be waiting to render this key (attached before this element finished
+        // mounting/registering). Notify so that host gets a follow-up render picking up the fragment;
+        // otherwise skip notifying on ordinary mount to avoid a render on every element registration.
+        if (_relocatedParent.ContainsKey(key))
+            NotifyChanged();
+    }
+    internal void UnregisterRealElement(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (!_realElementFragments.Remove(key))
+            return;
+        DetachRealChildQuiet(key);
+        HandleHostRemoval(key);
+        NotifyChanged();
+    }
+    internal void AttachRealChild(string key, string parentKey, bool atStart)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentKey);
+        RequireRealElement(key);
+        DetachRealChildQuiet(key);
+        _relocatedParent[key] = parentKey;
+        (_relocatedChildrenByHost.TryGetValue(parentKey, out var hostSet) ? hostSet : _relocatedChildrenByHost[parentKey] = new(StringComparer.Ordinal)).Add(key);
+        var siblings = _virtualChildKeys.TryGetValue(parentKey, out var existing) ? existing : _virtualChildKeys[parentKey] = [];
+        if (atStart)
+            siblings.Insert(0, key);
+        else
+            siblings.Add(key);
+        NotifyChanged();
+    }
+    internal void AttachRealSibling(string key, string anchorKey, string parentKey, bool before)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(anchorKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentKey);
+        RequireRealElement(key);
+        DetachRealChildQuiet(key);
+        _relocatedParent[key] = parentKey;
+        (_relocatedChildrenByHost.TryGetValue(parentKey, out var hostSet) ? hostSet : _relocatedChildrenByHost[parentKey] = new(StringComparer.Ordinal)).Add(key);
+        var siblings = _virtualChildKeys.TryGetValue(parentKey, out var existing) ? existing : _virtualChildKeys[parentKey] = [];
+        var anchorIndex = siblings.IndexOf(anchorKey);
+        var insertIndex = anchorIndex < 0 ? siblings.Count : before ? anchorIndex : anchorIndex + 1;
+        siblings.Insert(insertIndex, key);
+        NotifyChanged();
+    }
+    internal void DetachRealChild(string key)
+    {
+        RequireRealElement(key);
+        var wasRelocated = _relocatedParent.ContainsKey(key);
+        DetachRealChildQuiet(key);
+        if (wasRelocated)
+            NotifyChanged();
+    }
     internal void CreateVirtualChild(
         string key,
         string parentKey,
@@ -100,11 +172,9 @@ public class QueryRenderState
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         if (!_virtualNodes.Remove(key, out var node))
             return;
-        foreach (var descendantKey in VirtualChildKeysFor(key).ToArray())
-            RemoveVirtualNode(descendantKey);
+        HandleHostRemoval(key);
         if (node.ParentKey is not null && _virtualChildKeys.TryGetValue(node.ParentKey, out var siblings))
             siblings.Remove(key);
-        _virtualChildKeys.Remove(key);
         NotifyChanged();
     }
     internal string CreateDetachedVirtualNode(string key, string tagName, string? className, string? text, bool isHtml)
@@ -159,6 +229,41 @@ public class QueryRenderState
             ? node
             : throw new InvalidOperationException($"'{key}' is not a library-created (virtual) element.");
     }
+    private void RequireRealElement(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (!_realElementFragments.ContainsKey(key))
+            throw new InvalidOperationException($"'{key}' is not a currently-mounted real element.");
+    }
+    private void DetachRealChildQuiet(string key)
+    {
+        if (!_relocatedParent.Remove(key, out var oldHost))
+            return;
+        if (_virtualChildKeys.TryGetValue(oldHost, out var siblings))
+            siblings.Remove(key);
+        if (_relocatedChildrenByHost.TryGetValue(oldHost, out var hostSet))
+            hostSet.Remove(key);
+    }
+    /// <summary>
+    /// Cleans up a host key that has just stopped existing (disposed real element, or a removed virtual
+    /// container): every child currently attached under it either cascades away (a pure virtual child, which
+    /// has no other home) or springs back to its own declared Razor position (a relocated real child).
+    /// </summary>
+    private void HandleHostRemoval(string hostKey)
+    {
+        if (_virtualChildKeys.Remove(hostKey, out var children))
+        {
+            foreach (var childKey in children.ToArray())
+            {
+                if (_virtualNodes.ContainsKey(childKey))
+                    RemoveVirtualNode(childKey);
+                else if (_relocatedParent.ContainsKey(childKey))
+                    SpringBackRealChild(childKey);
+            }
+        }
+        _relocatedChildrenByHost.Remove(hostKey);
+    }
+    private void SpringBackRealChild(string childKey) => _relocatedParent.Remove(childKey);
     internal void AddClass(string elementKey, string className)
     {
         ValidateClassName(elementKey, className);
@@ -265,7 +370,8 @@ public class QueryRenderState
     {
         if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0 && _content.Count == 0
             && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0
-            && _prepended.Count == 0 && _appended.Count == 0 && _virtualNodes.Count == 0 && _virtualChildKeys.Count == 0)
+            && _prepended.Count == 0 && _appended.Count == 0 && _virtualNodes.Count == 0 && _virtualChildKeys.Count == 0
+            && _realElementFragments.Count == 0 && _relocatedParent.Count == 0 && _relocatedChildrenByHost.Count == 0)
             return;
         _styles.Clear();
         _attributes.Clear();
@@ -280,6 +386,9 @@ public class QueryRenderState
         _appended.Clear();
         _virtualNodes.Clear();
         _virtualChildKeys.Clear();
+        _realElementFragments.Clear();
+        _relocatedParent.Clear();
+        _relocatedChildrenByHost.Clear();
         NotifyChanged();
     }
     private static void ValidateAttribute(string elementKey, string name, string value)
@@ -312,7 +421,40 @@ public class QueryRenderState
         _appended.Remove(elementKey);
         NotifyChanged();
     }
-    private void Flush() { if (!_dirty) return; _dirty = false; Changed?.Invoke(); }
+    private void Flush()
+    {
+        if (!_dirty) return;
+        _dirty = false;
+        // Route the whole subscriber fan-out through one dispatch when at least one host component has
+        // registered one (QueryHost.OnInitialized). This guarantees that a mutation affecting two different
+        // components in lockstep (e.g. relocating a real element: source stops rendering, host starts)
+        // always lands in the same Blazor render batch, even when the mutating call originates off the
+        // renderer's thread (a background service, timer, or SignalR callback). When already on that
+        // thread, Dispatcher.InvokeAsync runs its callback synchronously/inline, so this has no effect on
+        // the existing synchronous fast path. Falls back to the direct, undispatched call used since before
+        // this existed (e.g. plain unit tests that construct QueryRenderState without any QueryHost).
+        //
+        // Any registered dispatcher works interchangeably here: multiple QueryHost instances sharing one
+        // QueryRenderState always share the same underlying Blazor renderer/dispatcher within one app or
+        // circuit, so if the dispatcher this picks is later unregistered (its QueryHost disposed), a
+        // remaining one takes over on the next flush rather than silently reverting to the unsafe
+        // undispatched path.
+        if (_dispatchers.Count > 0)
+        {
+            var task = _dispatchers[0](() => Changed?.Invoke());
+            // If the callback ran synchronously (the common case: already on the dispatcher thread),
+            // observe and rethrow any exception now, matching the pre-dispatch behavior where a Changed
+            // subscriber's exception propagated synchronously out of the mutating call. A still-pending
+            // task means this was a genuine cross-thread marshal; that path remains fire-and-forget, same
+            // as the per-subscriber InvokeAsync(StateHasChanged) calls used before this existed.
+            if (task.IsCompleted)
+                task.GetAwaiter().GetResult();
+        }
+        else
+        {
+            Changed?.Invoke();
+        }
+    }
     private sealed class Batch(QueryRenderState owner) : IDisposable
     {
         private bool _disposed;

@@ -292,14 +292,47 @@ namespace Reflections.Blazor.Query
                     _state.DetachVirtualChild(key);
                     _registry?.SetParent(key, null);
                 }
+                else if (_state.IsRealElement(key) && _state.IsRelocatedElsewhere(key))
+                {
+                    // Springs back to its own declared Razor position: clearing the relocation makes
+                    // QueryElement.BuildRenderTree render it in place again, and its own next
+                    // OnParametersSet resyncs the registry parent to ParentElementKey.
+                    _state.DetachRealChild(key);
+                }
                 else
                 {
-                    // A Razor-declared element cannot be relocated; this only preserves its state while
-                    // hiding it from render, matching Remove(). It cannot later be re-attached elsewhere.
+                    // A real element that was never relocated has nowhere else to go; this only
+                    // preserves its state while hiding it from render, matching Remove().
                     _state.Remove(key);
                 }
             }
             return this;
+        }
+
+        public QuerySelection Before(QuerySelection element)
+        {
+            ArgumentNullException.ThrowIfNull(element);
+            var movingKey = element.RequireResolvedKeys().FirstOrDefault()
+                ?? throw new InvalidOperationException("Before requires the moving selection to resolve to at least one element.");
+            AttachSibling(movingKey, RequireSingleAnchor("Before"), before: true);
+            return this;
+        }
+
+        public QuerySelection After(QuerySelection element)
+        {
+            ArgumentNullException.ThrowIfNull(element);
+            var movingKey = element.RequireResolvedKeys().FirstOrDefault()
+                ?? throw new InvalidOperationException("After requires the moving selection to resolve to at least one element.");
+            AttachSibling(movingKey, RequireSingleAnchor("After"), before: false);
+            return this;
+        }
+
+        public QuerySelection Wrap(string wrapperTagName, string? wrapperClassName = null)
+        {
+            var results = new List<string>();
+            foreach (var key in RequireResolvedKeys())
+                results.Add(WrapSingle(key, wrapperTagName, wrapperClassName));
+            return PushResolved(results);
         }
 
         public QuerySelection Clone()
@@ -716,13 +749,73 @@ namespace Reflections.Blazor.Query
 
         private void AttachTo(string key, string targetKey, bool atStart)
         {
-            if (!_state.IsVirtual(key))
-                throw new InvalidOperationException(
-                    "AppendTo/PrependTo can only move a library-created element (created via AppendElement, PrependElement, or Clone). " +
-                    "A Razor-declared QueryElement always renders in the slot its caller wrote in markup and cannot be relocated.");
+            ThrowIfWouldCreateCycle(key, targetKey);
+            if (_state.IsVirtual(key))
+                _state.AttachVirtualChild(key, targetKey, atStart);
+            else if (_state.IsRealElement(key))
+                _state.AttachRealChild(key, targetKey, atStart);
+            else
+                throw new InvalidOperationException($"'{key}' is not a mounted element known to this render state.");
 
-            _state.AttachVirtualChild(key, targetKey, atStart);
             RequireRegistry().SetParent(key, targetKey);
+        }
+
+        private string RequireSingleAnchor(string operationName)
+        {
+            var anchors = RequireResolvedKeys();
+            return anchors.Count switch
+            {
+                1 => anchors[0],
+                0 => throw new InvalidOperationException($"{operationName} requires the receiver selection to resolve to an anchor element."),
+                _ => throw new InvalidOperationException(
+                    $"{operationName} requires the receiver selection to resolve to exactly one anchor element; " +
+                    $"it resolved to {anchors.Count}. Moving a single element {operationName.ToLowerInvariant()} multiple anchors is ambiguous."),
+            };
+        }
+
+        private void AttachSibling(string movingKey, string anchorKey, bool before)
+        {
+            var parentKey = RequireRegistry().Parent([anchorKey]).FirstOrDefault()
+                ?? throw new InvalidOperationException("Before/After requires the anchor element to have a registered parent element.");
+            ThrowIfWouldCreateCycle(movingKey, parentKey);
+
+            if (_state.IsVirtual(movingKey))
+                _state.AttachVirtualSibling(movingKey, anchorKey, parentKey, before);
+            else if (_state.IsRealElement(movingKey))
+                _state.AttachRealSibling(movingKey, anchorKey, parentKey, before);
+            else
+                throw new InvalidOperationException($"'{movingKey}' is not a mounted element known to this render state.");
+
+            RequireRegistry().SetParent(movingKey, parentKey);
+        }
+
+        private string WrapSingle(string key, string wrapperTagName, string? wrapperClassName)
+        {
+            // CreateSibling resolves key's registered parent internally and throws if it has none.
+            var wrapperKey = CreateSibling(key, wrapperTagName, wrapperClassName, text: null, isHtml: false, before: true);
+
+            if (_state.IsVirtual(key))
+                _state.AttachVirtualChild(key, wrapperKey, atStart: true);
+            else if (_state.IsRealElement(key))
+                _state.AttachRealChild(key, wrapperKey, atStart: true);
+            else
+                throw new InvalidOperationException($"'{key}' is not a mounted element known to this render state.");
+            RequireRegistry().SetParent(key, wrapperKey);
+
+            return wrapperKey;
+        }
+
+        private void ThrowIfWouldCreateCycle(string movingKey, string proposedParentKey)
+        {
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            var current = proposedParentKey;
+            while (current is not null && visited.Add(current))
+            {
+                if (string.Equals(current, movingKey, StringComparison.Ordinal))
+                    throw new InvalidOperationException(
+                        $"Cannot move '{movingKey}' into '{proposedParentKey}' — '{proposedParentKey}' is a descendant of '{movingKey}', and attaching it there would create a cycle.");
+                current = RequireRegistry().Parent([current]).FirstOrDefault();
+            }
         }
 
         private string CloneVirtual(string sourceKey)

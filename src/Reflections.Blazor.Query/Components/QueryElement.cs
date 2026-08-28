@@ -22,6 +22,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
 
     private string? _registrationSignature;
     private string? _registeredKey;
+    private QueryRenderState? _registeredRenderState;
     private QueryRenderState? _subscribedRenderState;
 
     protected override void OnParametersSet()
@@ -37,26 +38,54 @@ public sealed class QueryElement : ComponentBase, IDisposable
             _subscribedRenderState.Changed += OnRenderStateChanged;
         }
 
+        var keyChanged = _registeredKey is not null && !string.Equals(_registeredKey, ElementKey, StringComparison.Ordinal);
+        var renderStateChanged = _registeredRenderState is not null && !ReferenceEquals(_registeredRenderState, renderState);
+
+        // Only tear down the real-element registration (and, transitively, any relocation bookkeeping
+        // it holds via UnregisterRealElement's HandleHostRemoval cascade) when this component's old
+        // (key, render state) identity is genuinely retiring — never for an ordinary same-key,
+        // same-render-state reparent or class/id change, which must not disturb children relocated onto
+        // this element.
+        if ((keyChanged || renderStateChanged) && _registeredKey is not null)
+            _registeredRenderState?.UnregisterRealElement(_registeredKey);
+
+        renderState.RegisterRealElement(ElementKey, RenderSelf);
+
         var selectors = BuildSelectors();
         var signature = $"{ElementKey}\u001f{ParentElementKey}\u001f{string.Join("\u001f", selectors)}";
-        if (signature == _registrationSignature)
+        if (!keyChanged && !renderStateChanged && signature == _registrationSignature)
+        {
+            if (!renderState.IsRelocatedElsewhere(ElementKey))
+                Registry.SetParent(ElementKey, ParentElementKey);
             return;
+        }
 
         if (_registeredKey is not null)
-            Registry.Unregister(_registeredKey);
+            Registry.Unregister(_registeredKey); // Registry has no in-place update; always re-add below.
 
         Registry.RegisterWithParent(ElementKey, ParentElementKey, selectors);
         _registeredKey = ElementKey;
+        _registeredRenderState = renderState;
         _registrationSignature = signature;
     }
 
     protected override void BuildRenderTree(RenderTreeBuilder builder)
     {
         var renderState = _subscribedRenderState ?? DefaultRenderState;
+        if (renderState.IsRelocatedElsewhere(ElementKey))
+            return; // rendered by its current host instead; emitting here too would duplicate it
+
+        RenderSelf(builder);
+    }
+
+    private void RenderSelf(RenderTreeBuilder builder)
+    {
+        var renderState = _subscribedRenderState ?? DefaultRenderState;
         if (renderState.IsRemoved(ElementKey))
             return;
 
         builder.OpenElement(0, TagName);
+        builder.SetKey(ElementKey);
         builder.AddMultipleAttributes(1, AdditionalAttributes);
         builder.AddAttribute(2, "data-rbq-key", ElementKey);
         if (!string.IsNullOrWhiteSpace(Id))
@@ -82,8 +111,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddContent(sequence++, ChildContent);
         foreach (var fragment in renderState.AppendedFor(ElementKey))
             AddFragment(builder, ref sequence, fragment);
-        foreach (var childKey in renderState.VirtualChildKeysFor(ElementKey))
-            RenderVirtualNode(builder, ref sequence, renderState, childKey);
+        RenderChildren(builder, ref sequence, renderState, ElementKey);
         builder.CloseElement();
     }
 
@@ -93,6 +121,22 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddMarkupContent(sequence++, fragment.Value);
         else
             builder.AddContent(sequence++, fragment.Value);
+    }
+
+    private static void RenderChildren(RenderTreeBuilder builder, ref int sequence, QueryRenderState renderState, string hostKey)
+    {
+        foreach (var childKey in renderState.VirtualChildKeysFor(hostKey))
+        {
+            var realFragment = renderState.RealElementFragmentFor(childKey);
+            if (realFragment is not null)
+                builder.AddContent(sequence++, realFragment);
+            else if (renderState.IsVirtual(childKey))
+                RenderVirtualNode(builder, ref sequence, renderState, childKey);
+            // else: a real element was relocated here but hasn't registered its fragment yet this pass
+            // (its own QueryElement hasn't mounted/re-rendered this render). Render nothing for it now —
+            // RegisterRealElement notifies this host to re-render as soon as it does register, so the gap
+            // is a transient, self-healing one, not a silent permanent drop.
+        }
     }
 
     private static void RenderVirtualNode(RenderTreeBuilder builder, ref int sequence, QueryRenderState renderState, string elementKey)
@@ -122,8 +166,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddContent(sequence++, content.Value);
         foreach (var fragment in renderState.AppendedFor(elementKey))
             AddFragment(builder, ref sequence, fragment);
-        foreach (var childKey in renderState.VirtualChildKeysFor(elementKey))
-            RenderVirtualNode(builder, ref sequence, renderState, childKey);
+        RenderChildren(builder, ref sequence, renderState, elementKey);
         builder.CloseElement();
     }
 
@@ -133,6 +176,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
         {
             Registry.Unregister(_registeredKey);
             Measurements.InvalidateElement(_subscribedRenderState ?? DefaultRenderState, _registeredKey);
+            _registeredRenderState?.UnregisterRealElement(_registeredKey);
         }
         if (_subscribedRenderState is not null)
             _subscribedRenderState.Changed -= OnRenderStateChanged;

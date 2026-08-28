@@ -4,7 +4,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 97/97 passed](https://img.shields.io/badge/tests-97%2F97%20passed-success)
+![Tests 107/107 passed](https://img.shields.io/badge/tests-107%2F107%20passed-success)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
@@ -35,8 +35,8 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 
 ## Current status (as of 2026-08-28, `master`)
 
-- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468). Classes, visibility, removal, and full create/move/duplicate support for *library-created* elements (`AppendElement`, `AppendTo`, `Detach`, `Clone`, etc.) are done. Moving, replacing, wrapping, or cloning an *already-declared, Razor-written* `QueryElement` remains architecturally out of reach — see below.
-- **Validation:** 97/97 unit and component tests passing.
+- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468), essentially complete. Classes, visibility, removal, and structural insertion — including moving and wrapping *real, Razor-declared* elements via `AppendTo`/`PrependTo`/`Before`/`After`/`Wrap`, not just library-created ones — are all done. Remaining gaps are narrow: `Replace*`, `WrapAll`/`WrapInner`, and cloning a real element (needs generator-level key minting).
+- **Validation:** 107/107 unit and component tests passing.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 
 ### Done (merged to `master`)
@@ -114,19 +114,18 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `AppendElement(tagName, className?, text?, isHtml?)` — creates a brand-new, library-owned element (a "virtual node") as the last child of the selected element, registered in `QueryElementRegistry` so it is selectable, styleable, and composable with every other operation (`Attr`, `AddClass`, `Hide`, nested `AppendElement`, etc.). Returns a `QuerySelection` for the new element.
 - [x] `PrependElement(...)` — same, as the first child.
 - [x] `InsertElementBefore(...)` / `InsertElementAfter(...)` — creates a new virtual sibling immediately before/after the selected element, inside that element's registered parent.
-- [x] `AppendTo(target)` / `PrependTo(target)` — moves a **library-created (virtual)** element into another element's child list, updating both `QueryRenderState` ordering and the `QueryElementRegistry` parent link. Throws `InvalidOperationException` if the source is a real, Razor-declared `QueryElement` — those cannot be relocated (see below).
-- [x] `Detach()` — orphans a virtual element (removed from its parent's child list, kept registered and its state intact) so it can later be re-attached via `AppendTo`/`PrependTo`. For a real `QueryElement`, behaves like `Remove()` (state preserved, hidden from render) since it cannot be relocated afterward — documented as a narrower guarantee than jQuery's `detach()`.
+- [x] `AppendTo(target)` / `PrependTo(target)` — moves an element (real, Razor-declared **or** library-created) into another element's child list. For a real `QueryElement`, this works via a live delegate to that component's own render method, captured on every render and invoked by the new host instead of the element's own declared position — the original renders nothing once relocated, so nothing is ever emitted twice. Cross-thread mutations (e.g. from a background service) are safe: a single dispatcher, registered by `QueryHost`, ensures the "source stops / host starts" pair always lands in one Blazor render batch.
+- [x] `Before(anchorContent)` / `After(anchorContent)` — move an existing element to sit immediately before/after a single anchor element (real or virtual). Throws if the receiving selection resolves to anything other than exactly one anchor, since moving one element relative to several anchors is ambiguous.
+- [x] `Wrap(tagName, className?)` — inserts a new library-created wrapper element at an element's current position and reparents the element inside it. Works for both real and virtual elements.
+- [x] `Detach()` — orphans an element from wherever it's currently attached, keeping its state intact so it can be re-attached later via `AppendTo`/`PrependTo`. For a relocated real element, this "springs it back" to render at its own declared Razor position again. For a real element that was never relocated, or a virtual element, this matches existing `Remove()`/detach-in-place semantics.
 - [x] `Clone()` — duplicates a **virtual** element's tag, class, attributes, properties, added classes, content, appended/prepended fragments, and hidden state under a new key, unattached until explicitly `AppendTo`/`PrependTo`'d somewhere. Throws for a real `QueryElement`, since two elements cannot share a `data-rbq-key` without generator-level key minting (not implemented).
 
 ### In progress / remaining (not yet started)
 
-The structural-insertion model above fully solves *creating, moving, and duplicating* **library-created (virtual)** elements at runtime — a `QueryElement`'s virtual children are rendered recursively by the same component, driven by `QueryRenderState`, with no direct DOM writes, and `AppendTo`/`PrependTo`/`Detach`/`Clone` all work on them. What remains open is specifically about an **already-declared, Razor-written** `QueryElement`: it always renders in the exact slot its caller wrote in markup, and no render-state or registry mutation relocates that specific component instance — this is a hard boundary of the current architecture, not an oversight.
-
-- [ ] `Before` / `After` (jQuery-style, moving an *existing, real* selection) — `InsertElementBefore`/`InsertElementAfter` above cover the create-new case for any element; `AppendTo`/`PrependTo` cover move for virtual elements. Moving a *real* element is still unsupported.
-- [ ] `InsertBefore` / `InsertAfter` (jQuery aliases of the above, same limitation)
-- [ ] `Replace` / `ReplaceAll` / `ReplaceWith` — for a real element, would need to hide the original (`Remove`) and insert new content approximately at the same position; not yet implemented.
-- [ ] `Wrap` / `WrapAll` / `WrapInner` — wrapping a real element with a new parent requires inserting a parent around an existing Razor slot, which is blocked the same way.
-- [ ] `Clone` **of a real, Razor-declared element** — remains blocked on generator-level key minting.
+- [ ] `InsertBefore` / `InsertAfter` (jQuery aliases of `Before`/`After`) — not yet added as separate names.
+- [ ] `Replace` / `ReplaceAll` / `ReplaceWith` — not yet implemented for either real or virtual elements.
+- [ ] `WrapAll` / `WrapInner` — only single-element `Wrap` exists so far.
+- [ ] `Clone` **of a real, Razor-declared element** — remains blocked on generator-level key minting (two elements can't share a `data-rbq-key`).
 - [ ] Component scoping — `ComponentScopeKey` and `IQueryScope` (Sprint 3 / Feature 4468)
 - [ ] `On`
 - [ ] `Off`

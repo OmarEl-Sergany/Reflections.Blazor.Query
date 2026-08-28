@@ -73,6 +73,34 @@ public sealed class QueryHostNavigationComponentTests
         Assert.Single(bridge.Batches);
     }
 
+    [Fact]
+    public async Task Disposing_one_of_two_QueryHosts_sharing_a_render_state_does_not_break_dispatch_for_the_other()
+    {
+        using var context = new BunitContext();
+        var sharedState = new QueryRenderState();
+        var registry = new QueryElementRegistry();
+        context.Services.AddSingleton<NavigationManager>(new TestNavigationManager());
+        context.Services.AddSingleton(sharedState);
+        context.Services.AddSingleton(registry);
+        context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+
+        var hostA = context.Render<QueryHost>(parameters => parameters
+            .Add(component => component.RenderState, sharedState)
+            .AddChildContent("<main>A</main>"));
+        var hostB = context.Render<QueryHost>(parameters => parameters
+            .Add(component => component.RenderState, sharedState)
+            .AddChildContent("<aside>B</aside>"));
+
+        // Host B registered its dispatch after host A. Disposing B must not clear A's ability to
+        // receive dispatched notifications for mutations made off the renderer's thread — the bug: a
+        // single dispatch slot got clobbered/cleared regardless of which host was still alive.
+        hostB.Instance.Dispose();
+
+        await Task.Run(() => new Query(sharedState, registry).Select(".target").Css("color", "green"));
+
+        hostA.WaitForAssertion(() => Assert.Contains("color: green", hostA.Markup, StringComparison.Ordinal));
+    }
+
     private sealed class TestNavigationManager : NavigationManager
     {
         public TestNavigationManager() => Initialize("https://query.test/", "https://query.test/");
