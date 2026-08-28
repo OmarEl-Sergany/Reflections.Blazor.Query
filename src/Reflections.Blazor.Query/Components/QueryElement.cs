@@ -71,14 +71,26 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
         foreach (var property in renderState.PropertiesFor(ElementKey))
             builder.AddAttribute(sequence++, property.Key, property.Value);
+        foreach (var fragment in renderState.PrependedFor(ElementKey))
+            AddFragment(builder, ref sequence, fragment);
         var content = renderState.ContentFor(ElementKey);
         if (content is { IsHtml: true })
-            builder.AddMarkupContent(sequence, content.Value);
+            builder.AddMarkupContent(sequence++, content.Value);
         else if (content is not null)
-            builder.AddContent(sequence, content.Value);
+            builder.AddContent(sequence++, content.Value);
         else
-            builder.AddContent(sequence, ChildContent);
+            builder.AddContent(sequence++, ChildContent);
+        foreach (var fragment in renderState.AppendedFor(ElementKey))
+            AddFragment(builder, ref sequence, fragment);
         builder.CloseElement();
+    }
+
+    private static void AddFragment(RenderTreeBuilder builder, ref int sequence, QueryContent fragment)
+    {
+        if (fragment.IsHtml)
+            builder.AddMarkupContent(sequence++, fragment.Value);
+        else
+            builder.AddContent(sequence++, fragment.Value);
     }
 
     public void Dispose()

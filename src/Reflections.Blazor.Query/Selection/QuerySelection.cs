@@ -169,6 +169,38 @@ namespace Reflections.Blazor.Query
 
         public QuerySelection Width(double pixels) => SetOwnedLength("width", pixels);
 
+        public QuerySelection Append(string text)
+        {
+            ArgumentNullException.ThrowIfNull(text);
+            foreach (var key in RequireResolvedKeys())
+                _state.AppendContent(key, text, isHtml: false);
+            return this;
+        }
+
+        public QuerySelection AppendHtml(string html)
+        {
+            ArgumentNullException.ThrowIfNull(html);
+            foreach (var key in RequireResolvedKeys())
+                _state.AppendContent(key, html, isHtml: true);
+            return this;
+        }
+
+        public QuerySelection Prepend(string text)
+        {
+            ArgumentNullException.ThrowIfNull(text);
+            foreach (var key in RequireResolvedKeys())
+                _state.PrependContent(key, text, isHtml: false);
+            return this;
+        }
+
+        public QuerySelection PrependHtml(string html)
+        {
+            ArgumentNullException.ThrowIfNull(html);
+            foreach (var key in RequireResolvedKeys())
+                _state.PrependContent(key, html, isHtml: true);
+            return this;
+        }
+
         public QuerySelection AddClass(string className)
         {
             foreach (var name in SplitClassNames(className))

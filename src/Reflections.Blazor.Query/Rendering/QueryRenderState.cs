@@ -10,6 +10,8 @@ public class QueryRenderState
     private readonly Dictionary<string, HashSet<string>> _removedClasses = new(StringComparer.Ordinal);
     private readonly HashSet<string> _hiddenKeys = new(StringComparer.Ordinal);
     private readonly HashSet<string> _removedKeys = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<QueryContent>> _prepended = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<QueryContent>> _appended = new(StringComparer.Ordinal);
     private int _batchDepth;
     private bool _dirty;
     public event Action? Changed;
@@ -33,6 +35,10 @@ public class QueryRenderState
         _removedClasses.TryGetValue(elementKey, out var classes) ? classes : (IReadOnlySet<string>)new HashSet<string>();
     internal bool IsHidden(string elementKey) => _hiddenKeys.Contains(elementKey);
     internal bool IsRemoved(string elementKey) => _removedKeys.Contains(elementKey);
+    internal IReadOnlyList<QueryContent> PrependedFor(string elementKey) =>
+        _prepended.TryGetValue(elementKey, out var fragments) ? fragments : [];
+    internal IReadOnlyList<QueryContent> AppendedFor(string elementKey) =>
+        _appended.TryGetValue(elementKey, out var fragments) ? fragments : [];
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
     internal void AddClass(string elementKey, string className)
     {
@@ -66,6 +72,8 @@ public class QueryRenderState
     internal void Empty(string elementKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        _prepended.Remove(elementKey);
+        _appended.Remove(elementKey);
         SetContent(elementKey, new QueryContent(string.Empty, false));
     }
     internal void SetCss(string selector, string property, string value) { _styles[(selector, property)] = value; NotifyChanged(); }
@@ -118,10 +126,27 @@ public class QueryRenderState
     }
     internal void SetText(string elementKey, string value) => SetContent(elementKey, new QueryContent(value, false));
     internal void SetHtml(string elementKey, string value) => SetContent(elementKey, new QueryContent(value, true));
+    internal void AppendContent(string elementKey, string value, bool isHtml)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(value);
+        (_appended.TryGetValue(elementKey, out var fragments) ? fragments : _appended[elementKey] = [])
+            .Add(new QueryContent(value, isHtml));
+        NotifyChanged();
+    }
+    internal void PrependContent(string elementKey, string value, bool isHtml)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(value);
+        (_prepended.TryGetValue(elementKey, out var fragments) ? fragments : _prepended[elementKey] = [])
+            .Insert(0, new QueryContent(value, isHtml));
+        NotifyChanged();
+    }
     public void Clear()
     {
         if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0 && _content.Count == 0
-            && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0)
+            && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0
+            && _prepended.Count == 0 && _appended.Count == 0)
             return;
         _styles.Clear();
         _attributes.Clear();
@@ -132,6 +157,8 @@ public class QueryRenderState
         _removedClasses.Clear();
         _hiddenKeys.Clear();
         _removedKeys.Clear();
+        _prepended.Clear();
+        _appended.Clear();
         NotifyChanged();
     }
     private static void ValidateAttribute(string elementKey, string name, string value)
@@ -160,6 +187,8 @@ public class QueryRenderState
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
         _content[elementKey] = content;
+        _prepended.Remove(elementKey);
+        _appended.Remove(elementKey);
         NotifyChanged();
     }
     private void Flush() { if (!_dirty) return; _dirty = false; Changed?.Invoke(); }

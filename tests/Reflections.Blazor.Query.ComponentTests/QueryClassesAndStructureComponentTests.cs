@@ -54,6 +54,39 @@ public sealed class QueryClassesAndStructureComponentTests
     }
 
     [Fact]
+    public void QueryElement_renders_prepended_content_before_and_appended_content_after_existing_content()
+    {
+        using var context = new BunitContext();
+        var registry = new QueryElementRegistry();
+        var renderState = new QueryRenderState();
+        context.Services.AddSingleton(registry);
+        context.Services.AddSingleton(renderState);
+        context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+
+        var cut = context.Render<QueryElement>(parameters => parameters
+            .Add(component => component.ElementKey, "list")
+            .Add(component => component.TagName, "div")
+            .Add(component => component.Class, "list")
+            .AddChildContent("middle"));
+        var selection = new Query(renderState, registry).Select(".list");
+
+        selection.Append("after").AppendHtml("<b>trusted-after</b>");
+        selection.Prepend("before");
+
+        cut.WaitForAssertion(() =>
+        {
+            var markup = cut.Markup;
+            var beforeIndex = markup.IndexOf("before", StringComparison.Ordinal);
+            var middleIndex = markup.IndexOf("middle", StringComparison.Ordinal);
+            var afterIndex = markup.IndexOf("after", StringComparison.Ordinal);
+            var trustedIndex = markup.IndexOf("<b>trusted-after</b>", StringComparison.Ordinal);
+            Assert.True(beforeIndex >= 0 && beforeIndex < middleIndex);
+            Assert.True(middleIndex < afterIndex);
+            Assert.True(afterIndex < trustedIndex);
+        });
+    }
+
+    [Fact]
     public void QueryElement_renders_nothing_once_removed()
     {
         using var context = new BunitContext();

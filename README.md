@@ -4,7 +4,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 74/74 passed](https://img.shields.io/badge/tests-74%2F74%20passed-success)
+![Tests 79/79 passed](https://img.shields.io/badge/tests-79%2F79%20passed-success)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
@@ -36,7 +36,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 ## Current status (as of 2026-08-28, `master`)
 
 - **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468). Classes, visibility, and removal are done; structural insertion (`Append`/`Wrap`/etc.) is deferred pending a child-list architecture.
-- **Validation:** 74/74 unit and component tests passing.
+- **Validation:** 79/79 unit and component tests passing.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 
 ### Done (merged to `master`)
@@ -107,14 +107,16 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `Toggle`
 - [x] `Remove`
 - [x] `Empty`
+- [x] `Append` — appends an owned, encoded text fragment after an element's existing content.
+- [x] `AppendHtml` — trusted-markup variant of `Append`, under the same explicit trust boundary as `Html`.
+- [x] `Prepend` — prepends an owned, encoded text fragment before an element's existing content.
+- [x] `PrependHtml` — trusted-markup variant of `Prepend`.
 
 ### In progress / remaining (not yet started)
 
-The structural-insertion APIs below (`Append` through `WrapInner`) need a library-owned child-list model — dynamically creating, moving, or reparenting `QueryElement` instances at runtime — which is a bigger architectural addition than a render-state flag. They are scoped for a follow-up sprint rather than included in the current classes/visibility/removal delivery.
+`AppendTo` through `WrapInner` below are **not** the same problem as `Append`/`Prepend` above. `Append`/`Prepend` only grow a selected element's *own* rendered content, which fits the existing render-state pattern. The APIs below need to move or create whole sibling elements relative to other elements — for a `QueryElement`, that is impossible without a library-owned child-list model, because a `QueryElement` always renders in the exact Razor slot where its caller declared it; no render-state flag can relocate it. This is a bigger architectural addition (dynamic creation/reparenting of `QueryElement` instances at runtime) and is scoped for a follow-up sprint.
 
-- [ ] `Append`
 - [ ] `AppendTo`
-- [ ] `Prepend`
 - [ ] `PrependTo`
 - [ ] `Before`
 - [ ] `After`

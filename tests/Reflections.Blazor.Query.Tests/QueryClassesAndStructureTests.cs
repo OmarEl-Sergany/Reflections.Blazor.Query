@@ -1,3 +1,4 @@
+using System.Linq;
 using Reflections.Blazor.Query;
 
 namespace Reflections.Blazor.Query.Tests;
@@ -125,6 +126,57 @@ public sealed class QueryClassesAndStructureTests
 
         Assert.Equal(string.Empty, state.ContentFor("panel")?.Value);
         Assert.True(state.IsRemoved("child"));
+    }
+
+    [Fact]
+    public void Append_and_Prepend_accumulate_ordered_encoded_fragments()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+
+        query.Select(".list").Append("first").Append("second");
+        query.Select(".list").Prepend("zero-b").Prepend("zero-a");
+
+        Assert.Equal(["zero-a", "zero-b"], state.PrependedFor("list").Select(f => f.Value));
+        Assert.Equal(["first", "second"], state.AppendedFor("list").Select(f => f.Value));
+        Assert.All(state.PrependedFor("list").Concat(state.AppendedFor("list")), f => Assert.False(f.IsHtml));
+    }
+
+    [Fact]
+    public void AppendHtml_and_PrependHtml_mark_fragments_as_trusted_markup()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+
+        query.Select(".list").AppendHtml("<b>end</b>").PrependHtml("<b>start</b>");
+
+        Assert.True(state.AppendedFor("list").Single().IsHtml);
+        Assert.True(state.PrependedFor("list").Single().IsHtml);
+    }
+
+    [Fact]
+    public void Setting_Text_or_Html_clears_previously_appended_and_prepended_fragments()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        query.Select(".list").Append("stale");
+
+        query.Select(".list").Text("fresh");
+
+        Assert.Empty(state.AppendedFor("list"));
+    }
+
+    [Fact]
+    public void Empty_clears_appended_and_prepended_fragments()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        query.Select(".list").Append("stale").Prepend("also-stale");
+
+        query.Select(".list").Empty();
+
+        Assert.Empty(state.AppendedFor("list"));
+        Assert.Empty(state.PrependedFor("list"));
     }
 
     [Fact]
