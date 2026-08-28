@@ -1,5 +1,6 @@
 using Bunit;
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Reflections.Blazor.Query;
 
@@ -83,6 +84,31 @@ public sealed class QueryClassesAndStructureComponentTests
             Assert.True(beforeIndex >= 0 && beforeIndex < middleIndex);
             Assert.True(middleIndex < afterIndex);
             Assert.True(afterIndex < trustedIndex);
+        });
+    }
+
+    [Fact]
+    public void QueryElement_preserves_caller_supplied_inline_style_when_hidden()
+    {
+        using var context = new BunitContext();
+        var registry = new QueryElementRegistry();
+        var renderState = new QueryRenderState();
+        context.Services.AddSingleton(registry);
+        context.Services.AddSingleton(renderState);
+        context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+
+        var cut = context.Render<QueryElement>(parameters => parameters
+            .Add(component => component.ElementKey, "panel")
+            .Add(component => component.TagName, "div")
+            .Add(component => component.Class, "panel")
+            .Add(component => component.AdditionalAttributes, new Dictionary<string, object> { ["style"] = "color: red;" }));
+
+        new Query(renderState, registry).Select(".panel").Hide();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("color: red;", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("display: none;", cut.Markup, StringComparison.Ordinal);
         });
     }
 

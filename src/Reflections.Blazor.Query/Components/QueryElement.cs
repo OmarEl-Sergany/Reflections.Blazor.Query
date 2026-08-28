@@ -66,7 +66,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
         if (!string.IsNullOrEmpty(className))
             builder.AddAttribute(sequence++, "class", className);
         if (renderState.IsHidden(ElementKey))
-            builder.AddAttribute(sequence++, "style", "display: none;");
+            builder.AddAttribute(sequence++, "style", BuildHiddenStyle());
         foreach (var attribute in renderState.AttributesFor(ElementKey))
             builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
         foreach (var property in renderState.PropertiesFor(ElementKey))
@@ -105,6 +105,21 @@ public sealed class QueryElement : ComponentBase, IDisposable
     }
 
     private void OnRenderStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private string BuildHiddenStyle()
+    {
+        if (AdditionalAttributes is not null
+            && AdditionalAttributes.TryGetValue("style", out var existing)
+            && existing is string existingStyle
+            && !string.IsNullOrWhiteSpace(existingStyle))
+        {
+            var trimmed = existingStyle.TrimEnd();
+            if (!trimmed.EndsWith(';'))
+                trimmed += ";";
+            return $"{trimmed} display: none;";
+        }
+        return "display: none;";
+    }
 
     private string? BuildClassName(QueryRenderState renderState)
     {
