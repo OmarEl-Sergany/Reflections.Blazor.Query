@@ -8,7 +8,7 @@ builder.Logging.AddConsole();
 builder.Services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider,
     Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider>();
 
-builder.Services.AddReflectionsBlazorQuery();
+builder.Services.AddBlazorQuery();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

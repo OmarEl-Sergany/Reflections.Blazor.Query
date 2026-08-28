@@ -7,9 +7,9 @@
 <h1>Reflections.Blazor.Query</h1>
 <p>This page exercises CSS updates through the library after a Blazor event.</p>
 <section class="debug-panel">
-    <p>First paragraph: unchanged.</p>
-    <p>Second paragraph: click the button to style me.</p>
-    <p>Third paragraph: unchanged.</p>
+    <QueryElement TagName="p" ElementKey="home-paragraph-1" Class="query-item">First paragraph: unchanged.</QueryElement>
+    <QueryElement TagName="p" ElementKey="home-paragraph-2" Class="query-item">Second paragraph: click the button to style me.</QueryElement>
+    <QueryElement TagName="p" ElementKey="home-paragraph-3" Class="query-item">Third paragraph: unchanged.</QueryElement>
 </section>
 <button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
 @if (_applied)
@@ -23,7 +23,7 @@
     {
         using (Query.BeginBatch())
         {
-            Query.Select(".debug-panel p:nth-of-type(2)").Css("color", "red");
+            Query.Select(".query-item").Eq(1).Css("color", "red");
             using (LayoutQuery.BeginBatch())
             {
                 LayoutQuery.Select(".sidebar").Css("background", "black");

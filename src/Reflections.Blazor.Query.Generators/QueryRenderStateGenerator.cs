@@ -20,7 +20,14 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
                 [
                     "Select", "Css", "BeginBatch", "Clear", "QueryHost",
                     "PageScope", "LayoutScope", "ApplicationScope",
-                    "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata"
+                    "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata",
+                    "Add", "AddBack", "End", "Find", "Children", "Filter", "Not", "Has", "Is",
+                    "Parent", "Parents", "ParentsUntil", "Closest", "Next", "NextAll", "NextUntil",
+                    "Prev", "PrevAll", "PrevUntil", "Siblings",
+                    "Length", "First", "Last", "Eq", "Slice", "ToArray", "ElementRegistry",
+                    "QueryElement", "GeneratedElementKey", "ElementDisposal",
+                    "Each", "Map", "Get", "Index", "PushStack", "SelectorParser", "SelectorMatcher",
+                    "CompoundTagIdClassSelectors"
                 ];
             }
             """));

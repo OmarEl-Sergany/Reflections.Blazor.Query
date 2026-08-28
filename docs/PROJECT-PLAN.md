@@ -82,7 +82,7 @@ The API matrix must be maintained as a versioned document and each item must hav
 - Add `.env` protection and secret scanning.
 - Define generated API metadata format and operation identifiers. (Complete; metadata includes operations, scopes, and lifecycle capabilities.)
 - Create deterministic render-state and scope tests. (Complete; batching, navigation clearing, layout persistence, application/page/layout isolation, and host subscription disposal are covered.)
-- Provide shared DI registration through `AddReflectionsBlazorQuery`. (Complete.)
+- Provide shared DI registration through `AddBlazorQuery`. (Complete.)
 - Add Server, WebAssembly, and Auto demo hosts and proof pages. (Complete; build verified.)
 
 Foundation verification: full solution build succeeds with 0 errors; 11 unit/component tests pass. Live browser validation also passes for Interactive Server, WebAssembly, and Auto. Server preserves layout-owned styles across navigation while page-owned styles reset. WebAssembly and Auto apply state-owned CSS after hydration, rerender successfully, and reset page state after navigating away and back.
@@ -92,6 +92,8 @@ Foundation verification: full solution build succeeds with 0 errors; 11 unit/com
 - Implement `Select`, `Length`, `Eq`, `First`, `Last`, `Slice`, `ToArray`, `Each`, `Map`, `End`, `PushStack`.
 - Implement `Find`, `Children`, `Closest`, `Parent`, `Parents`, `ParentsUntil`, `Next*`, `Prev*`, `Siblings`, `Filter`, `Not`, `Has`, `Is`, `Index`.
 - Add zero/one/many match tests and navigation-scope tests.
+
+Managed selector subset: `*`, tag, id, class, and compound tag/id/class selectors resolve through generated element metadata. Combinators, pseudo-classes, attribute selectors, and arbitrary browser selector expressions remain CSS-only until an explicit managed matcher contract is designed.
 
 ### Sprint 2 - attributes, properties, data, and text
 

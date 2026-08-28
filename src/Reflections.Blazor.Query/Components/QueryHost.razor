@@ -11,19 +11,22 @@
 
     protected override void OnInitialized()
     {
-        ActiveState.Changed += StateHasChanged;
+        ActiveState.Changed += OnStateChanged;
         Navigation.LocationChanged += OnLocationChanged;
     }
+
+    private void OnStateChanged() => _ = InvokeAsync(StateHasChanged);
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
         if (ClearOnNavigation) ActiveState.Clear();
-        _ = InvokeAsync(StateHasChanged);
+        if (!ClearOnNavigation)
+            _ = InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        ActiveState.Changed -= StateHasChanged;
+        ActiveState.Changed -= OnStateChanged;
         Navigation.LocationChanged -= OnLocationChanged;
     }
 }
