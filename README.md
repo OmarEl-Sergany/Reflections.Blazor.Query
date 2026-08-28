@@ -4,7 +4,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 61/61 passed](https://img.shields.io/badge/tests-61%2F61%20passed-success)
+![Tests 74/74 passed](https://img.shields.io/badge/tests-74%2F74%20passed-success)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
@@ -35,8 +35,8 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 
 ## Current status (as of 2026-08-28, `master`)
 
-- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468) is next up.
-- **Validation:** 61/61 unit and component tests passing.
+- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468). Classes, visibility, and removal are done; structural insertion (`Append`/`Wrap`/etc.) is deferred pending a child-list architecture.
+- **Validation:** 74/74 unit and component tests passing.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 
 ### Done (merged to `master`)
@@ -98,16 +98,20 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `Offset`
 - [x] `Position`
 - [x] `OffsetParent`
+- [x] `AddClass`
+- [x] `RemoveClass`
+- [x] `ToggleClass`
+- [x] `HasClass`
+- [x] `Show`
+- [x] `Hide`
+- [x] `Toggle`
+- [x] `Remove`
+- [x] `Empty`
 
 ### In progress / remaining (not yet started)
 
-- [ ] `AddClass`
-- [ ] `RemoveClass`
-- [ ] `ToggleClass`
-- [ ] `HasClass`
-- [ ] `Show`
-- [ ] `Hide`
-- [ ] `Toggle`
+The structural-insertion APIs below (`Append` through `WrapInner`) need a library-owned child-list model — dynamically creating, moving, or reparenting `QueryElement` instances at runtime — which is a bigger architectural addition than a render-state flag. They are scoped for a follow-up sprint rather than included in the current classes/visibility/removal delivery.
+
 - [ ] `Append`
 - [ ] `AppendTo`
 - [ ] `Prepend`
@@ -119,9 +123,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [ ] `Replace`
 - [ ] `ReplaceAll`
 - [ ] `ReplaceWith`
-- [ ] `Remove`
-- [ ] `Empty`
-- [ ] `Detach`
+- [ ] `Detach` — distinct from `Remove`; needs the same structural-insertion model to support re-attaching.
 - [ ] `Clone`
 - [ ] `Wrap`
 - [ ] `WrapAll`
