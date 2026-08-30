@@ -21,6 +21,15 @@ The implementation names use `Async` suffixes to make the browser boundary visib
 
 `Height(double)` and `Width(double)` are implemented as separate render-state write operations. They accept finite non-negative CSS pixel values, emit generated-key CSS rules for each resolved owned element, and never call JavaScript.
 
+## Form serialization boundary
+
+Form values (checked state, selected options, radio groups, disabled membership) are live browser state, not render-state mutations. `Serialize` / `SerializeArray` therefore follow the same read-only observation contract as dimensions:
+
+- `SerializeArrayAsync` (**implemented**) — returns `IReadOnlyList<SerializedField>` (`Name` / `Value` pairs) read from the browser for the selection's resolved owned elements.
+- `SerializeAsync` (**implemented**) — returns the jQuery-style URL-encoded query string built from the same field pairs (`name=value&name=value`, `+` for spaces).
+
+The JS module applies jQuery's "successful control" rules read-only: a field is emitted only for a control that has a `name`, is not disabled, is a submittable element, is not a submit/button/image/reset/file control, and (for `checkbox`/`radio`) is checked. Selecting a `<form>`/`<fieldset>` serializes its named controls; selecting a submittable control serializes that control; selecting any other container serializes its descendant controls. The JS module never sets attributes, properties, classes, styles, content, or handlers — it only reads.
+
 ## Data flow
 
 ```mermaid

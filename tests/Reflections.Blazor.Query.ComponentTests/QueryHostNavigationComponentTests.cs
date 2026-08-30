@@ -20,6 +20,7 @@ public sealed class QueryHostNavigationComponentTests
         context.Services.AddSingleton<NavigationManager>(navigation);
         context.Services.AddSingleton<QueryRenderState>(pageState);
         context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+        context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
         context.Services.AddSingleton(new QueryElementRegistry());
 
         new Query(pageState).Select(".page-target").Css("color", "red");
@@ -54,6 +55,7 @@ public sealed class QueryHostNavigationComponentTests
         context.Services.AddSingleton<NavigationManager>(navigation);
         context.Services.AddSingleton<QueryRenderState>(pageState);
         context.Services.AddSingleton(measurements);
+        context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
         context.Services.AddSingleton(new QueryElementRegistry());
 
         context.Render<QueryHost>(parameters => parameters
@@ -83,6 +85,7 @@ public sealed class QueryHostNavigationComponentTests
         context.Services.AddSingleton(sharedState);
         context.Services.AddSingleton(registry);
         context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+        context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
 
         var hostA = context.Render<QueryHost>(parameters => parameters
             .Add(component => component.RenderState, sharedState)

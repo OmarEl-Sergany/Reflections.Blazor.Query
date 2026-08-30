@@ -8,6 +8,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
     [Inject] private QueryElementRegistry Registry { get; set; } = default!;
     [Inject] private QueryRenderState DefaultRenderState { get; set; } = default!;
     [Inject] private QueryMeasurementCoordinator Measurements { get; set; } = default!;
+    [Inject] private QueryFormCoordinator Forms { get; set; } = default!;
     [CascadingParameter] private QueryRenderState? CascadedRenderState { get; set; }
 
     [Parameter, EditorRequired] public string ElementKey { get; set; } = string.Empty;
@@ -176,6 +177,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
         {
             Registry.Unregister(_registeredKey);
             Measurements.InvalidateElement(_subscribedRenderState ?? DefaultRenderState, _registeredKey);
+            Forms.InvalidateElement(_subscribedRenderState ?? DefaultRenderState, _registeredKey);
             _registeredRenderState?.UnregisterRealElement(_registeredKey);
         }
         if (_subscribedRenderState is not null)

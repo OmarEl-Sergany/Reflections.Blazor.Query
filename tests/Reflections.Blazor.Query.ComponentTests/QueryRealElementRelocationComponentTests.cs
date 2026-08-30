@@ -37,6 +37,7 @@ public sealed class QueryRealElementRelocationComponentTests
         context.Services.AddSingleton(registry);
         context.Services.AddSingleton(state);
         context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+        context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
         return (context, registry, state);
     }
 

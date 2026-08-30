@@ -2,6 +2,7 @@
 @inject QueryRenderState DefaultState
 @inject NavigationManager Navigation
 @inject QueryMeasurementCoordinator Measurements
+@inject QueryFormCoordinator Forms
 @inject QueryElementRegistry Registry
 <CascadingValue Value="ActiveState" IsFixed="true">@ChildContent</CascadingValue>
 <style data-reflections-blazor-query="true">@foreach (var rule in ActiveState.Rules){<text>@rule.Selector { @rule.Property: @rule.Value; }</text>}</style>
@@ -16,13 +17,18 @@
         ActiveState.Changed += OnStateChanged;
         ActiveState.RegisterDispatch(InvokeAsync);
         Measurements.Requested += OnMeasurementRequested;
+        Forms.Requested += OnMeasurementRequested;
         Navigation.LocationChanged += OnLocationChanged;
     }
 
     private void OnStateChanged() => _ = InvokeAsync(StateHasChanged);
     private void OnMeasurementRequested() => _ = InvokeAsync(StateHasChanged);
 
-    protected override Task OnAfterRenderAsync(bool firstRender) => Measurements.FlushAsync().AsTask();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await Measurements.FlushAsync().AsTask();
+        await Forms.FlushAsync().AsTask();
+    }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
@@ -33,6 +39,7 @@
             foreach (var key in virtualKeys)
                 Registry.Unregister(key);
             Measurements.Invalidate(ActiveState);
+            Forms.Invalidate(ActiveState);
         }
         if (!ClearOnNavigation)
             _ = InvokeAsync(StateHasChanged);
@@ -43,7 +50,9 @@
         ActiveState.Changed -= OnStateChanged;
         ActiveState.UnregisterDispatch(InvokeAsync);
         Measurements.Requested -= OnMeasurementRequested;
+        Forms.Requested -= OnMeasurementRequested;
         Navigation.LocationChanged -= OnLocationChanged;
         Measurements.Invalidate(ActiveState);
+        Forms.Invalidate(ActiveState);
     }
 }

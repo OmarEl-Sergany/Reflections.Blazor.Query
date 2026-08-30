@@ -1,6 +1,7 @@
 ﻿using System;
 
 using System.Globalization;
+using System.Text;
 
 namespace Reflections.Blazor.Query
 {
@@ -9,6 +10,7 @@ namespace Reflections.Blazor.Query
         private readonly QueryRenderState _state;
         private readonly QueryElementRegistry? _registry;
         private readonly QueryMeasurementCoordinator? _measurements;
+        private readonly QueryFormCoordinator? _forms;
         private readonly QuerySelection? _previous;
         private readonly IReadOnlyList<string>? _resolvedKeys;
 
@@ -17,6 +19,7 @@ namespace Reflections.Blazor.Query
             QueryRenderState state,
             QueryElementRegistry? registry = null,
             QueryMeasurementCoordinator? measurements = null,
+            QueryFormCoordinator? forms = null,
             QuerySelection? previous = null,
             IReadOnlyList<string>? resolvedKeys = null)
         {
@@ -24,6 +27,7 @@ namespace Reflections.Blazor.Query
             _state = state;
             _registry = registry;
             _measurements = measurements;
+            _forms = forms;
             _previous = previous;
             _resolvedKeys = resolvedKeys;
         }
@@ -164,6 +168,24 @@ namespace Reflections.Blazor.Query
 
         public ValueTask<string?> OffsetParentAsync(CancellationToken cancellationToken = default) =>
             MeasureRelatedKeyFirstAsync(MeasurementKind.OffsetParent, cancellationToken);
+
+        public ValueTask<IReadOnlyList<SerializedField>> SerializeArrayAsync(CancellationToken cancellationToken = default) =>
+            SerializeFieldsAsync(cancellationToken);
+
+        public async ValueTask<string> SerializeAsync(CancellationToken cancellationToken = default)
+        {
+            var fields = await SerializeFieldsAsync(cancellationToken);
+            var builder = new StringBuilder();
+            foreach (var field in fields)
+            {
+                if (builder.Length > 0)
+                    builder.Append('&');
+                builder.Append(EscapeDataString(field.Name));
+                builder.Append('=');
+                builder.Append(EscapeDataString(field.Value));
+            }
+            return builder.ToString();
+        }
 
         public QuerySelection Height(double pixels) => SetOwnedLength("height", pixels);
 
@@ -667,10 +689,10 @@ namespace Reflections.Blazor.Query
             return PushResolved(keys);
         }
 
-        private QuerySelection Push(string selector) => new(selector, _state, _registry, _measurements, this);
+        private QuerySelection Push(string selector) => new(selector, _state, _registry, _measurements, _forms, this);
 
         private QuerySelection PushResolved(IReadOnlyList<string> keys) =>
-            new(ToKeySelector(keys), _state, _registry, _measurements, this, keys);
+            new(ToKeySelector(keys), _state, _registry, _measurements, _forms, this, keys);
 
         private ValueTask<double?> MeasureFirstAsync(MeasurementKind kind, CancellationToken cancellationToken)
         {
@@ -700,6 +722,22 @@ namespace Reflections.Blazor.Query
                 : (_measurements ?? throw new InvalidOperationException(
                     "Measurement APIs require QueryMeasurementCoordinator registration through AddBlazorQuery()."))
                     .RequestRelatedKeyAsync(_state, key, kind, cancellationToken);
+        }
+
+        private ValueTask<IReadOnlyList<SerializedField>> SerializeFieldsAsync(CancellationToken cancellationToken)
+        {
+            var keys = RequireResolvedKeys();
+            return keys.Count == 0
+                ? ValueTask.FromResult<IReadOnlyList<SerializedField>>([])
+                : (_forms ?? throw new InvalidOperationException(
+                    "Serialization APIs require QueryFormCoordinator registration through AddBlazorQuery()."))
+                    .RequestArrayAsync(_state, keys, cancellationToken);
+        }
+
+        private static string EscapeDataString(string value)
+        {
+            var escaped = System.Uri.EscapeDataString(value);
+            return escaped.Replace("%20", "+");
         }
 
         private QuerySelection SetOwnedLength(string property, double pixels)

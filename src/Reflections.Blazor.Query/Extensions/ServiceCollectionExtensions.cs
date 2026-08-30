@@ -10,6 +10,8 @@ public static class QueryServiceCollectionExtensions
         services.AddScoped<QueryElementRegistry>();
         services.AddScoped<IQueryMeasurementBridge, JsQueryMeasurementBridge>();
         services.AddScoped<QueryMeasurementCoordinator>();
+        services.AddScoped<IQueryFormBridge, JsQueryFormBridge>();
+        services.AddScoped<QueryFormCoordinator>();
         services.AddScoped<Query>();
         services.AddScoped<LayoutQueryRenderState>();
         services.AddScoped<LayoutQuery>();

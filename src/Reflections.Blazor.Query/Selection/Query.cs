@@ -9,15 +9,18 @@ namespace Reflections.Blazor.Query
         private readonly QueryRenderState _state;
         private readonly QueryElementRegistry? _registry;
         private readonly QueryMeasurementCoordinator? _measurements;
+        private readonly QueryFormCoordinator? _forms;
 
         public Query(
             QueryRenderState state,
             QueryElementRegistry? registry = null,
-            QueryMeasurementCoordinator? measurements = null)
+            QueryMeasurementCoordinator? measurements = null,
+            QueryFormCoordinator? forms = null)
         {
             _state = state;
             _registry = registry;
             _measurements = measurements;
+            _forms = forms;
         }
 
         public IDisposable BeginBatch() => _state.BeginBatch();
@@ -25,7 +28,7 @@ namespace Reflections.Blazor.Query
         public QuerySelection Select(string selector)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);
-            return new QuerySelection(selector, _state, _registry, _measurements, resolvedKeys: _registry?.Resolve(selector));
+            return new QuerySelection(selector, _state, _registry, _measurements, _forms, resolvedKeys: _registry?.Resolve(selector));
         }
     }
 }

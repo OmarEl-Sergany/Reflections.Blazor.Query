@@ -17,6 +17,7 @@ public sealed class QueryElementComponentTests
         context.Services.AddSingleton(registry);
         context.Services.AddSingleton(renderState);
         context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+        context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
         registry.Register("parent-one", ".parent-one");
         registry.Register("parent-two", ".parent-two");
 
@@ -59,6 +60,7 @@ public sealed class QueryElementComponentTests
         context.Services.AddSingleton(registry);
         context.Services.AddSingleton(renderState);
         context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+        context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
 
         var cut = context.Render<QueryElement>(parameters => parameters
             .Add(component => component.ElementKey, "input")

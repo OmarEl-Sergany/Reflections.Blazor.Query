@@ -4,7 +4,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 107/107 passed](https://img.shields.io/badge/tests-107%2F107%20passed-success)
+![Tests 116/116 passed](https://img.shields.io/badge/tests-116%2F116%20passed-success)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
@@ -35,8 +35,8 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 
 ## Current status (as of 2026-08-28, `master`)
 
-- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468), essentially complete. Classes, visibility, removal, and structural insertion — including moving and wrapping *real, Razor-declared* elements via `AppendTo`/`PrependTo`/`Before`/`After`/`Wrap`, not just library-created ones — are all done. Remaining gaps are narrow: `Replace*`, `WrapAll`/`WrapInner`, and cloning a real element (needs generator-level key minting).
-- **Validation:** 107/107 unit and component tests passing.
+- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468), essentially complete. Classes, visibility, removal, and structural insertion — including moving and wrapping *real, Razor-declared* elements via `AppendTo`/`PrependTo`/`Before`/`After`/`Wrap`, not just library-created ones — are all done. `Serialize`/`SerializeArray` (read-only form observation) are also implemented. Remaining gaps are narrow: `Replace*`, `WrapAll`/`WrapInner`, and cloning a real element (needs generator-level key minting).
+- **Validation:** 116/116 unit and component tests passing.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 
 ### Done (merged to `master`)
@@ -107,6 +107,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `Toggle`
 - [x] `Remove`
 - [x] `Empty`
+- [x] `Serialize` / `SerializeArray` — asynchronous (`SerializeAsync` / `SerializeArrayAsync`), read-only form observation. Reads successful form controls from the browser through the same queued, coalesced, read-only JS boundary as layout measurement and returns name/value pairs to C# without mutating the DOM.
 - [x] `Append` — appends an owned, encoded text fragment after an element's existing content.
 - [x] `AppendHtml` — trusted-markup variant of `Append`, under the same explicit trust boundary as `Html`.
 - [x] `Prepend` — prepends an owned, encoded text fragment before an element's existing content.
@@ -156,8 +157,6 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [ ] `Resize`
 - [ ] `Scroll`
 - [ ] `Submit`
-- [ ] `Serialize`
-- [ ] `SerializeArray`
 - [ ] `Animate`
 - [ ] `ClearQueue`
 - [ ] `Delay`

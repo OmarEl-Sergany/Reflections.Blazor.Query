@@ -41,7 +41,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 #### Sprint 4 — Events & Forms (Feature 4469)
 
 - [ ] Fluent event binding: `On`, `Off`, `One`, and `Trigger`.
-- [ ] Form-state handlers: `Serialize` and `SerializeArray`.
+- [x] Form-state handlers: `Serialize` and `SerializeArray` — read-only form observation (`SerializeAsync` / `SerializeArrayAsync`) via the queued, coalesced, read-only JS boundary defined in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). jQuery "successful control" semantics; no DOM mutation.
 
 #### Sprint 5 — Effects & Queues (Feature 4470)
 
