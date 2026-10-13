@@ -69,6 +69,16 @@ public sealed class QueryClassesAndStructureTests
         Assert.Equal(11111111, count);
     }
 
+    [Fact]
+    public void Double_click_hover_load_error_and_unload_helpers_compose_the_event_pipeline()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("surface", ".surface"); var count = 0;
+        query.Select(".surface").DblClick(() => count++).Hover(() => count += 10, () => count += 100)
+            .Load(() => count += 1000).Error(() => count += 10000).Unload(() => count += 100000)
+            .DblClick().MouseEnter().MouseLeave().Load().Error().Unload();
+        Assert.Equal(111111, count);
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();

@@ -108,6 +108,15 @@ namespace Reflections.Blazor.Query
         public QuerySelection MouseLeave() => Trigger("mouseleave");
         public QuerySelection ContextMenu(Action handler) => On("contextmenu", handler);
         public QuerySelection ContextMenu() => Trigger("contextmenu");
+        public QuerySelection DblClick(Action handler) => On("dblclick", handler);
+        public QuerySelection DblClick() => Trigger("dblclick");
+        public QuerySelection Hover(Action enterHandler, Action leaveHandler) => MouseEnter(enterHandler).MouseLeave(leaveHandler);
+        public QuerySelection Error(Action handler) => On("error", handler);
+        public QuerySelection Error() => Trigger("error");
+        public QuerySelection Load(Action handler) => On("load", handler);
+        public QuerySelection Load() => Trigger("load");
+        public QuerySelection Unload(Action handler) => On("unload", handler);
+        public QuerySelection Unload() => Trigger("unload");
 
         public QuerySelection Attr(string name, string value)
         {
