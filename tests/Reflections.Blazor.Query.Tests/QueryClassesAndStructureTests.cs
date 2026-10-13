@@ -6,6 +6,31 @@ namespace Reflections.Blazor.Query.Tests;
 
 public sealed class QueryClassesAndStructureTests
 {
+    [Fact]
+    public void On_and_Trigger_invoke_all_library_owned_handlers()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var count = 0;
+
+        query.Select(".button").On("click", () => count++).On("onclick", () => count += 10).Trigger("click");
+
+        Assert.Equal(11, count);
+    }
+
+    [Fact]
+    public void One_removes_its_handler_after_the_first_trigger_and_Off_removes_remaining_handlers()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var count = 0;
+        var selection = query.Select(".button").One("click", () => count++).On("click", () => count += 10);
+
+        selection.Trigger("click").Trigger("click").Off("click").Trigger("click");
+
+        Assert.Equal(21, count);
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();

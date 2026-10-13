@@ -105,6 +105,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
         foreach (var property in renderState.PropertiesFor(ElementKey))
             builder.AddAttribute(sequence++, property.Key, property.Value);
+        foreach (var eventName in renderState.EventNamesFor(ElementKey))
+            builder.AddAttribute(sequence++, eventName, (Action)(() => renderState.Trigger(ElementKey, eventName)));
         foreach (var fragment in renderState.PrependedFor(ElementKey))
             AddFragment(builder, ref sequence, fragment);
         var content = renderState.ContentFor(ElementKey);
@@ -166,6 +168,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
         foreach (var property in renderState.PropertiesFor(elementKey))
             builder.AddAttribute(sequence++, property.Key, property.Value);
+        foreach (var eventName in renderState.EventNamesFor(elementKey))
+            builder.AddAttribute(sequence++, eventName, (Action)(() => renderState.Trigger(elementKey, eventName)));
         foreach (var fragment in renderState.PrependedFor(elementKey))
             AddFragment(builder, ref sequence, fragment);
         var content = renderState.ContentFor(elementKey) ?? (node.Text is null ? null : new QueryContent(node.Text, node.IsHtml));

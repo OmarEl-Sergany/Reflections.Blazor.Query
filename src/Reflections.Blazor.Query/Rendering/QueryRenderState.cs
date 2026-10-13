@@ -21,6 +21,7 @@ public class QueryRenderState
     private readonly Dictionary<string, string> _innerWrapperByOwner = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _contentWrapperByOwner = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RenderFragment> _innerContentByWrapper = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Key, string EventName), List<QueryEventHandler>> _eventHandlers = new();
     private readonly Dictionary<string, string> _relocatedParent = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _relocatedChildrenByHost = new(StringComparer.Ordinal);
     private readonly List<Func<Action, Task>> _dispatchers = [];
@@ -65,6 +66,34 @@ public class QueryRenderState
         _innerWrapperByOwner.TryGetValue(elementKey, out var wrapperKey) ? wrapperKey : null;
     internal RenderFragment? InnerContentForWrapper(string wrapperKey) =>
         _innerContentByWrapper.TryGetValue(wrapperKey, out var fragment) ? fragment : null;
+    internal IReadOnlyList<string> EventNamesFor(string elementKey) => _eventHandlers.Keys
+        .Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal))
+        .Select(key => key.EventName).Distinct(StringComparer.Ordinal).ToArray();
+    internal void On(string elementKey, string eventName, Action handler, bool once)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        (_eventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _eventHandlers[(elementKey, eventName)] = []).Add(new(handler, once));
+        NotifyChanged();
+    }
+    internal void Off(string elementKey, string eventName)
+    {
+        eventName = NormalizeEventName(eventName);
+        if (_eventHandlers.Remove((elementKey, eventName))) NotifyChanged();
+    }
+    internal void Trigger(string elementKey, string eventName)
+    {
+        eventName = NormalizeEventName(eventName);
+        if (!_eventHandlers.TryGetValue((elementKey, eventName), out var handlers)) return;
+        foreach (var entry in handlers.ToArray())
+        {
+            entry.Handler();
+            if (entry.Once) handlers.Remove(entry);
+        }
+        if (handlers.Count == 0) _eventHandlers.Remove((elementKey, eventName));
+        NotifyChanged();
+    }
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
     internal void RegisterDispatch(Func<Action, Task> dispatch)
     {
@@ -429,6 +458,7 @@ public class QueryRenderState
         _innerWrapperByOwner.Clear();
         _contentWrapperByOwner.Clear();
         _innerContentByWrapper.Clear();
+        _eventHandlers.Clear();
         _relocatedParent.Clear();
         _relocatedChildrenByHost.Clear();
         NotifyChanged();
@@ -446,6 +476,12 @@ public class QueryRenderState
             throw new ArgumentException("The library-owned data-rbq-key attribute cannot be changed.", nameof(name));
         if (name.StartsWith("on", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Event-like names are reserved for the library event API.", nameof(name));
+    }
+    private static string NormalizeEventName(string eventName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
+        var normalized = eventName.Trim().ToLowerInvariant();
+        return normalized.StartsWith("on", StringComparison.Ordinal) ? normalized : "on" + normalized;
     }
     private static void ValidateClassName(string elementKey, string className)
     {
@@ -505,4 +541,5 @@ public class QueryRenderState
 }
 public sealed record QueryStyleRule(string Selector, string Property, string Value);
 internal sealed record QueryContent(string Value, bool IsHtml);
+internal sealed record QueryEventHandler(Action Handler, bool Once);
 internal sealed record QueryVirtualNode(string Key, string? ParentKey, string TagName, string? ClassName, string? Text, bool IsHtml);

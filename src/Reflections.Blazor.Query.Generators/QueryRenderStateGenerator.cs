@@ -19,8 +19,8 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
                 public static readonly string[] SupportedOperations =
                 [
                     "Select", "Css", "Attr", "RemoveAttr", "Prop", "RemoveProp", "Data", "RemoveData", "Text", "Html", "Val", "Height", "Width", "HeightAsync", "WidthAsync", "InnerHeightAsync", "InnerWidthAsync", "OuterHeightAsync", "OuterWidthAsync", "OffsetAsync", "PositionAsync", "OffsetParentAsync", "Serialize", "SerializeArray", "BeginBatch", "Clear", "QueryHost",
-                    "PageScope", "LayoutScope", "ApplicationScope",
-                    "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata",
+                    "PageScope", "LayoutScope", "ApplicationScope", "ComponentScope",
+                    "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata", "On", "Off", "One", "Trigger",
                     "Add", "AddBack", "End", "Find", "Children", "Filter", "Not", "Has", "Is",
                     "Parent", "Parents", "ParentsUntil", "Closest", "Next", "NextAll", "NextUntil",
                     "Prev", "PrevAll", "PrevUntil", "Siblings",

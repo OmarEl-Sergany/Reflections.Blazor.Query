@@ -45,3 +45,12 @@
 3. Carry an optional scope key through `Query` and `QuerySelection`; filter every returned selection and guard destructive descendant traversal.
 4. Make QueryElement obtain a scope from an explicit parameter or the cascading host and register accordingly.
 5. Add unit isolation tests and a bUnit cascade test, then update metadata, README, wiki, and Feature 4468 after full validation.
+
+---
+
+# Events foundation — plan
+
+1. Store handlers in QueryRenderState and expose normalized names, registration, removal, and dispatch.
+2. Add fluent On, One, Off, and Trigger APIs to QuerySelection.
+3. Render handlers through QueryElement and virtual-node output.
+4. Add unit coverage for multiple handlers, one-shot removal, and off behavior plus a component click regression.

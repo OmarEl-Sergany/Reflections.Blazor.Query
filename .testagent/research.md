@@ -99,3 +99,9 @@ Scope is a registry predicate, not a DI lifetime. Resolution, traversal results,
 2. Traversal cannot escape the scope through `Parent` or sibling relationships.
 3. Structural cleanup (`Empty`) does not remove nested elements owned by another scope.
 4. QueryScopeHost cascades the same scope to child QueryElements without a nested DI scope.
+
+---
+
+# Events foundation — research
+
+Library-owned handlers are stored by element key and normalized DOM event name. QueryElement renders an Action delegate for each registered event so Blazor owns browser binding and dispatch. `One` removes its handler after first invocation; `Off` removes registered callbacks; `Trigger` uses the same in-memory dispatch path for deterministic C# orchestration.

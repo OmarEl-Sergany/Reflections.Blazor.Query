@@ -4,7 +4,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 135/135 passed](https://img.shields.io/badge/tests-135%2F135%20passed-success)
+![Tests 138/138 passed](https://img.shields.io/badge/tests-138%2F138%20passed-success)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
@@ -36,7 +36,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 ## Current status (as of 2026-08-28, `master`)
 
 - **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468), essentially complete. Classes, visibility, removal, and structural insertion — including moving and wrapping *real, Razor-declared* elements via `AppendTo`/`PrependTo`/`Before`/`After`/`Wrap`/`WrapAll`/`WrapInner`, not just library-created ones — are all done. `Serialize`/`SerializeArray` (read-only form observation) are also implemented. Remaining gap: cloning a real element (needs generator-level key minting).
-- **Validation:** 135/135 unit and component tests passing.
+- **Validation:** 138/138 unit and component tests passing.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 
 ### Done (merged to `master`)
@@ -129,10 +129,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 
 - [ ] `Clone` **of a real, Razor-declared element** — remains blocked on generator-level key minting (two elements can't share a `data-rbq-key`).
 - [x] Component scoping — `QueryScopeHost` creates and cascades an `IQueryScope` without a nested DI container. Scoped queries filter registry resolution, traversal, and cleanup to their own component identity; unscoped `Query` remains the explicit page/layout orchestration API.
-- [ ] `On`
-- [ ] `Off`
-- [ ] `One`
-- [ ] `Trigger`
+- [x] `On` / `Off` / `One` / `Trigger` — library-owned synchronous C# handlers rendered as Blazor event bindings. `One` consumes its handler after the first dispatch; `Trigger` uses the identical state dispatcher as browser-originated events. No browser-side listener registration occurs.
 - [ ] `TriggerHandler`
 - [ ] `Bind` (legacy alias)
 - [ ] `Unbind` (legacy alias)

@@ -109,3 +109,23 @@
 
 - Focused unit suite: 105 passed.
 - Focused component suite: 30 passed.
+
+---
+
+# Events foundation — status
+
+## Implemented tests
+
+- `On_and_Trigger_invoke_all_library_owned_handlers`
+- `One_removes_its_handler_after_the_first_trigger_and_Off_removes_remaining_handlers`
+- `On_renders_a_Blazor_owned_click_binding_that_dispatches_the_registered_handler`
+
+## Test-quality review
+
+- Unit tests cover event-name normalization, ordered multi-handler dispatch, one-shot consumption, and removal.
+- The component test dispatches a real bUnit click against the rendered QueryElement rather than calling the state dispatcher directly.
+
+## Validation
+
+- Focused unit suite: 107 passed.
+- Focused component suite: 31 passed.

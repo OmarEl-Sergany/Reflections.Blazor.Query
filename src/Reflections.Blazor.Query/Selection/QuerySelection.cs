@@ -49,6 +49,27 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        public QuerySelection On(string eventName, Action handler)
+        {
+            foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: false);
+            return this;
+        }
+        public QuerySelection One(string eventName, Action handler)
+        {
+            foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: true);
+            return this;
+        }
+        public QuerySelection Off(string eventName)
+        {
+            foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName);
+            return this;
+        }
+        public QuerySelection Trigger(string eventName)
+        {
+            foreach (var key in RequireResolvedKeys()) _state.Trigger(key, eventName);
+            return this;
+        }
+
         public QuerySelection Attr(string name, string value)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(name);

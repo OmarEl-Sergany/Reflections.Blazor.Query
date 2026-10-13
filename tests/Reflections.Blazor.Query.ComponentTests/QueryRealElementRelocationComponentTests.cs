@@ -495,6 +495,29 @@ public sealed class QueryRealElementRelocationComponentTests
         });
     }
 
+    [Fact]
+    public void On_renders_a_Blazor_owned_click_binding_that_dispatches_the_registered_handler()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "button");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "button");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "button");
+            builder.AddComponentParameter(4, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "click me")));
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+        var count = 0;
+
+        query.Select(".button").On("click", () => count++);
+        cut.Find("button").Click();
+
+        Assert.Equal(1, count);
+    }
+
     private static int CountOccurrences(string value, string fragment)
     {
         var count = 0;
