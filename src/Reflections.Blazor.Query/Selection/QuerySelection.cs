@@ -82,6 +82,12 @@ namespace Reflections.Blazor.Query
         public QuerySelection Focus() => Trigger("focus");
         public QuerySelection Blur(Action handler) => On("blur", handler);
         public QuerySelection Blur() => Trigger("blur");
+        public QuerySelection FocusIn(Action handler) => On("focusin", handler);
+        public QuerySelection FocusIn() => Trigger("focusin");
+        public QuerySelection FocusOut(Action handler) => On("focusout", handler);
+        public QuerySelection FocusOut() => Trigger("focusout");
+        public QuerySelection SelectJS(Action handler) => On("select", handler);
+        public QuerySelection SelectJS() => Trigger("select");
         public QuerySelection KeyDown(Action handler) => On("keydown", handler);
         public QuerySelection KeyDown() => Trigger("keydown");
         public QuerySelection KeyUp(Action handler) => On("keyup", handler);

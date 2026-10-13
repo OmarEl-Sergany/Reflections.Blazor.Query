@@ -79,6 +79,15 @@ public sealed class QueryClassesAndStructureTests
         Assert.Equal(111111, count);
     }
 
+    [Fact]
+    public void Focusin_focusout_and_selectjs_helpers_do_not_collide_with_query_selection()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("input", ".input"); var count = 0;
+        query.Select(".input").FocusIn(() => count++).FocusOut(() => count += 10).SelectJS(() => count += 100)
+            .FocusIn().FocusOut().SelectJS();
+        Assert.Equal(111, count);
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();
