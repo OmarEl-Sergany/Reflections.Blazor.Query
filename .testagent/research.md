@@ -80,3 +80,22 @@ The query engine never reads or moves browser DOM nodes. It relocates a render f
 2. Existing direct library-owned children are reparented beneath the wrapper in order.
 3. A virtual target is rejected before a wrapper is created.
 4. Generated metadata advertises `WrapInner`.
+
+---
+
+# Component query scopes — research
+
+## Scope
+
+Add lexical query isolation without creating nested DI service providers. `QueryScopeHost` creates an `IQueryScope`, cascades it through a component subtree, and `QueryElement` registers its stable key to that scope. The shared registry remains one scoped service, but every scoped selection filters keys to its own scope.
+
+## Isolation rule
+
+Scope is a registry predicate, not a DI lifetime. Resolution, traversal results, selector composition, and structural descendant cleanup must exclude other scope keys. This allows a component to orchestrate only its own registered elements while an explicit unscoped `Query` remains available for page/layout orchestration.
+
+## Acceptance checklist
+
+1. A scope resolves matching elements in its own component subtree and excludes an identical selector in another scope.
+2. Traversal cannot escape the scope through `Parent` or sibling relationships.
+3. Structural cleanup (`Empty`) does not remove nested elements owned by another scope.
+4. QueryScopeHost cascades the same scope to child QueryElements without a nested DI scope.

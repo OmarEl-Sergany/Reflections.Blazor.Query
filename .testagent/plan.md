@@ -35,3 +35,13 @@
 3. Add `WrapInner` to `QuerySelection`: validate a mounted real target, snapshot its direct owned children, create the wrapper, move those children beneath it, then activate the content mapping.
 4. Add unit tests for reparenting and invalid virtual targets, plus a bUnit test proving Razor content renders once inside the wrapper.
 5. Advertise the operation in generated metadata and public documentation; run focused and full solution validation.
+
+---
+
+# Component query scopes — plan
+
+1. Extend registry entries with an optional scope key and provide scope membership filtering.
+2. Add `IQueryScope`, a `QueryScope` implementation, and `QueryScopeHost` to create/cascade lexical scope identities from the existing scoped `Query` service.
+3. Carry an optional scope key through `Query` and `QuerySelection`; filter every returned selection and guard destructive descendant traversal.
+4. Make QueryElement obtain a scope from an explicit parameter or the cascading host and register accordingly.
+5. Add unit isolation tests and a bUnit cascade test, then update metadata, README, wiki, and Feature 4468 after full validation.

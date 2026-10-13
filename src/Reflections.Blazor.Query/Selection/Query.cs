@@ -30,6 +30,15 @@ namespace Reflections.Blazor.Query
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);
             return new QuerySelection(selector, _state, _registry, _measurements, _forms, resolvedKeys: _registry?.Resolve(selector));
         }
+
+        public IQueryScope CreateScope() => new QueryScope(this, Guid.NewGuid().ToString("N"));
+
+        internal QuerySelection SelectInScope(string selector, string scopeKey)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(selector);
+            ArgumentException.ThrowIfNullOrWhiteSpace(scopeKey);
+            return new QuerySelection(selector, _state, _registry, _measurements, _forms, scopeKey, resolvedKeys: _registry?.FilterScope(_registry.Resolve(selector), scopeKey));
+        }
     }
 }
 

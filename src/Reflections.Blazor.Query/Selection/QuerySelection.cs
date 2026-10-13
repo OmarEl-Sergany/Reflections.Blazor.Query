@@ -13,6 +13,7 @@ namespace Reflections.Blazor.Query
         private readonly QueryFormCoordinator? _forms;
         private readonly QuerySelection? _previous;
         private readonly IReadOnlyList<string>? _resolvedKeys;
+        private readonly string? _scopeKey;
 
         internal QuerySelection(
             string selector,
@@ -20,6 +21,7 @@ namespace Reflections.Blazor.Query
             QueryElementRegistry? registry = null,
             QueryMeasurementCoordinator? measurements = null,
             QueryFormCoordinator? forms = null,
+            string? scopeKey = null,
             QuerySelection? previous = null,
             IReadOnlyList<string>? resolvedKeys = null)
         {
@@ -28,6 +30,7 @@ namespace Reflections.Blazor.Query
             _registry = registry;
             _measurements = measurements;
             _forms = forms;
+            _scopeKey = scopeKey;
             _previous = previous;
             _resolvedKeys = resolvedKeys;
         }
@@ -521,7 +524,7 @@ namespace Reflections.Blazor.Query
             foreach (var key in RequireResolvedKeys())
             {
                 _state.Empty(key);
-                foreach (var descendantKey in RequireRegistry().AllDescendants([key]))
+                foreach (var descendantKey in FilterToScope(RequireRegistry().AllDescendants([key])))
                     _state.Remove(descendantKey);
             }
             return this;
@@ -788,10 +791,10 @@ namespace Reflections.Blazor.Query
             return PushResolved(keys);
         }
 
-        private QuerySelection Push(string selector) => new(selector, _state, _registry, _measurements, _forms, this);
+        private QuerySelection Push(string selector) => new(selector, _state, _registry, _measurements, _forms, _scopeKey, this);
 
         private QuerySelection PushResolved(IReadOnlyList<string> keys) =>
-            new(ToKeySelector(keys), _state, _registry, _measurements, _forms, this, keys);
+            new(ToKeySelector(keys), _state, _registry, _measurements, _forms, _scopeKey, this, FilterToScope(keys));
 
         private ValueTask<double?> MeasureFirstAsync(MeasurementKind kind, CancellationToken cancellationToken)
         {
@@ -1051,7 +1054,7 @@ namespace Reflections.Blazor.Query
         private HashSet<string> ResolveKeys(string selector) => _registry is null
             ? throw new InvalidOperationException(
                 "This operation requires library-owned element metadata. Register generated element keys before evaluating selection predicates.")
-            : _registry.Resolve(selector).ToHashSet(StringComparer.Ordinal);
+            : FilterToScope(_registry.Resolve(selector)).ToHashSet(StringComparer.Ordinal);
 
         private QueryElementRegistry RequireRegistry() => _registry ??
             throw new InvalidOperationException(
@@ -1059,7 +1062,11 @@ namespace Reflections.Blazor.Query
 
         private IReadOnlyList<string> OrderKeys(IEnumerable<string> keys) => _registry is null
             ? keys.Distinct(StringComparer.Ordinal).ToArray()
-            : _registry.Order(keys);
+            : FilterToScope(_registry.Order(keys));
+
+        private IReadOnlyList<string> FilterToScope(IEnumerable<string> keys) => _registry is null || _scopeKey is null
+            ? keys.Distinct(StringComparer.Ordinal).ToArray()
+            : _registry.FilterScope(keys, _scopeKey);
 
         private IReadOnlyList<string> RequireResolvedKeys() => _resolvedKeys ??
             throw new InvalidOperationException(

@@ -5,12 +5,15 @@ public sealed class QueryElementRegistry
     private readonly List<Entry> _entries = [];
 
     public void Register(string key, params string[] selectors)
-        => RegisterCore(key, parentKey: null, selectors);
+        => RegisterCore(key, parentKey: null, scopeKey: null, selectors);
 
     public void RegisterWithParent(string key, string? parentKey, params string[] selectors)
-        => RegisterCore(key, parentKey, selectors);
+        => RegisterCore(key, parentKey, scopeKey: null, selectors);
 
-    private void RegisterCore(string key, string? parentKey, string[] selectors)
+    public void RegisterWithParentAndScope(string key, string? parentKey, string? scopeKey, params string[] selectors)
+        => RegisterCore(key, parentKey, scopeKey, selectors);
+
+    private void RegisterCore(string key, string? parentKey, string? scopeKey, string[] selectors)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         if (string.IsNullOrWhiteSpace(parentKey))
@@ -27,7 +30,7 @@ public sealed class QueryElementRegistry
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);
 
         var aliases = selectors.ToHashSet(StringComparer.Ordinal);
-        _entries.Add(new Entry(key, parentKey, aliases, Selector.FromAliases(aliases)));
+        _entries.Add(new Entry(key, parentKey, scopeKey, aliases, Selector.FromAliases(aliases)));
     }
 
     public bool Unregister(string key) =>
@@ -55,6 +58,9 @@ public sealed class QueryElementRegistry
 
     internal IReadOnlyList<string> Resolve(string selector) =>
         _entries.Where(entry => Matches(entry, selector)).Select(entry => entry.Key).ToArray();
+
+    internal IReadOnlyList<string> FilterScope(IEnumerable<string> keys, string? scopeKey) =>
+        scopeKey is null ? Order(keys) : Order(keys.Where(key => string.Equals(Find(key)?.ScopeKey, scopeKey, StringComparison.Ordinal)));
 
     internal IReadOnlyList<string> Order(IEnumerable<string> keys)
     {
@@ -245,5 +251,5 @@ public sealed class QueryElementRegistry
         ? null
         : _entries.FirstOrDefault(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
 
-    private sealed record Entry(string Key, string? ParentKey, HashSet<string> Selectors, Selector Metadata);
+    private sealed record Entry(string Key, string? ParentKey, string? ScopeKey, HashSet<string> Selectors, Selector Metadata);
 }

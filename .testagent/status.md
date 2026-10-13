@@ -89,3 +89,23 @@
 - Focused unit suite: 103 passed.
 - Focused component suite: 30 passed.
 - Full solution: 103 unit tests + 30 component tests passed; build succeeded with 0 warnings and 0 errors.
+
+---
+
+# Component query scopes — status
+
+## Implemented tests
+
+- `Component_scope_resolves_and_traverses_only_its_own_registered_elements`
+- `Component_scope_empty_does_not_remove_a_descendant_owned_by_another_scope`
+
+## Test-quality review
+
+- Scoped resolution and `Parent()` assertions prove identical selectors cannot cross the registry scope boundary.
+- The cleanup assertion proves `Empty()` excludes nested keys registered to a different component scope.
+- An initial regression exposed unscoped `PushStack` ordering; scope filtering now preserves legacy input order when no scope is active.
+
+## Validation
+
+- Focused unit suite: 105 passed.
+- Focused component suite: 30 passed.

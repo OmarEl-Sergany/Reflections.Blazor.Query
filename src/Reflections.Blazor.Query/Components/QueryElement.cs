@@ -10,9 +10,11 @@ public sealed class QueryElement : ComponentBase, IDisposable
     [Inject] private QueryMeasurementCoordinator Measurements { get; set; } = default!;
     [Inject] private QueryFormCoordinator Forms { get; set; } = default!;
     [CascadingParameter] private QueryRenderState? CascadedRenderState { get; set; }
+    [CascadingParameter] private IQueryScope? CascadedQueryScope { get; set; }
 
     [Parameter, EditorRequired] public string ElementKey { get; set; } = string.Empty;
     [Parameter] public string? ParentElementKey { get; set; }
+    [Parameter] public string? ScopeKey { get; set; }
     [Parameter] public string TagName { get; set; } = "div";
     [Parameter] public string? Id { get; set; }
     [Parameter] public string? Class { get; set; }
@@ -54,7 +56,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
         renderState.RegisterInnerContent(ElementKey, ChildContent ?? EmptyContent);
 
         var selectors = BuildSelectors();
-        var signature = $"{ElementKey}\u001f{ParentElementKey}\u001f{string.Join("\u001f", selectors)}";
+        var scopeKey = ScopeKey ?? CascadedQueryScope?.Key;
+        var signature = $"{ElementKey}\u001f{ParentElementKey}\u001f{scopeKey}\u001f{string.Join("\u001f", selectors)}";
         if (!keyChanged && !renderStateChanged && signature == _registrationSignature)
         {
             if (!renderState.IsRelocatedElsewhere(ElementKey))
@@ -65,7 +68,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
         if (_registeredKey is not null)
             Registry.Unregister(_registeredKey); // Registry has no in-place update; always re-add below.
 
-        Registry.RegisterWithParent(ElementKey, ParentElementKey, selectors);
+        Registry.RegisterWithParentAndScope(ElementKey, ParentElementKey, scopeKey, selectors);
         _registeredKey = ElementKey;
         _registeredRenderState = renderState;
         _registrationSignature = signature;
