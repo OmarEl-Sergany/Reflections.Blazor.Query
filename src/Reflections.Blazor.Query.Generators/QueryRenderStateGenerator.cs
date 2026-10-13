@@ -20,7 +20,7 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
                 [
                     "Select", "Css", "Attr", "RemoveAttr", "Prop", "RemoveProp", "Data", "RemoveData", "Text", "Html", "Val", "Height", "Width", "HeightAsync", "WidthAsync", "InnerHeightAsync", "InnerWidthAsync", "OuterHeightAsync", "OuterWidthAsync", "OffsetAsync", "PositionAsync", "OffsetParentAsync", "Serialize", "SerializeArray", "BeginBatch", "Clear", "QueryHost",
                     "PageScope", "LayoutScope", "ApplicationScope", "ComponentScope",
-                    "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata", "On", "Off", "One", "Trigger",
+                    "NavigationLifecycle", "DisposalLifecycle", "GeneratedMetadata", "On", "Off", "One", "Trigger", "TriggerHandler", "Bind", "Unbind", "Click", "Change", "Submit",
                     "Add", "AddBack", "End", "Find", "Children", "Filter", "Not", "Has", "Is",
                     "Parent", "Parents", "ParentsUntil", "Closest", "Next", "NextAll", "NextUntil",
                     "Prev", "PrevAll", "PrevUntil", "Siblings",

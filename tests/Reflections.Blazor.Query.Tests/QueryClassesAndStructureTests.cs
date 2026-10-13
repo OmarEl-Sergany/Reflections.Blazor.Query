@@ -31,6 +31,23 @@ public sealed class QueryClassesAndStructureTests
         Assert.Equal(21, count);
     }
 
+    [Fact]
+    public void TriggerHandler_and_legacy_bind_aliases_share_the_same_handler_pipeline()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("button", ".button"); var first = 0; var second = 0;
+        Action firstHandler = () => first++; Action secondHandler = () => second++;
+        query.Select(".button").Bind("click", firstHandler).Bind("click", secondHandler).Unbind("click", firstHandler).TriggerHandler("click");
+        Assert.Equal(0, first); Assert.Equal(1, second);
+    }
+
+    [Fact]
+    public void Click_change_and_submit_helpers_bind_and_trigger_their_normalized_events()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("form", ".form"); var count = 0;
+        query.Select(".form").Click(() => count++).Change(() => count += 10).Submit(() => count += 100).Click().Change().Submit();
+        Assert.Equal(111, count);
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();

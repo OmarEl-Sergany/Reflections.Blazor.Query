@@ -77,10 +77,13 @@ public class QueryRenderState
         (_eventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _eventHandlers[(elementKey, eventName)] = []).Add(new(handler, once));
         NotifyChanged();
     }
-    internal void Off(string elementKey, string eventName)
+    internal void Off(string elementKey, string eventName, Action? handler = null)
     {
         eventName = NormalizeEventName(eventName);
-        if (_eventHandlers.Remove((elementKey, eventName))) NotifyChanged();
+        if (!_eventHandlers.TryGetValue((elementKey, eventName), out var handlers)) return;
+        if (handler is null) _eventHandlers.Remove((elementKey, eventName));
+        else { handlers.RemoveAll(entry => entry.Handler == handler); if (handlers.Count == 0) _eventHandlers.Remove((elementKey, eventName)); }
+        NotifyChanged();
     }
     internal void Trigger(string elementKey, string eventName)
     {
