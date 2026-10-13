@@ -72,6 +72,31 @@ namespace Reflections.Blazor.Query
         public QuerySelection TriggerHandler(string eventName) => Trigger(eventName);
         public QuerySelection Bind(string eventName, Action handler) => On(eventName, handler);
         public QuerySelection Unbind(string eventName, Action? handler = null) => Off(eventName, handler);
+        public QuerySelection DelegateJS(string selector, string eventName, Action<QueryEventTarget> handler)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(selector);
+            ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
+            ArgumentNullException.ThrowIfNull(handler);
+            foreach (var key in RequireResolvedKeys())
+            {
+                if (!_state.IsRealElement(key))
+                    throw new InvalidOperationException("Delegated events require a mounted QueryElement root.");
+                _state.Delegate(key, selector, eventName, handler);
+            }
+            return this;
+        }
+        public QuerySelection Undelegate(string selector, string eventName, Action<QueryEventTarget>? handler = null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(selector);
+            ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
+            foreach (var key in RequireResolvedKeys())
+            {
+                if (!_state.IsRealElement(key))
+                    throw new InvalidOperationException("Delegated events require a mounted QueryElement root.");
+                _state.Undelegate(key, selector, eventName, handler);
+            }
+            return this;
+        }
         public QuerySelection Click(Action handler) => On("click", handler);
         public QuerySelection Click() => Trigger("click");
         public QuerySelection Change(Action handler) => On("change", handler);

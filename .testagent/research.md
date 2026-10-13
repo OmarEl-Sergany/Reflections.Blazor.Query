@@ -105,3 +105,17 @@ Scope is a registry predicate, not a DI lifetime. Resolution, traversal results,
 # Events foundation — research
 
 Library-owned handlers are stored by element key and normalized DOM event name. QueryElement renders an Action delegate for each registered event so Blazor owns browser binding and dispatch. `One` removes its handler after first invocation; `Off` removes registered callbacks; `Trigger` uses the same in-memory dispatch path for deterministic C# orchestration.
+
+---
+
+# Typed and delegated events — research
+
+## Boundary
+
+Blazor event callbacks carry typed event arguments but do not expose the browser target's library key. Delegation therefore needs a read-only JS function that walks from `event.target` to the closest `data-rbq-key`; it returns only that key. C# validates registry membership, scope, and selector matching before invoking a registered delegated handler.
+
+## Constraints
+
+- No JS-managed listener registration, mutation, selector matching, or handler storage.
+- Typed handlers must render as Blazor `EventCallback<TEventArgs>` bindings.
+- Delegated routing must reject a target outside the delegating root or scope.

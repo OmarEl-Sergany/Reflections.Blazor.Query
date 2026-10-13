@@ -107,6 +107,9 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(sequence++, property.Key, property.Value);
         foreach (var eventName in renderState.EventNamesFor(ElementKey))
             builder.AddAttribute(sequence++, eventName, (Action)(() => renderState.Trigger(ElementKey, eventName)));
+        foreach (var eventName in renderState.DelegatedEventNamesFor(ElementKey))
+            builder.AddAttribute(sequence++, QueryDelegatedEvents.AttributeName(eventName),
+                EventCallback.Factory.Create<QueryEventTarget>(this, target => renderState.TriggerDelegated(ElementKey, eventName, target, Registry)));
         foreach (var fragment in renderState.PrependedFor(ElementKey))
             AddFragment(builder, ref sequence, fragment);
         var content = renderState.ContentFor(ElementKey);

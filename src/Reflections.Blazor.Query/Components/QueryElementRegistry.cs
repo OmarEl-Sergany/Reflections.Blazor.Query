@@ -59,6 +59,18 @@ public sealed class QueryElementRegistry
     internal IReadOnlyList<string> Resolve(string selector) =>
         _entries.Where(entry => Matches(entry, selector)).Select(entry => entry.Key).ToArray();
 
+    internal bool MatchesKey(string key, string selector) => Find(key) is { } entry && Matches(entry, selector);
+
+    internal bool IsDescendantInSameScope(string key, string rootKey)
+    {
+        var target = Find(key);
+        var root = Find(rootKey);
+        return target is not null
+            && root is not null
+            && string.Equals(target.ScopeKey, root.ScopeKey, StringComparison.Ordinal)
+            && IsDescendantOf(target, [rootKey]);
+    }
+
     internal IReadOnlyList<string> FilterScope(IEnumerable<string> keys, string? scopeKey) =>
         scopeKey is null ? Order(keys) : Order(keys.Where(key => string.Equals(Find(key)?.ScopeKey, scopeKey, StringComparison.Ordinal)));
 

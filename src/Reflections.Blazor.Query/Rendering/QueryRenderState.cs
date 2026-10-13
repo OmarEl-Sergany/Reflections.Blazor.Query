@@ -22,6 +22,7 @@ public class QueryRenderState
     private readonly Dictionary<string, string> _contentWrapperByOwner = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RenderFragment> _innerContentByWrapper = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Key, string EventName), List<QueryEventHandler>> _eventHandlers = new();
+    private readonly Dictionary<(string RootKey, string EventName), List<QueryDelegatedEventHandler>> _delegatedEventHandlers = new();
     private readonly Dictionary<string, string> _relocatedParent = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _relocatedChildrenByHost = new(StringComparer.Ordinal);
     private readonly List<Func<Action, Task>> _dispatchers = [];
@@ -69,6 +70,11 @@ public class QueryRenderState
     internal IReadOnlyList<string> EventNamesFor(string elementKey) => _eventHandlers.Keys
         .Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal))
         .Select(key => key.EventName).Distinct(StringComparer.Ordinal).ToArray();
+    internal IReadOnlyList<string> DelegatedEventNamesFor(string rootKey) => _delegatedEventHandlers.Keys
+        .Where(key => string.Equals(key.RootKey, rootKey, StringComparison.Ordinal))
+        .Select(key => key.EventName)
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
     internal void On(string elementKey, string eventName, Action handler, bool once)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
@@ -95,6 +101,45 @@ public class QueryRenderState
             if (entry.Once) handlers.Remove(entry);
         }
         if (handlers.Count == 0) _eventHandlers.Remove((elementKey, eventName));
+        NotifyChanged();
+    }
+    internal void Delegate(string rootKey, string selector, string eventName, Action<QueryEventTarget> handler)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(selector);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeDelegatedEventName(eventName);
+        (_delegatedEventHandlers.TryGetValue((rootKey, eventName), out var handlers)
+            ? handlers
+            : _delegatedEventHandlers[(rootKey, eventName)] = [])
+            .Add(new(selector, handler));
+        NotifyChanged();
+    }
+    internal void Undelegate(string rootKey, string selector, string eventName, Action<QueryEventTarget>? handler = null)
+    {
+        eventName = NormalizeDelegatedEventName(eventName);
+        if (!_delegatedEventHandlers.TryGetValue((rootKey, eventName), out var handlers))
+            return;
+
+        handlers.RemoveAll(entry => string.Equals(entry.Selector, selector, StringComparison.Ordinal)
+            && (handler is null || entry.Handler == handler));
+        if (handlers.Count == 0)
+            _delegatedEventHandlers.Remove((rootKey, eventName));
+        NotifyChanged();
+    }
+    internal void TriggerDelegated(string rootKey, string eventName, QueryEventTarget target, QueryElementRegistry registry)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(registry);
+        eventName = NormalizeDelegatedEventName(eventName);
+        if (target.ElementKey is not { Length: > 0 } targetKey
+            || !_delegatedEventHandlers.TryGetValue((rootKey, eventName), out var handlers)
+            || !registry.IsDescendantInSameScope(targetKey, rootKey))
+            return;
+
+        foreach (var entry in handlers.ToArray())
+            if (registry.MatchesKey(targetKey, entry.Selector))
+                entry.Handler(target);
         NotifyChanged();
     }
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
@@ -440,7 +485,7 @@ public class QueryRenderState
             && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0
             && _prepended.Count == 0 && _appended.Count == 0 && _virtualNodes.Count == 0 && _virtualChildKeys.Count == 0
             && _realElementFragments.Count == 0 && _innerContentByOwner.Count == 0 && _innerWrapperByOwner.Count == 0
-            && _contentWrapperByOwner.Count == 0 && _innerContentByWrapper.Count == 0 && _relocatedParent.Count == 0
+            && _contentWrapperByOwner.Count == 0 && _innerContentByWrapper.Count == 0 && _eventHandlers.Count == 0 && _delegatedEventHandlers.Count == 0 && _relocatedParent.Count == 0
             && _relocatedChildrenByHost.Count == 0)
             return;
         _styles.Clear();
@@ -462,6 +507,7 @@ public class QueryRenderState
         _contentWrapperByOwner.Clear();
         _innerContentByWrapper.Clear();
         _eventHandlers.Clear();
+        _delegatedEventHandlers.Clear();
         _relocatedParent.Clear();
         _relocatedChildrenByHost.Clear();
         NotifyChanged();
@@ -485,6 +531,13 @@ public class QueryRenderState
         ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
         var normalized = eventName.Trim().ToLowerInvariant();
         return normalized.StartsWith("on", StringComparison.Ordinal) ? normalized : "on" + normalized;
+    }
+    private static string NormalizeDelegatedEventName(string eventName)
+    {
+        var normalized = NormalizeEventName(eventName)[2..];
+        if (!QueryDelegatedEvents.SupportedNames.Contains(normalized, StringComparer.Ordinal))
+            throw new NotSupportedException($"Delegated event '{eventName}' is not supported because it does not bubble to the query root.");
+        return normalized;
     }
     private static void ValidateClassName(string elementKey, string className)
     {
@@ -545,4 +598,5 @@ public class QueryRenderState
 public sealed record QueryStyleRule(string Selector, string Property, string Value);
 internal sealed record QueryContent(string Value, bool IsHtml);
 internal sealed record QueryEventHandler(Action Handler, bool Once);
+internal sealed record QueryDelegatedEventHandler(string Selector, Action<QueryEventTarget> Handler);
 internal sealed record QueryVirtualNode(string Key, string? ParentKey, string TagName, string? ClassName, string? Text, bool IsHtml);

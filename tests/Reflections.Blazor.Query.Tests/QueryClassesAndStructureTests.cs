@@ -88,6 +88,57 @@ public sealed class QueryClassesAndStructureTests
         Assert.Equal(111, count);
     }
 
+    [Fact]
+    public void DelegateJS_dispatches_only_matching_descendants_in_the_root_scope()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.RegisterWithParentAndScope("root", null, "scope-a", ".root");
+        registry.RegisterWithParentAndScope("item", "root", "scope-a", ".item");
+        registry.RegisterWithParentAndScope("other", "root", "scope-b", ".item");
+        state.RegisterRealElement("root", _ => { });
+        QueryEventTarget? observed = null;
+
+        query.Select(".root").DelegateJS(".item", "click", target => observed = target);
+        state.TriggerDelegated("root", "click", new("other"), registry);
+        Assert.Null(observed);
+
+        state.TriggerDelegated("root", "click", new("item"), registry);
+        Assert.Equal("item", observed?.ElementKey);
+    }
+
+    [Fact]
+    public void Undelegate_removes_only_the_matching_delegated_handler()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("root", ".root");
+        registry.RegisterWithParent("item", "root", ".item");
+        state.RegisterRealElement("root", _ => { });
+        var first = 0;
+        var second = 0;
+        Action<QueryEventTarget> firstHandler = _ => first++;
+        Action<QueryEventTarget> secondHandler = _ => second++;
+
+        query.Select(".root").DelegateJS(".item", "click", firstHandler).DelegateJS(".item", "click", secondHandler)
+            .Undelegate(".item", "click", firstHandler);
+        state.TriggerDelegated("root", "click", new("item"), registry);
+
+        Assert.Equal(0, first);
+        Assert.Equal(1, second);
+    }
+
+    [Fact]
+    public void DelegateJS_rejects_non_bubbling_events_and_virtual_roots()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("root", ".root");
+        state.RegisterRealElement("root", _ => { });
+
+        Assert.Throws<NotSupportedException>(() => query.Select(".root").DelegateJS(".item", "focus", _ => { }));
+
+        var virtualRoot = query.Select(".root").AppendElement("div", "virtual-root");
+        Assert.Throws<InvalidOperationException>(() => virtualRoot.DelegateJS(".item", "click", _ => { }));
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();

@@ -129,3 +129,22 @@
 
 - Focused unit suite: 107 passed.
 - Focused component suite: 31 passed.
+# Typed and delegated events — status
+
+## Delivered
+
+- `DelegateJS` and `Undelegate` keep delegated handler registrations in `QueryRenderState`, keyed by a mounted `QueryElement` root and a finite set of bubbling event names.
+- `queryEvents.js` registers pre-start Blazor custom event types and returns only the closest `data-rbq-key`; it never owns listeners, callbacks, selector evaluation, or DOM mutation.
+- C# verifies that a target is a descendant of the delegating root, belongs to the same component scope, and matches the delegated selector before invoking a handler.
+- Server, WebAssembly, and Auto sample hosts now defer Blazor startup, register the RCL custom event types, then start Blazor.
+
+## Assertion review
+
+- `DelegateJS_dispatches_only_matching_descendants_in_the_root_scope` proves the scope and descendant boundary before successful dispatch.
+- `Undelegate_removes_only_the_matching_delegated_handler` proves per-handler removal does not remove siblings.
+- `DelegateJS_rejects_non_bubbling_events_and_virtual_roots` blocks event types that cannot safely delegate and roots that lack a component render callback.
+
+## Validation
+
+- Unit tests: 116 passed.
+- Component tests: 31 passed.

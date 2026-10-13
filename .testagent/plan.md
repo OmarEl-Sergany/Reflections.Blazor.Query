@@ -54,3 +54,13 @@
 2. Add fluent On, One, Off, and Trigger APIs to QuerySelection.
 3. Render handlers through QueryElement and virtual-node output.
 4. Add unit coverage for multiple handlers, one-shot removal, and off behavior plus a component click regression.
+
+---
+
+# Typed and delegated events — plan
+
+1. Replace the Action-only handler representation with a typed dispatch envelope while retaining existing untyped APIs.
+2. Render typed EventCallbacks from QueryElement for real and virtual nodes.
+3. Add a read-only JS target-key resolver and an injectable bridge contract.
+4. Add DelegateJS and Undelegate with root and component-scope validation.
+5. Cover typed invocation, rejected out-of-scope targets, and browser event dispatch in unit/component tests.

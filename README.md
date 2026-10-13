@@ -188,7 +188,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [ ] `Live` — legacy removed API.
 - [ ] `Undelegate` — legacy removed API.
 - [ ] `Context` — review required or deferred.
-- [ ] `DelegateJS` — review required or deferred; explicit escape hatch that can bypass Blazor ownership rules.
+- [x] `DelegateJS` / `Undelegate` — delegated, bubbling browser events. The host must load the supplied pre-start custom-event initializer; it returns only the closest library-owned `data-rbq-key`, then C# validates the root, scope, and selector before dispatch. No JS handler registry or DOM mutation is used.
 - [ ] `Error` — review required or deferred.
 - [ ] `JQuery` — review required or deferred.
 - [ ] `Load` (non-Ajax) — review required or deferred.
