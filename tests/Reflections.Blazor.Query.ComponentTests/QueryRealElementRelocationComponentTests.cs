@@ -256,6 +256,48 @@ public sealed class QueryRealElementRelocationComponentTests
     }
 
     [Fact]
+    public void ReplaceWith_moves_a_real_element_to_the_target_position_without_duplicate_markup()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "root");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "div");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "root");
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(4);
+            builder.AddComponentParameter(5, nameof(QueryElement.ElementKey), "target");
+            builder.AddComponentParameter(6, nameof(QueryElement.TagName), "span");
+            builder.AddComponentParameter(7, nameof(QueryElement.Class), "target");
+            builder.AddComponentParameter(8, nameof(QueryElement.ParentElementKey), "root");
+            builder.AddComponentParameter(9, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "target-content")));
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(10);
+            builder.AddComponentParameter(11, nameof(QueryElement.ElementKey), "replacement");
+            builder.AddComponentParameter(12, nameof(QueryElement.TagName), "span");
+            builder.AddComponentParameter(13, nameof(QueryElement.Class), "replacement");
+            builder.AddComponentParameter(14, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "replacement-content")));
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+
+        query.Select(".target").ReplaceWith(query.Select(".replacement"));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("target-content", cut.Markup, StringComparison.Ordinal);
+            Assert.Equal(1, CountOccurrences(cut.Markup, "replacement-content"));
+            var rootStart = cut.Markup.IndexOf("class=\"root\"", StringComparison.Ordinal);
+            var rootEnd = cut.Markup.IndexOf("</div>", rootStart, StringComparison.Ordinal);
+            var replacementIndex = cut.Markup.IndexOf("replacement-content", StringComparison.Ordinal);
+            Assert.True(replacementIndex > rootStart && replacementIndex < rootEnd);
+        });
+    }
+
+    [Fact]
     public void Reparenting_a_real_element_via_an_ordinary_parameter_change_does_not_disturb_children_relocated_onto_it()
     {
         var (context, registry, state) = CreateContext();
@@ -365,5 +407,17 @@ public sealed class QueryRealElementRelocationComponentTests
             var moverIndex = cut.Markup.IndexOf("class=\"mover\"", StringComparison.Ordinal);
             Assert.True(moverIndex > listBStart && moverIndex < listBEnd);
         });
+    }
+
+    private static int CountOccurrences(string value, string fragment)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = value.IndexOf(fragment, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += fragment.Length;
+        }
+        return count;
     }
 }

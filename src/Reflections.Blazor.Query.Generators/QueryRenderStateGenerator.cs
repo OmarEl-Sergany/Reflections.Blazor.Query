@@ -27,7 +27,11 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
                     "Length", "First", "Last", "Eq", "Slice", "ToArray", "ElementRegistry",
                     "QueryElement", "GeneratedElementKey", "ElementDisposal",
                     "Each", "Map", "Get", "Index", "PushStack", "SelectorParser", "SelectorMatcher",
-                    "CompoundTagIdClassSelectors"
+                    "CompoundTagIdClassSelectors",
+                    "AddClass", "RemoveClass", "ToggleClass", "HasClass", "Show", "Hide", "Toggle", "Remove", "Empty", "Detach",
+                    "Append", "AppendHtml", "Prepend", "PrependHtml", "AppendElement", "PrependElement", "InsertElementBefore", "InsertElementAfter",
+                    "AppendTo", "PrependTo", "Before", "After", "InsertBefore", "InsertAfter", "Wrap", "Clone",
+                    "ReplaceWith", "ReplaceAll", "Replace"
                 ];
             }
             """));

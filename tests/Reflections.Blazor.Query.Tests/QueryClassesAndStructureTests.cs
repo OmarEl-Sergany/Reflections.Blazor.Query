@@ -252,6 +252,75 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
+    public void ReplaceWith_moves_a_virtual_replacement_to_the_target_position_and_unregisters_the_target()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        query.Select(".list").AppendElement("li", text: "before");
+        var target = query.Select(".list").AppendElement("li", "target", "target");
+        var replacement = query.Select(".list").AppendElement("li", "replacement", "replacement");
+        replacement.Detach();
+
+        var result = target.ReplaceWith(replacement);
+
+        Assert.Same(target, result);
+        Assert.Equal(["before", "replacement"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+        Assert.Empty(query.Select(".target").ToArray());
+        Assert.Single(query.Select(".replacement").ToArray());
+    }
+
+    [Fact]
+    public void ReplaceAll_moves_the_receiver_to_the_target_position()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var target = query.Select(".list").AppendElement("li", "target", "target");
+        var replacement = query.Select(".list").AppendElement("li", "replacement", "replacement");
+        replacement.Detach();
+
+        var result = replacement.ReplaceAll(target);
+
+        Assert.Same(replacement, result);
+        Assert.Equal(["replacement"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+        Assert.Empty(query.Select(".target").ToArray());
+    }
+
+    [Fact]
+    public void Replace_is_an_alias_for_ReplaceWith()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var target = query.Select(".list").AppendElement("li", "target", "target");
+        var replacement = query.Select(".list").AppendElement("li", "replacement", "replacement");
+        replacement.Detach();
+
+        target.Replace(replacement);
+
+        Assert.Equal(["replacement"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+        Assert.Empty(query.Select(".target").ToArray());
+    }
+
+    [Fact]
+    public void ReplaceWith_rejects_self_replacement()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("card", ".card");
+        var card = query.Select(".card");
+
+        Assert.Throws<InvalidOperationException>(() => card.ReplaceWith(card));
+    }
+
+    [Fact]
+    public void Generated_metadata_advertises_all_supported_structural_operations()
+    {
+        Assert.Contains("ReplaceWith", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("ReplaceAll", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("Replace", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("InsertBefore", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("InsertAfter", QueryGeneratedMetadata.SupportedOperations);
+    }
+
+    [Fact]
     public void InsertElementBefore_throws_when_anchor_has_no_registered_parent()
     {
         var (query, registry, _) = CreateQuery();

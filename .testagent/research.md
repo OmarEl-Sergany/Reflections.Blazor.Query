@@ -22,3 +22,23 @@ Add regression coverage for queued read-only browser observations that are inval
 2. A late measurement bridge completion cannot repopulate the invalidated page cache.
 3. A surviving layout render state remains independently usable after the page state is invalidated.
 4. The same guarantees apply to in-flight form serialization snapshots.
+
+---
+
+# Replace operations — research
+
+## Scope
+
+Implement `ReplaceWith`, `ReplaceAll`, and `Replace` without bypassing the library-owned render-state and real-element relocation model.
+
+## Ownership rule
+
+The replacement is moved into the single target's registered sibling slot by the established `AttachSibling` path. The target is removed only after that move succeeds. Virtual targets are removed from state and registry; real targets use the existing render-owned removal state. The implementation deliberately does not clone for multi-target operations.
+
+## Acceptance checklist
+
+1. Replacing a virtual target moves the supplied replacement to its exact sibling position and removes the target from state and registry.
+2. `ReplaceAll(target)` is the receiver-order equivalent of `target.ReplaceWith(this)`.
+3. `Replace` is the documented compatibility alias of `ReplaceWith`.
+4. A real Razor-declared replacement renders once at the target position while the real target no longer renders.
+5. Self-replacement is rejected before it can remove the only selected element.

@@ -371,6 +371,39 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        /// <summary>
+        /// Replaces this single target anchor with a single existing library-owned element.
+        /// The replacement is relocated through Blazor-owned render state before the target is removed.
+        /// </summary>
+        public QuerySelection ReplaceWith(QuerySelection replacement)
+        {
+            ArgumentNullException.ThrowIfNull(replacement);
+            var targetKey = RequireSingleAnchor("ReplaceWith");
+            var replacementKey = replacement.RequireSingleElement("ReplaceWith");
+            if (string.Equals(targetKey, replacementKey, StringComparison.Ordinal))
+                throw new InvalidOperationException("ReplaceWith cannot replace an element with itself.");
+
+            AttachSibling(replacementKey, targetKey, before: true);
+            RemoveSingle(targetKey);
+            return this;
+        }
+
+        /// <summary>
+        /// Replaces a single target anchor with this single receiver element.
+        /// This is the receiver-order counterpart of <c>target.ReplaceWith(this)</c>.
+        /// </summary>
+        public QuerySelection ReplaceAll(QuerySelection target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            target.ReplaceWith(this);
+            return this;
+        }
+
+        /// <summary>
+        /// Compatibility alias for <see cref="ReplaceWith(QuerySelection)"/>.
+        /// </summary>
+        public QuerySelection Replace(QuerySelection replacement) => ReplaceWith(replacement);
+
         public QuerySelection Wrap(string wrapperTagName, string? wrapperClassName = null)
         {
             var results = new List<string>();
@@ -831,6 +864,32 @@ namespace Reflections.Blazor.Query
                     $"{operationName} requires the receiver selection to resolve to exactly one anchor element; " +
                     $"it resolved to {anchors.Count}. Moving a single element {operationName.ToLowerInvariant()} multiple anchors is ambiguous."),
             };
+        }
+
+        private string RequireSingleElement(string operationName)
+        {
+            var elements = RequireResolvedKeys();
+            return elements.Count switch
+            {
+                1 => elements[0],
+                0 => throw new InvalidOperationException($"{operationName} requires the replacement selection to resolve to an element."),
+                _ => throw new InvalidOperationException(
+                    $"{operationName} requires the replacement selection to resolve to exactly one element; " +
+                    $"it resolved to {elements.Count}. Cloning replacements for multiple elements is not supported."),
+            };
+        }
+
+        private void RemoveSingle(string elementKey)
+        {
+            if (_state.IsVirtual(elementKey))
+            {
+                _state.RemoveVirtualNode(elementKey);
+                _registry?.Unregister(elementKey);
+            }
+            else
+            {
+                _state.Remove(elementKey);
+            }
         }
 
         private void AttachSibling(string movingKey, string anchorKey, bool before)
