@@ -224,6 +224,34 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
+    public void InsertBefore_moves_the_receiver_before_its_single_target_anchor_and_preserves_the_receiver_selection()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var anchor = query.Select(".list").AppendElement("li", text: "anchor");
+        var moving = query.Select(".list").AppendElement("li", text: "moving");
+
+        var result = moving.InsertBefore(anchor);
+
+        Assert.Same(moving, result);
+        Assert.Equal(["moving", "anchor"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+    }
+
+    [Fact]
+    public void InsertAfter_moves_the_receiver_after_its_single_target_anchor_and_preserves_the_receiver_selection()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var moving = query.Select(".list").AppendElement("li", text: "moving");
+        var anchor = query.Select(".list").AppendElement("li", text: "anchor");
+
+        var result = moving.InsertAfter(anchor);
+
+        Assert.Same(moving, result);
+        Assert.Equal(["anchor", "moving"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+    }
+
+    [Fact]
     public void InsertElementBefore_throws_when_anchor_has_no_registered_parent()
     {
         var (query, registry, _) = CreateQuery();

@@ -349,6 +349,28 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        /// <summary>
+        /// Moves this selection immediately before the single target anchor.
+        /// This is the fluent, jQuery-compatible receiver-order alias for <c>target.Before(this)</c>.
+        /// </summary>
+        public QuerySelection InsertBefore(QuerySelection target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            target.Before(this);
+            return this;
+        }
+
+        /// <summary>
+        /// Moves this selection immediately after the single target anchor.
+        /// This is the fluent, jQuery-compatible receiver-order alias for <c>target.After(this)</c>.
+        /// </summary>
+        public QuerySelection InsertAfter(QuerySelection target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            target.After(this);
+            return this;
+        }
+
         public QuerySelection Wrap(string wrapperTagName, string? wrapperClassName = null)
         {
             var results = new List<string>();
