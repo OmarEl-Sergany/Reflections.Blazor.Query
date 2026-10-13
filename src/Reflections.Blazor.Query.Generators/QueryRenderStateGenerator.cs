@@ -30,7 +30,7 @@ public sealed class QueryRenderStateGenerator : IIncrementalGenerator
                     "CompoundTagIdClassSelectors",
                     "AddClass", "RemoveClass", "ToggleClass", "HasClass", "Show", "Hide", "Toggle", "Remove", "Empty", "Detach",
                     "Append", "AppendHtml", "Prepend", "PrependHtml", "AppendElement", "PrependElement", "InsertElementBefore", "InsertElementAfter",
-                    "AppendTo", "PrependTo", "Before", "After", "InsertBefore", "InsertAfter", "Wrap", "WrapAll", "Clone",
+                    "AppendTo", "PrependTo", "Before", "After", "InsertBefore", "InsertAfter", "Wrap", "WrapAll", "WrapInner", "Clone",
                     "ReplaceWith", "ReplaceAll", "Replace"
                 ];
             }

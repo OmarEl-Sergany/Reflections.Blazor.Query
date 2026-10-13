@@ -17,6 +17,10 @@ public class QueryRenderState
     private readonly Dictionary<string, QueryVirtualNode> _virtualNodes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _virtualChildKeys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RenderFragment> _realElementFragments = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RenderFragment> _innerContentByOwner = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _innerWrapperByOwner = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _contentWrapperByOwner = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RenderFragment> _innerContentByWrapper = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _relocatedParent = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _relocatedChildrenByHost = new(StringComparer.Ordinal);
     private readonly List<Func<Action, Task>> _dispatchers = [];
@@ -57,6 +61,10 @@ public class QueryRenderState
     internal bool IsRelocatedElsewhere(string elementKey) => _relocatedParent.ContainsKey(elementKey);
     internal RenderFragment? RealElementFragmentFor(string elementKey) =>
         _realElementFragments.TryGetValue(elementKey, out var fragment) ? fragment : null;
+    internal string? InnerWrapperFor(string elementKey) =>
+        _innerWrapperByOwner.TryGetValue(elementKey, out var wrapperKey) ? wrapperKey : null;
+    internal RenderFragment? InnerContentForWrapper(string wrapperKey) =>
+        _innerContentByWrapper.TryGetValue(wrapperKey, out var fragment) ? fragment : null;
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
     internal void RegisterDispatch(Func<Action, Task> dispatch)
     {
@@ -74,6 +82,34 @@ public class QueryRenderState
         // otherwise skip notifying on ordinary mount to avoid a render on every element registration.
         if (_relocatedParent.ContainsKey(key))
             NotifyChanged();
+    }
+    internal void RegisterInnerContent(string key, RenderFragment fragment)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(fragment);
+        _innerContentByOwner[key] = fragment;
+        if (_contentWrapperByOwner.TryGetValue(key, out var wrapperKey))
+            _innerContentByWrapper[wrapperKey] = fragment;
+    }
+    internal void UnregisterInnerContent(string key)
+    {
+        _innerContentByOwner.Remove(key);
+        _innerWrapperByOwner.Remove(key);
+        if (_contentWrapperByOwner.Remove(key, out var wrapperKey))
+            _innerContentByWrapper.Remove(wrapperKey);
+    }
+    internal void SetInnerWrapper(string ownerKey, string wrapperKey)
+    {
+        if (!_innerContentByOwner.TryGetValue(ownerKey, out var fragment))
+            throw new InvalidOperationException($"'{ownerKey}' does not have component-owned inner content.");
+
+        _innerWrapperByOwner[ownerKey] = wrapperKey;
+        if (!_contentWrapperByOwner.ContainsKey(ownerKey))
+        {
+            _contentWrapperByOwner[ownerKey] = wrapperKey;
+            _innerContentByWrapper[wrapperKey] = fragment;
+        }
+        NotifyChanged();
     }
     internal void UnregisterRealElement(string key)
     {
@@ -371,7 +407,9 @@ public class QueryRenderState
         if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0 && _content.Count == 0
             && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0
             && _prepended.Count == 0 && _appended.Count == 0 && _virtualNodes.Count == 0 && _virtualChildKeys.Count == 0
-            && _realElementFragments.Count == 0 && _relocatedParent.Count == 0 && _relocatedChildrenByHost.Count == 0)
+            && _realElementFragments.Count == 0 && _innerContentByOwner.Count == 0 && _innerWrapperByOwner.Count == 0
+            && _contentWrapperByOwner.Count == 0 && _innerContentByWrapper.Count == 0 && _relocatedParent.Count == 0
+            && _relocatedChildrenByHost.Count == 0)
             return;
         _styles.Clear();
         _attributes.Clear();
@@ -387,6 +425,10 @@ public class QueryRenderState
         _virtualNodes.Clear();
         _virtualChildKeys.Clear();
         _realElementFragments.Clear();
+        _innerContentByOwner.Clear();
+        _innerWrapperByOwner.Clear();
+        _contentWrapperByOwner.Clear();
+        _innerContentByWrapper.Clear();
         _relocatedParent.Clear();
         _relocatedChildrenByHost.Clear();
         NotifyChanged();

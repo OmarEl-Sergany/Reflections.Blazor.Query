@@ -25,3 +25,13 @@
 3. Create the wrapper before the first selected sibling and attach selected elements in existing render order.
 4. Add virtual ordering and mixed-parent rejection tests, plus a bUnit real-element rendering test.
 5. Update generated metadata and public README, then run focused and full solution validation.
+
+---
+
+# WrapInner — plan
+
+1. Register the component-owned `ChildContent` fragment with `QueryRenderState` during `QueryElement` parameter processing and remove it on disposal.
+2. Add render-state mappings between an owner key and its inner wrapper; render the captured fragment only through that wrapper.
+3. Add `WrapInner` to `QuerySelection`: validate a mounted real target, snapshot its direct owned children, create the wrapper, move those children beneath it, then activate the content mapping.
+4. Add unit tests for reparenting and invalid virtual targets, plus a bUnit test proving Razor content renders once inside the wrapper.
+5. Advertise the operation in generated metadata and public documentation; run focused and full solution validation.

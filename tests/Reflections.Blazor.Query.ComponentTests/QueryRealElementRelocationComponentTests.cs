@@ -345,6 +345,45 @@ public sealed class QueryRealElementRelocationComponentTests
     }
 
     [Fact]
+    public void WrapInner_moves_component_owned_Razor_content_and_existing_owned_children_into_one_wrapper()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "panel");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "div");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "panel");
+            builder.AddComponentParameter(4, nameof(QueryElement.ChildContent), (RenderFragment)(b =>
+            {
+                b.OpenElement(0, "span");
+                b.AddAttribute(1, "class", "declared");
+                b.AddContent(2, "declared-content");
+                b.CloseElement();
+            }));
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+        query.Select(".panel").AppendElement("em", "managed", "managed-content");
+
+        query.Select(".panel").WrapInner("section", "inner");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, CountOccurrences(cut.Markup, "class=\"inner\""));
+            Assert.Equal(1, CountOccurrences(cut.Markup, "declared-content"));
+            Assert.Equal(1, CountOccurrences(cut.Markup, "managed-content"));
+            var wrapperStart = cut.Markup.IndexOf("class=\"inner\"", StringComparison.Ordinal);
+            var wrapperEnd = cut.Markup.IndexOf("</section>", wrapperStart, StringComparison.Ordinal);
+            var declaredIndex = cut.Markup.IndexOf("declared-content", StringComparison.Ordinal);
+            var managedIndex = cut.Markup.IndexOf("managed-content", StringComparison.Ordinal);
+            Assert.True(declaredIndex > wrapperStart && declaredIndex < managedIndex && managedIndex < wrapperEnd);
+        });
+    }
+
+    [Fact]
     public void Reparenting_a_real_element_via_an_ordinary_parameter_change_does_not_disturb_children_relocated_onto_it()
     {
         var (context, registry, state) = CreateContext();

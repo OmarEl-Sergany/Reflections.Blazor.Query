@@ -51,6 +51,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
             _registeredRenderState?.UnregisterRealElement(_registeredKey);
 
         renderState.RegisterRealElement(ElementKey, RenderSelf);
+        renderState.RegisterInnerContent(ElementKey, ChildContent ?? EmptyContent);
 
         var selectors = BuildSelectors();
         var signature = $"{ElementKey}\u001f{ParentElementKey}\u001f{string.Join("\u001f", selectors)}";
@@ -108,11 +109,13 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddMarkupContent(sequence++, content.Value);
         else if (content is not null)
             builder.AddContent(sequence++, content.Value);
+        else if (renderState.InnerWrapperFor(ElementKey) is { } innerWrapperKey)
+            RenderVirtualNode(builder, ref sequence, renderState, innerWrapperKey);
         else
             builder.AddContent(sequence++, ChildContent);
         foreach (var fragment in renderState.AppendedFor(ElementKey))
             AddFragment(builder, ref sequence, fragment);
-        RenderChildren(builder, ref sequence, renderState, ElementKey);
+        RenderChildren(builder, ref sequence, renderState, ElementKey, renderState.InnerWrapperFor(ElementKey));
         builder.CloseElement();
     }
 
@@ -124,10 +127,12 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddContent(sequence++, fragment.Value);
     }
 
-    private static void RenderChildren(RenderTreeBuilder builder, ref int sequence, QueryRenderState renderState, string hostKey)
+    private static void RenderChildren(RenderTreeBuilder builder, ref int sequence, QueryRenderState renderState, string hostKey, string? excludedChildKey = null)
     {
         foreach (var childKey in renderState.VirtualChildKeysFor(hostKey))
         {
+            if (string.Equals(childKey, excludedChildKey, StringComparison.Ordinal))
+                continue;
             var realFragment = renderState.RealElementFragmentFor(childKey);
             if (realFragment is not null)
                 builder.AddContent(sequence++, realFragment);
@@ -165,6 +170,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddMarkupContent(sequence++, content.Value);
         else if (content is not null)
             builder.AddContent(sequence++, content.Value);
+        if (renderState.InnerContentForWrapper(elementKey) is { } innerContent)
+            builder.AddContent(sequence++, innerContent);
         foreach (var fragment in renderState.AppendedFor(elementKey))
             AddFragment(builder, ref sequence, fragment);
         RenderChildren(builder, ref sequence, renderState, elementKey);
@@ -178,6 +185,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
             Registry.Unregister(_registeredKey);
             Measurements.InvalidateElement(_subscribedRenderState ?? DefaultRenderState, _registeredKey);
             Forms.InvalidateElement(_subscribedRenderState ?? DefaultRenderState, _registeredKey);
+            _registeredRenderState?.UnregisterInnerContent(_registeredKey);
             _registeredRenderState?.UnregisterRealElement(_registeredKey);
         }
         if (_subscribedRenderState is not null)
@@ -185,6 +193,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
     }
 
     private void OnRenderStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private static readonly RenderFragment EmptyContent = _ => { };
 
     private string BuildHiddenStyle()
     {

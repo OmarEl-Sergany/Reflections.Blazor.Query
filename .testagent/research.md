@@ -61,3 +61,22 @@ Implement `WrapAll` for a non-empty selection of owned siblings that share one r
 2. Real Razor-declared siblings render once, in order, under that wrapper.
 3. Mixed-parent selections fail before any wrapper or relocation state is created.
 4. Generated metadata advertises `WrapAll`.
+
+---
+
+# WrapInner — research
+
+## Scope
+
+Implement `WrapInner` only for mounted `QueryElement` instances. A component registers its own `ChildContent` render fragment with `QueryRenderState`; the operation creates an owned virtual wrapper, renders that fragment through the wrapper, and reparents existing library-owned direct children beneath it.
+
+## Ownership rule
+
+The query engine never reads or moves browser DOM nodes. It relocates a render fragment that the `QueryElement` component explicitly owns. Virtual nodes have no component-backed render fragment, so `WrapInner` rejects them rather than silently wrapping only part of their rendered output.
+
+## Acceptance checklist
+
+1. A real `QueryElement` with Razor `ChildContent` renders that content once under the generated wrapper after `WrapInner`.
+2. Existing direct library-owned children are reparented beneath the wrapper in order.
+3. A virtual target is rejected before a wrapper is created.
+4. Generated metadata advertises `WrapInner`.

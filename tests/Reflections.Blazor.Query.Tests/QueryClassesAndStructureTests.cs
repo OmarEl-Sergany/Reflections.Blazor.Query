@@ -344,6 +344,52 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
+    public void WrapInner_moves_existing_owned_children_under_a_component_owned_wrapper()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("panel", ".panel");
+        state.RegisterRealElement("panel", _ => { });
+        state.RegisterInnerContent("panel", _ => { });
+        var first = query.Select(".panel").AppendElement("span", "item", "first");
+        var second = query.Select(".panel").AppendElement("span", "item", "second");
+
+        var wrapper = query.Select(".panel").WrapInner("section", "inner");
+        var wrapperKey = wrapper.ToArray().Single();
+
+        Assert.Equal([wrapperKey], state.VirtualChildKeysFor("panel"));
+        Assert.Equal([first.ToArray().Single(), second.ToArray().Single()], state.VirtualChildKeysFor(wrapperKey));
+        Assert.Equal([wrapperKey], query.Select(".item").Parent().ToArray().Distinct().ToArray());
+    }
+
+    [Fact]
+    public void WrapInner_rejects_a_virtual_target_before_creating_a_wrapper()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var item = query.Select(".list").AppendElement("li", "item");
+        var virtualCount = state.AllVirtualKeys.Count;
+
+        Assert.Throws<InvalidOperationException>(() => item.WrapInner("section"));
+
+        Assert.Equal(virtualCount, state.AllVirtualKeys.Count);
+        Assert.Equal([item.ToArray().Single()], state.VirtualChildKeysFor("list"));
+    }
+
+    [Fact]
+    public void Clear_removes_component_owned_inner_wrapper_mappings()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("panel", ".panel");
+        state.RegisterRealElement("panel", _ => { });
+        state.RegisterInnerContent("panel", _ => { });
+        query.Select(".panel").WrapInner("section");
+
+        state.Clear();
+
+        Assert.Null(state.InnerWrapperFor("panel"));
+    }
+
+    [Fact]
     public void Generated_metadata_advertises_all_supported_structural_operations()
     {
         Assert.Contains("ReplaceWith", QueryGeneratedMetadata.SupportedOperations);
@@ -352,6 +398,7 @@ public sealed class QueryClassesAndStructureTests
         Assert.Contains("InsertBefore", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("InsertAfter", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("WrapAll", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("WrapInner", QueryGeneratedMetadata.SupportedOperations);
     }
 
     [Fact]

@@ -4,7 +4,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 129/129 passed](https://img.shields.io/badge/tests-129%2F129%20passed-success)
+![Tests 133/133 passed](https://img.shields.io/badge/tests-133%2F133%20passed-success)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
@@ -35,8 +35,8 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 
 ## Current status (as of 2026-08-28, `master`)
 
-- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468), essentially complete. Classes, visibility, removal, and structural insertion — including moving and wrapping *real, Razor-declared* elements via `AppendTo`/`PrependTo`/`Before`/`After`/`Wrap`/`WrapAll`, not just library-created ones — are all done. `Serialize`/`SerializeArray` (read-only form observation) are also implemented. Remaining gaps are narrow: `WrapInner` and cloning a real element (needs generator-level key minting).
-- **Validation:** 129/129 unit and component tests passing.
+- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468), essentially complete. Classes, visibility, removal, and structural insertion — including moving and wrapping *real, Razor-declared* elements via `AppendTo`/`PrependTo`/`Before`/`After`/`Wrap`/`WrapAll`/`WrapInner`, not just library-created ones — are all done. `Serialize`/`SerializeArray` (read-only form observation) are also implemented. Remaining gap: cloning a real element (needs generator-level key minting).
+- **Validation:** 133/133 unit and component tests passing.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 
 ### Done (merged to `master`)
@@ -119,6 +119,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `Before(anchorContent)` / `After(anchorContent)` — move an existing element to sit immediately before/after a single anchor element (real or virtual). Throws if the receiving selection resolves to anything other than exactly one anchor, since moving one element relative to several anchors is ambiguous.
 - [x] `Wrap(tagName, className?)` — inserts a new library-created wrapper element at an element's current position and reparents the element inside it. Works for both real and virtual elements.
 - [x] `WrapAll(tagName, className?)` — inserts one library-created wrapper before the first selected sibling, then reparents every selected real or virtual element into it in selector/render order. All selected elements must share one registered parent; cross-parent wrapping is rejected before any state changes.
+- [x] `WrapInner(tagName, className?)` — moves a mounted `QueryElement`'s entire component-owned `ChildContent` render fragment and its existing library-owned direct children into a generated wrapper. This is render-tree relocation, not DOM mutation. Virtual targets are intentionally rejected because they have no component-owned Razor fragment.
 - [x] `Detach()` — orphans an element from wherever it's currently attached, keeping its state intact so it can be re-attached later via `AppendTo`/`PrependTo`. For a relocated real element, this "springs it back" to render at its own declared Razor position again. For a real element that was never relocated, or a virtual element, this matches existing `Remove()`/detach-in-place semantics.
 - [x] `Clone()` — duplicates a **virtual** element's tag, class, attributes, properties, added classes, content, appended/prepended fragments, and hidden state under a new key, unattached until explicitly `AppendTo`/`PrependTo`'d somewhere. Throws for a real `QueryElement`, since two elements cannot share a `data-rbq-key` without generator-level key minting (not implemented).
 - [x] `InsertBefore(target)` / `InsertAfter(target)` — jQuery-compatible receiver-order aliases over `target.Before(this)` / `target.After(this)`, preserving the existing single-anchor safety contract.
@@ -126,7 +127,6 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 
 ### In progress / remaining (not yet started)
 
-- [ ] `WrapInner` — deliberately deferred. Arbitrary Razor `ChildContent` is an opaque `RenderFragment`, so safely moving only an element's existing inner content requires an explicit owned render-slot design rather than partial DOM emulation.
 - [ ] `Clone` **of a real, Razor-declared element** — remains blocked on generator-level key minting (two elements can't share a `data-rbq-key`).
 - [ ] Component scoping — `ComponentScopeKey` and `IQueryScope` (Sprint 3 / Feature 4468)
 - [ ] `On`

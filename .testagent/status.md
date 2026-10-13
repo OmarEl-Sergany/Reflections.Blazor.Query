@@ -64,3 +64,28 @@
 - Focused unit suite: 100 passed.
 - Focused component suite: 29 passed.
 - Full solution: 100 unit tests + 29 component tests passed; build succeeded with 0 warnings and 0 errors.
+
+---
+
+# WrapInner — status
+
+## Implemented tests
+
+- `WrapInner_moves_existing_owned_children_under_a_component_owned_wrapper`
+- `WrapInner_rejects_a_virtual_target_before_creating_a_wrapper`
+- `Clear_removes_component_owned_inner_wrapper_mappings`
+- `WrapInner_moves_component_owned_Razor_content_and_existing_owned_children_into_one_wrapper`
+- `Generated_metadata_advertises_all_supported_structural_operations`
+
+## Test-quality review
+
+- The unit test asserts the exact parent/child topology after existing managed children move beneath the generated wrapper.
+- The invalid-target test proves virtual targets fail before any virtual node is created.
+- The component test asserts both captured Razor content and a managed child render exactly once within the wrapper and retain order.
+- The clear-state regression proves render-fragment mappings cannot outlive a render-state reset.
+
+## Validation
+
+- Focused unit suite: 103 passed.
+- Focused component suite: 30 passed.
+- Full solution: 103 unit tests + 30 component tests passed; build succeeded with 0 warnings and 0 errors.

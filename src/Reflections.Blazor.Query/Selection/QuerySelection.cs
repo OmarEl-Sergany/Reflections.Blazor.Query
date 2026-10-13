@@ -432,6 +432,30 @@ namespace Reflections.Blazor.Query
             return PushResolved([wrapperKey]);
         }
 
+        /// <summary>
+        /// Moves a mounted <see cref="QueryElement"/>'s component-owned inner render fragment into a
+        /// library-owned wrapper. This does not inspect or mutate browser DOM nodes.
+        /// </summary>
+        public QuerySelection WrapInner(string wrapperTagName, string? wrapperClassName = null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(wrapperTagName);
+            var results = new List<string>();
+            foreach (var key in RequireResolvedKeys())
+            {
+                if (!_state.IsRealElement(key))
+                    throw new InvalidOperationException(
+                        "WrapInner requires a mounted QueryElement with component-owned ChildContent; virtual elements are not supported.");
+
+                var existingChildren = _state.VirtualChildKeysFor(key).ToArray();
+                var wrapperKey = CreateChild(key, wrapperTagName, wrapperClassName, text: null, isHtml: false, atStart: true);
+                foreach (var childKey in existingChildren)
+                    AttachTo(childKey, wrapperKey, atStart: false);
+                _state.SetInnerWrapper(key, wrapperKey);
+                results.Add(wrapperKey);
+            }
+            return PushResolved(results);
+        }
+
         public QuerySelection Clone()
         {
             var results = new List<string>();
