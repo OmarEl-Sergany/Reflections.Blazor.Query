@@ -78,6 +78,20 @@ namespace Reflections.Blazor.Query
         public QuerySelection Change() => Trigger("change");
         public QuerySelection Submit(Action handler) => On("submit", handler);
         public QuerySelection Submit() => Trigger("submit");
+        public QuerySelection Focus(Action handler) => On("focus", handler);
+        public QuerySelection Focus() => Trigger("focus");
+        public QuerySelection Blur(Action handler) => On("blur", handler);
+        public QuerySelection Blur() => Trigger("blur");
+        public QuerySelection KeyDown(Action handler) => On("keydown", handler);
+        public QuerySelection KeyDown() => Trigger("keydown");
+        public QuerySelection KeyUp(Action handler) => On("keyup", handler);
+        public QuerySelection KeyUp() => Trigger("keyup");
+        public QuerySelection MouseEnter(Action handler) => On("mouseenter", handler);
+        public QuerySelection MouseEnter() => Trigger("mouseenter");
+        public QuerySelection MouseLeave(Action handler) => On("mouseleave", handler);
+        public QuerySelection MouseLeave() => Trigger("mouseleave");
+        public QuerySelection ContextMenu(Action handler) => On("contextmenu", handler);
+        public QuerySelection ContextMenu() => Trigger("contextmenu");
 
         public QuerySelection Attr(string name, string value)
         {

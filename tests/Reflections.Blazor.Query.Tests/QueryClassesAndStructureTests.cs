@@ -48,6 +48,16 @@ public sealed class QueryClassesAndStructureTests
         Assert.Equal(111, count);
     }
 
+    [Fact]
+    public void Focus_keyboard_mouse_and_context_helpers_bind_and_trigger_their_events()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("input", ".input"); var count = 0;
+        query.Select(".input").Focus(() => count++).Blur(() => count += 10).KeyDown(() => count += 100).KeyUp(() => count += 1000)
+            .MouseEnter(() => count += 10000).MouseLeave(() => count += 100000).ContextMenu(() => count += 1000000)
+            .Focus().Blur().KeyDown().KeyUp().MouseEnter().MouseLeave().ContextMenu();
+        Assert.Equal(1111111, count);
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();
