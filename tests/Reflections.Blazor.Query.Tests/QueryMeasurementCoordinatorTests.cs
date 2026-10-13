@@ -170,6 +170,40 @@ public sealed class QueryMeasurementCoordinatorTests
         Assert.Equal(42, await pending);
     }
 
+    [Fact]
+    public async Task Invalidating_an_in_flight_page_request_cancels_it_ignores_its_late_result_and_preserves_layout_state()
+    {
+        var bridge = new SequencedMeasurementBridge();
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var page = new QueryRenderState();
+        var layout = new LayoutQueryRenderState();
+
+        var stalePage = coordinator.RequestAsync(page, "page", MeasurementKind.Height).AsTask();
+        var layoutHeight = coordinator.RequestAsync(layout, "layout", MeasurementKind.Height).AsTask();
+        var firstFlush = coordinator.FlushAsync().AsTask();
+        await bridge.FirstStarted.Task;
+
+        coordinator.Invalidate(page);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => stalePage);
+
+        bridge.CompleteFirst(
+        [
+            new MeasurementReading("page", MeasurementKind.Height, 10),
+            new MeasurementReading("layout", MeasurementKind.Height, 20)
+        ]);
+        await firstFlush;
+        Assert.Equal(20, await layoutHeight);
+
+        var refreshedPage = coordinator.RequestAsync(page, "page", MeasurementKind.Height).AsTask();
+        var secondFlush = coordinator.FlushAsync().AsTask();
+        await bridge.SecondStarted.Task;
+        bridge.CompleteSecond([new MeasurementReading("page", MeasurementKind.Height, 30)]);
+        await secondFlush;
+
+        Assert.Equal(30, await refreshedPage);
+        Assert.Equal(2, bridge.Batches.Count);
+    }
+
     private sealed class FakeMeasurementBridge(params IReadOnlyList<MeasurementReading> readings) : IQueryMeasurementBridge
     {
         public List<IReadOnlyList<MeasurementRequest>> Batches { get; } = [];
@@ -199,5 +233,40 @@ public sealed class QueryMeasurementCoordinatorTests
         }
 
         public void Complete(IReadOnlyList<MeasurementReading> readings) => _completion.TrySetResult(readings);
+    }
+
+    private sealed class SequencedMeasurementBridge : IQueryMeasurementBridge
+    {
+        private readonly TaskCompletionSource<IReadOnlyList<MeasurementReading>> _first = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<IReadOnlyList<MeasurementReading>> _second = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _calls;
+
+        public TaskCompletionSource FirstStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource SecondStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public List<IReadOnlyList<MeasurementRequest>> Batches { get; } = [];
+
+        public ValueTask<IReadOnlyList<MeasurementReading>> MeasureAsync(
+            IReadOnlyList<MeasurementRequest> requests,
+            CancellationToken cancellationToken)
+        {
+            Batches.Add(requests.ToArray());
+            return ++_calls switch
+            {
+                1 => Start(FirstStarted, _first.Task),
+                2 => Start(SecondStarted, _second.Task),
+                _ => throw new InvalidOperationException("Only two batches are expected.")
+            };
+        }
+
+        public void CompleteFirst(IReadOnlyList<MeasurementReading> readings) => _first.TrySetResult(readings);
+        public void CompleteSecond(IReadOnlyList<MeasurementReading> readings) => _second.TrySetResult(readings);
+
+        private static ValueTask<IReadOnlyList<MeasurementReading>> Start(
+            TaskCompletionSource started,
+            Task<IReadOnlyList<MeasurementReading>> completion)
+        {
+            started.TrySetResult();
+            return new ValueTask<IReadOnlyList<MeasurementReading>>(completion);
+        }
     }
 }

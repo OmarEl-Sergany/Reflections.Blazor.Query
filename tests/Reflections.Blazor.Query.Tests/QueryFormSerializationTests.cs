@@ -105,6 +105,33 @@ public sealed class QueryFormSerializationTests
     }
 
     [Fact]
+    public async Task Invalidating_an_in_flight_page_serialization_cancels_it_and_ignores_its_late_result()
+    {
+        var bridge = new SequencedFormBridge();
+        await using var coordinator = new QueryFormCoordinator(bridge);
+        var page = new QueryRenderState();
+
+        var stale = coordinator.RequestArrayAsync(page, ["form"]).AsTask();
+        var firstFlush = coordinator.FlushAsync().AsTask();
+        await bridge.FirstStarted.Task;
+
+        coordinator.Invalidate(page);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => stale);
+
+        bridge.CompleteFirst([new SerializationResult("form", [new SerializedField("version", "stale")])]);
+        await firstFlush;
+
+        var refreshed = coordinator.RequestArrayAsync(page, ["form"]).AsTask();
+        var secondFlush = coordinator.FlushAsync().AsTask();
+        await bridge.SecondStarted.Task;
+        bridge.CompleteSecond([new SerializationResult("form", [new SerializedField("version", "fresh")])]);
+        await secondFlush;
+
+        Assert.Equal([new SerializedField("version", "fresh")], await refreshed);
+        Assert.Equal(2, bridge.Batches.Count);
+    }
+
+    [Fact]
     public async Task Query_selection_SerializeArray_returns_fields_for_resolved_elements()
     {
         var bridge = new FakeFormBridge(
@@ -171,6 +198,41 @@ public sealed class QueryFormSerializationTests
         {
             Batches.Add(requests.ToArray());
             return ValueTask.FromResult(results);
+        }
+    }
+
+    private sealed class SequencedFormBridge : IQueryFormBridge
+    {
+        private readonly TaskCompletionSource<IReadOnlyList<SerializationResult>> _first = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<IReadOnlyList<SerializationResult>> _second = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _calls;
+
+        public TaskCompletionSource FirstStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource SecondStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public List<IReadOnlyList<SerializationRequest>> Batches { get; } = [];
+
+        public ValueTask<IReadOnlyList<SerializationResult>> SerializeAsync(
+            IReadOnlyList<SerializationRequest> requests,
+            CancellationToken cancellationToken)
+        {
+            Batches.Add(requests.ToArray());
+            return ++_calls switch
+            {
+                1 => Start(FirstStarted, _first.Task),
+                2 => Start(SecondStarted, _second.Task),
+                _ => throw new InvalidOperationException("Only two batches are expected.")
+            };
+        }
+
+        public void CompleteFirst(IReadOnlyList<SerializationResult> results) => _first.TrySetResult(results);
+        public void CompleteSecond(IReadOnlyList<SerializationResult> results) => _second.TrySetResult(results);
+
+        private static ValueTask<IReadOnlyList<SerializationResult>> Start(
+            TaskCompletionSource started,
+            Task<IReadOnlyList<SerializationResult>> completion)
+        {
+            started.TrySetResult();
+            return new ValueTask<IReadOnlyList<SerializationResult>>(completion);
         }
     }
 }

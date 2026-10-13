@@ -4,7 +4,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 116/116 passed](https://img.shields.io/badge/tests-116%2F116%20passed-success)
+![Tests 118/118 passed](https://img.shields.io/badge/tests-118%2F118%20passed-success)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
@@ -36,7 +36,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 ## Current status (as of 2026-08-28, `master`)
 
 - **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468), essentially complete. Classes, visibility, removal, and structural insertion — including moving and wrapping *real, Razor-declared* elements via `AppendTo`/`PrependTo`/`Before`/`After`/`Wrap`, not just library-created ones — are all done. `Serialize`/`SerializeArray` (read-only form observation) are also implemented. Remaining gaps are narrow: `Replace*`, `WrapAll`/`WrapInner`, and cloning a real element (needs generator-level key minting).
-- **Validation:** 116/116 unit and component tests passing.
+- **Validation:** 118/118 unit and component tests passing.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 
 ### Done (merged to `master`)
