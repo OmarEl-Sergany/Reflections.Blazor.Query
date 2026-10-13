@@ -58,6 +58,17 @@ public sealed class QueryClassesAndStructureTests
         Assert.Equal(1111111, count);
     }
 
+    [Fact]
+    public void Remaining_keyboard_mouse_resize_and_scroll_helpers_bind_and_trigger_their_events()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("surface", ".surface"); var count = 0;
+        query.Select(".surface").KeyPress(() => count++).MouseDown(() => count += 10).MouseUp(() => count += 100)
+            .MouseMove(() => count += 1000).MouseOver(() => count += 10000).MouseOut(() => count += 100000)
+            .Resize(() => count += 1000000).Scroll(() => count += 10000000)
+            .KeyPress().MouseDown().MouseUp().MouseMove().MouseOver().MouseOut().Resize().Scroll();
+        Assert.Equal(11111111, count);
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();
