@@ -298,6 +298,53 @@ public sealed class QueryRealElementRelocationComponentTests
     }
 
     [Fact]
+    public void WrapAll_moves_real_siblings_under_one_generated_wrapper_without_duplicate_markup()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "root");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "div");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "root");
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(4);
+            builder.AddComponentParameter(5, nameof(QueryElement.ElementKey), "first");
+            builder.AddComponentParameter(6, nameof(QueryElement.TagName), "span");
+            builder.AddComponentParameter(7, nameof(QueryElement.Class), "item");
+            builder.AddComponentParameter(8, nameof(QueryElement.ParentElementKey), "root");
+            builder.AddComponentParameter(9, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "first-content")));
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(10);
+            builder.AddComponentParameter(11, nameof(QueryElement.ElementKey), "second");
+            builder.AddComponentParameter(12, nameof(QueryElement.TagName), "span");
+            builder.AddComponentParameter(13, nameof(QueryElement.Class), "item");
+            builder.AddComponentParameter(14, nameof(QueryElement.ParentElementKey), "root");
+            builder.AddComponentParameter(15, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "second-content")));
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+
+        var wrapper = query.Select(".item").WrapAll("section", "wrapper");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, CountOccurrences(cut.Markup, "class=\"wrapper\""));
+            Assert.Equal(1, CountOccurrences(cut.Markup, "first-content"));
+            Assert.Equal(1, CountOccurrences(cut.Markup, "second-content"));
+            var wrapperStart = cut.Markup.IndexOf("class=\"wrapper\"", StringComparison.Ordinal);
+            var wrapperEnd = cut.Markup.IndexOf("</section>", wrapperStart, StringComparison.Ordinal);
+            var firstIndex = cut.Markup.IndexOf("first-content", StringComparison.Ordinal);
+            var secondIndex = cut.Markup.IndexOf("second-content", StringComparison.Ordinal);
+            Assert.True(firstIndex > wrapperStart && firstIndex < secondIndex && secondIndex < wrapperEnd);
+        });
+
+        Assert.Equal(wrapper.ToArray(), query.Select(".item").Parent().ToArray());
+    }
+
+    [Fact]
     public void Reparenting_a_real_element_via_an_ordinary_parameter_change_does_not_disturb_children_relocated_onto_it()
     {
         var (context, registry, state) = CreateContext();

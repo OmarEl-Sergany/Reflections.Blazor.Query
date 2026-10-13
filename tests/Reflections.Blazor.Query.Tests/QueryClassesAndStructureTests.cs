@@ -311,6 +311,39 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
+    public void WrapAll_creates_one_wrapper_and_preserves_selected_virtual_sibling_order()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var first = query.Select(".list").AppendElement("li", "item", "first");
+        var second = query.Select(".list").AppendElement("li", "item", "second");
+
+        var wrapper = query.Select(".item").WrapAll("section", "wrapper");
+        var wrapperKey = wrapper.ToArray().Single();
+
+        Assert.Equal([wrapperKey], state.VirtualChildKeysFor("list"));
+        Assert.Equal([first.ToArray().Single(), second.ToArray().Single()], state.VirtualChildKeysFor(wrapperKey));
+        Assert.Equal([wrapperKey], query.Select(".item").Parent().ToArray());
+    }
+
+    [Fact]
+    public void WrapAll_rejects_a_cross_parent_selection_before_creating_a_wrapper()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("listA", ".listA");
+        registry.Register("listB", ".listB");
+        query.Select(".listA").AppendElement("li", "a", "a");
+        query.Select(".listB").AppendElement("li", "b", "b");
+        var virtualCount = state.AllVirtualKeys.Count;
+
+        Assert.Throws<InvalidOperationException>(() => query.Select(".a").Add(".b").WrapAll("section"));
+
+        Assert.Equal(virtualCount, state.AllVirtualKeys.Count);
+        Assert.Single(state.VirtualChildKeysFor("listA"));
+        Assert.Single(state.VirtualChildKeysFor("listB"));
+    }
+
+    [Fact]
     public void Generated_metadata_advertises_all_supported_structural_operations()
     {
         Assert.Contains("ReplaceWith", QueryGeneratedMetadata.SupportedOperations);
@@ -318,6 +351,7 @@ public sealed class QueryClassesAndStructureTests
         Assert.Contains("Replace", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("InsertBefore", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("InsertAfter", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("WrapAll", QueryGeneratedMetadata.SupportedOperations);
     }
 
     [Fact]

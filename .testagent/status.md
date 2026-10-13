@@ -41,3 +41,26 @@
 - Focused unit suite: 97 passed.
 - Focused component suite: 28 passed.
 - Full solution: 98 unit tests + 28 component tests passed; build succeeded with 0 warnings and 0 errors.
+
+---
+
+# WrapAll — status
+
+## Implemented tests
+
+- `WrapAll_creates_one_wrapper_and_preserves_selected_virtual_sibling_order`
+- `WrapAll_rejects_a_cross_parent_selection_before_creating_a_wrapper`
+- `WrapAll_moves_real_siblings_under_one_generated_wrapper_without_duplicate_markup`
+- `Generated_metadata_advertises_all_supported_structural_operations`
+
+## Test-quality review
+
+- The virtual-node test asserts one wrapper, exact child ordering, and reparented selector output.
+- The cross-parent test proves validation happens before a wrapper is created or either source parent is mutated.
+- The component test proves two real Razor elements are emitted once each, in original order, beneath the generated wrapper.
+
+## Validation
+
+- Focused unit suite: 100 passed.
+- Focused component suite: 29 passed.
+- Full solution: 100 unit tests + 29 component tests passed; build succeeded with 0 warnings and 0 errors.

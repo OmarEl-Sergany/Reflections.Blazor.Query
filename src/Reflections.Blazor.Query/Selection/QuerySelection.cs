@@ -412,6 +412,26 @@ namespace Reflections.Blazor.Query
             return PushResolved(results);
         }
 
+        /// <summary>
+        /// Creates one library-owned wrapper around all selected siblings in their current render order.
+        /// Every selected element must share a registered parent; cross-parent wrapping would require
+        /// implicit ordering and cloning semantics that this render-state model deliberately does not infer.
+        /// </summary>
+        public QuerySelection WrapAll(string wrapperTagName, string? wrapperClassName = null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(wrapperTagName);
+            var keys = RequireResolvedKeys();
+            if (keys.Count == 0)
+                return PushResolved([]);
+
+            EnsureCommonParent(keys, "WrapAll");
+            var wrapperKey = CreateSibling(keys[0], wrapperTagName, wrapperClassName, text: null, isHtml: false, before: true);
+            foreach (var key in keys)
+                AttachTo(key, wrapperKey, atStart: false);
+
+            return PushResolved([wrapperKey]);
+        }
+
         public QuerySelection Clone()
         {
             var results = new List<string>();
@@ -877,6 +897,22 @@ namespace Reflections.Blazor.Query
                     $"{operationName} requires the replacement selection to resolve to exactly one element; " +
                     $"it resolved to {elements.Count}. Cloning replacements for multiple elements is not supported."),
             };
+        }
+
+        private void EnsureCommonParent(IReadOnlyList<string> keys, string operationName)
+        {
+            var registry = RequireRegistry();
+            var parentKey = registry.Parent([keys[0]]).FirstOrDefault()
+                ?? throw new InvalidOperationException(
+                    $"{operationName} requires selected elements to have a registered parent element.");
+
+            foreach (var key in keys.Skip(1))
+            {
+                var candidateParent = registry.Parent([key]).FirstOrDefault();
+                if (!string.Equals(parentKey, candidateParent, StringComparison.Ordinal))
+                    throw new InvalidOperationException(
+                        $"{operationName} requires every selected element to share the same registered parent.");
+            }
         }
 
         private void RemoveSingle(string elementKey)

@@ -42,3 +42,22 @@ The replacement is moved into the single target's registered sibling slot by the
 3. `Replace` is the documented compatibility alias of `ReplaceWith`.
 4. A real Razor-declared replacement renders once at the target position while the real target no longer renders.
 5. Self-replacement is rejected before it can remove the only selected element.
+
+---
+
+# WrapAll — research
+
+## Scope
+
+Implement `WrapAll` for a non-empty selection of owned siblings that share one registered parent. The operation creates one virtual wrapper before the first selected element, then moves every selected real or virtual element into it in render-order.
+
+## Explicit boundary
+
+`WrapInner` is not included in this slice. Arbitrary Razor `ChildContent` is an opaque `RenderFragment`; wrapping it correctly requires a separate render-slot design. Pretending that only virtual fragments were wrapped would violate caller expectations.
+
+## Acceptance checklist
+
+1. Virtual siblings become ordered children of exactly one generated wrapper.
+2. Real Razor-declared siblings render once, in order, under that wrapper.
+3. Mixed-parent selections fail before any wrapper or relocation state is created.
+4. Generated metadata advertises `WrapAll`.

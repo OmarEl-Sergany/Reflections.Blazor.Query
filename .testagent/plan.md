@@ -15,3 +15,13 @@
 3. Add unit tests for virtual replacement ordering, alias semantics, and self-replacement rejection.
 4. Add a bUnit regression for real-element replacement to prove one renderer output and no duplicate source markup.
 5. Run focused suites, full solution validation, and record the assertion review.
+
+---
+
+# WrapAll — plan
+
+1. Add `WrapAll` and a preflight helper to `QuerySelection`.
+2. Verify every selected element has the same non-null registered parent before creating state.
+3. Create the wrapper before the first selected sibling and attach selected elements in existing render order.
+4. Add virtual ordering and mixed-parent rejection tests, plus a bUnit real-element rendering test.
+5. Update generated metadata and public README, then run focused and full solution validation.
