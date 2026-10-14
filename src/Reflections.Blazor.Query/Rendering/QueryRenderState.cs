@@ -114,12 +114,13 @@ public class QueryRenderState
         (_asyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _asyncEventHandlers[(elementKey, eventName)] = []).Add(new(handler, once));
         NotifyChanged();
     }
-    internal void Off(string elementKey, string eventName, Func<Task>? handler)
+    internal void OffAsync(string elementKey, string eventName, Func<Task> handler)
     {
+        ArgumentNullException.ThrowIfNull(handler);
         eventName = NormalizeEventName(eventName);
         if (!_asyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers)) return;
-        if (handler is null) _asyncEventHandlers.Remove((elementKey, eventName));
-        else { handlers.RemoveAll(entry => entry.Handler == handler); if (handlers.Count == 0) _asyncEventHandlers.Remove((elementKey, eventName)); }
+        handlers.RemoveAll(entry => entry.Handler == handler);
+        if (handlers.Count == 0) _asyncEventHandlers.Remove((elementKey, eventName));
         NotifyChanged();
     }
     internal void On<TEventArgs>(string elementKey, string eventName, Action<TEventArgs> handler, bool once) where TEventArgs : EventArgs
@@ -158,13 +159,14 @@ public class QueryRenderState
             .Add(new(args => handler((TEventArgs)args), handler, typeof(TEventArgs), once));
         NotifyChanged();
     }
-    internal void Off<TEventArgs>(string elementKey, string eventName, Func<TEventArgs, Task>? handler) where TEventArgs : EventArgs
+    internal void OffAsync<TEventArgs>(string elementKey, string eventName, Func<TEventArgs, Task> handler) where TEventArgs : EventArgs
     {
+        ArgumentNullException.ThrowIfNull(handler);
         eventName = NormalizeEventName(eventName);
         if (!_typedAsyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers))
             return;
         handlers.RemoveAll(entry => entry.ArgumentType == typeof(TEventArgs)
-            && (handler is null || entry.OriginalHandler.Equals(handler)));
+            && entry.OriginalHandler.Equals(handler));
         if (handlers.Count == 0)
             _typedAsyncEventHandlers.Remove((elementKey, eventName));
         NotifyChanged();

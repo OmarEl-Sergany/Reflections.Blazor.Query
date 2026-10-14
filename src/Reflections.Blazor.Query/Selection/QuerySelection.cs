@@ -94,14 +94,14 @@ namespace Reflections.Blazor.Query
             foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName, handler);
             return this;
         }
-        public QuerySelection Off(string eventName, Func<Task>? handler)
+        public QuerySelection OffAsync(string eventName, Func<Task> handler)
         {
-            foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName, handler);
+            foreach (var key in RequireResolvedKeys()) _state.OffAsync(key, eventName, handler);
             return this;
         }
-        public QuerySelection Off<TEventArgs>(string eventName, Func<TEventArgs, Task>? handler) where TEventArgs : EventArgs
+        public QuerySelection OffAsync<TEventArgs>(string eventName, Func<TEventArgs, Task> handler) where TEventArgs : EventArgs
         {
-            foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName, handler);
+            foreach (var key in RequireResolvedKeys()) _state.OffAsync(key, eventName, handler);
             return this;
         }
         public QuerySelection Trigger(string eventName)
@@ -134,8 +134,8 @@ namespace Reflections.Blazor.Query
         public QuerySelection Bind<TEventArgs>(string eventName, Func<TEventArgs, Task> handler) where TEventArgs : EventArgs => On(eventName, handler);
         public QuerySelection Unbind(string eventName, Action? handler = null) => Off(eventName, handler);
         public QuerySelection Unbind<TEventArgs>(string eventName, Action<TEventArgs>? handler = null) where TEventArgs : EventArgs => Off(eventName, handler);
-        public QuerySelection Unbind(string eventName, Func<Task>? handler) => Off(eventName, handler);
-        public QuerySelection Unbind<TEventArgs>(string eventName, Func<TEventArgs, Task>? handler) where TEventArgs : EventArgs => Off(eventName, handler);
+        public QuerySelection UnbindAsync(string eventName, Func<Task> handler) => OffAsync(eventName, handler);
+        public QuerySelection UnbindAsync<TEventArgs>(string eventName, Func<TEventArgs, Task> handler) where TEventArgs : EventArgs => OffAsync(eventName, handler);
         public QuerySelection DelegateJS(string selector, string eventName, Action<QueryEventTarget> handler)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);

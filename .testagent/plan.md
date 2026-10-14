@@ -129,7 +129,7 @@
 
 # Awaitable native event handlers — plan
 
-1. Extend untyped and typed registrations with async entries, exact `Off` overloads, one-shot support, event-name discovery, and cleanup.
+1. Extend untyped and typed registrations with async entries, exact `OffAsync` overloads, one-shot support, event-name discovery, and cleanup.
 2. Add `TriggerAsync` on `QuerySelection` and `QueryRenderState`; keep synchronous trigger semantics non-blocking and compatible.
 3. Make native Blazor event descriptors return/await tasks, including the fallback callback path.
 4. Add unit assertions for async payload dispatch, exact removal, one-shot consumption, and synchronous compatibility.

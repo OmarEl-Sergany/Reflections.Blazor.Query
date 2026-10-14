@@ -263,7 +263,7 @@
 
 ## Delivered
 
-- Added `Func<Task>` and `Func<TEventArgs, Task>` overloads for `On`, `One`, `Off`, `Bind`, `Unbind`, native event helpers, and `Hover`.
+- Added `Func<Task>` and `Func<TEventArgs, Task>` overloads for `On`, `One`, `Bind`, native event helpers, and `Hover`; `OffAsync` / `UnbindAsync` remove async delegates without changing legacy null-call overload resolution.
 - Added `TriggerAsync` overloads. Synchronous `Trigger` remains non-blocking and unchanged; native Blazor event callbacks await both sync and async registrations and preserve typed native payloads.
 - Async one-shot handlers are removed before invocation; async registrations participate in element-key discovery and are removed with virtual-node disposal or `Clear`.
 - Updated generator metadata, README, and the Feature 4469 implementation plan.

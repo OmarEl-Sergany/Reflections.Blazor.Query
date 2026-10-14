@@ -249,7 +249,7 @@ public sealed class QueryClassesAndStructureTests
         };
         var selection = query.Select(".button").On("click", removed).On("click", retained);
 
-        selection.Off("click", removed);
+        selection.OffAsync("click", removed);
         selection.Trigger("click");
         Assert.Equal(0, removedCalls);
         Assert.Equal(0, retainedCalls);
@@ -823,6 +823,8 @@ public sealed class QueryClassesAndStructureTests
     {
         Assert.Contains("AsyncOn", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("TypedAsyncOn", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("OffAsync", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("UnbindAsync", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("AsyncOne", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("TriggerAsync", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("TypedTriggerAsync", QueryGeneratedMetadata.SupportedOperations);

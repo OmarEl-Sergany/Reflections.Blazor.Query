@@ -211,7 +211,7 @@ Event registrations are keyed to an owned element identity. Destroying that iden
 ## Acceptance checklist
 
 1. `On` and `One` accept `Func<Task>` and `Func<TEventArgs, Task>` handlers while preserving existing synchronous overloads.
-2. `Off` removes the exact asynchronous handler, and one-shot async handlers are removed before their first awaited dispatch.
+2. `OffAsync` removes the exact asynchronous handler without making legacy `Off(eventName, null)` ambiguous; one-shot async handlers are removed before their first awaited dispatch.
 3. Native Blazor event callbacks await asynchronous handlers and preserve native event arguments.
 4. Existing synchronous `Trigger` behavior remains unchanged; explicit `TriggerAsync` dispatches async registrations.
 5. Event-name discovery and element cleanup include asynchronous registrations.
