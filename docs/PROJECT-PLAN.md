@@ -44,7 +44,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 - [x] Event helpers: `Blur`, `Change`, `Click`, `ContextMenu`, `DblClick`, `Focus`, `FocusIn`, `FocusOut`, `Hover`, keyboard and mouse helpers, `Resize`, `Scroll`, and `Submit`; both synchronous and `Task`-returning overloads are supported, with native Blazor event args where available.
 - [x] Compatibility aliases: `TriggerHandler`, `Bind`, and `Unbind`, including typed and awaitable callback overloads; `UnbindAsync` removes awaitable delegates without introducing `null` overload ambiguity in the legacy API.
 - [x] Delegated routing: `DelegateJS` / `Undelegate` with host pre-start registration and C# root/scope/selector checks.
-- [x] Form-state handlers: `Serialize` and `SerializeArray` — read-only form observation (`SerializeAsync` / `SerializeArrayAsync`) via the queued, coalesced, read-only JS boundary defined in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). jQuery "successful control" semantics; no DOM mutation.
+- [x] Form-state handlers: `Serialize` and `SerializeArray` — read-only form observation (`SerializeAsync` / `SerializeArrayAsync`) via the queued, coalesced, read-only JS boundary defined in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). jQuery "successful control" semantics; no DOM mutation. Coordinator disposal is idempotent and serialized behind active bridge reads.
 
 #### Sprint 5 — Effects & Queues (Feature 4470)
 

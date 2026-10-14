@@ -107,7 +107,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `Toggle`
 - [x] `Remove`
 - [x] `Empty`
-- [x] `Serialize` / `SerializeArray` — asynchronous (`SerializeAsync` / `SerializeArrayAsync`), read-only form observation. Reads successful form controls from the browser through the same queued, coalesced, read-only JS boundary as layout measurement and returns name/value pairs to C# without mutating the DOM.
+- [x] `Serialize` / `SerializeArray` — asynchronous (`SerializeAsync` / `SerializeArrayAsync`), read-only form observation. Reads successful form controls from the browser through the same queued, coalesced, read-only JS boundary as layout measurement and returns name/value pairs to C# without mutating the DOM. Coordinator disposal closes admission and waits for an active bridge read before disposing the JS module.
 - [x] `Append` — appends an owned, encoded text fragment after an element's existing content.
 - [x] `AppendHtml` — trusted-markup variant of `Append`, under the same explicit trust boundary as `Html`.
 - [x] `Prepend` — prepends an owned, encoded text fragment before an element's existing content.

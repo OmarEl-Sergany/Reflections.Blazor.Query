@@ -132,6 +132,34 @@ public sealed class QueryFormSerializationTests
     }
 
     [Fact]
+    public async Task Dispose_is_idempotent_and_waits_for_an_in_flight_bridge_call_before_disposing_it()
+    {
+        var bridge = new BlockingDisposableFormBridge();
+        var coordinator = new QueryFormCoordinator(bridge);
+        var state = new QueryRenderState();
+        var pending = coordinator.RequestArrayAsync(state, ["form"]).AsTask();
+        var flush = coordinator.FlushAsync().AsTask();
+        await bridge.SerializationStarted.Task;
+
+        var firstDispose = coordinator.DisposeAsync().AsTask();
+        var secondDispose = coordinator.DisposeAsync().AsTask();
+
+        Assert.Same(firstDispose, secondDispose);
+        Assert.False(firstDispose.IsCompleted);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+
+        bridge.Complete([new SerializationResult("form", [new SerializedField("q", "late")])]);
+        await flush;
+        await Task.WhenAll(firstDispose, secondDispose);
+        await coordinator.FlushAsync();
+
+        Assert.Equal(1, bridge.DisposeCalls);
+        Assert.Single(bridge.Batches);
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await coordinator.RequestArrayAsync(state, ["after-dispose"]));
+    }
+
+    [Fact]
     public async Task Query_selection_SerializeArray_returns_fields_for_resolved_elements()
     {
         var bridge = new FakeFormBridge(
@@ -233,6 +261,33 @@ public sealed class QueryFormSerializationTests
         {
             started.TrySetResult();
             return new ValueTask<IReadOnlyList<SerializationResult>>(completion);
+        }
+    }
+
+    private sealed class BlockingDisposableFormBridge : IQueryFormBridge, IAsyncDisposable
+    {
+        private readonly TaskCompletionSource<IReadOnlyList<SerializationResult>> _completion =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource SerializationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public List<IReadOnlyList<SerializationRequest>> Batches { get; } = [];
+        public int DisposeCalls { get; private set; }
+
+        public ValueTask<IReadOnlyList<SerializationResult>> SerializeAsync(
+            IReadOnlyList<SerializationRequest> requests,
+            CancellationToken cancellationToken)
+        {
+            Batches.Add(requests.ToArray());
+            SerializationStarted.TrySetResult();
+            return new ValueTask<IReadOnlyList<SerializationResult>>(_completion.Task);
+        }
+
+        public void Complete(IReadOnlyList<SerializationResult> results) => _completion.TrySetResult(results);
+
+        public ValueTask DisposeAsync()
+        {
+            DisposeCalls++;
+            return ValueTask.CompletedTask;
         }
     }
 }

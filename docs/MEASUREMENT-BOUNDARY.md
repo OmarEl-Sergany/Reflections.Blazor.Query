@@ -30,6 +30,8 @@ Form values (checked state, selected options, radio groups, disabled membership)
 
 The JS module applies jQuery's "successful control" rules read-only: a field is emitted only for a control that has a `name`, is not disabled, is a submittable element, is not a submit/button/image/reset/file control, and (for `checkbox`/`radio`) is checked. Selecting a `<form>`/`<fieldset>` serializes its named controls; selecting a submittable control serializes that control; selecting any other container serializes its descendant controls. The JS module never sets attributes, properties, classes, styles, content, or handlers — it only reads.
 
+The coordinator closes request admission atomically during disposal, cancels pending result tasks, and serializes bridge disposal behind any in-flight browser read. Repeated/concurrent disposal calls share one completion task; requests after disposal throw `ObjectDisposedException`. This prevents late cache population and avoids disposing the JS module while it is servicing a serialization batch.
+
 ## Data flow
 
 ```mermaid
