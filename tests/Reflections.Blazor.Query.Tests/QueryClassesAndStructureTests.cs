@@ -141,7 +141,7 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
-    public void Typed_On_and_Trigger_preserve_the_native_event_payload_and_share_dispatch_with_untyped_handlers()
+    public void Typed_On_and_Trigger_preserve_the_native_event_payload_without_invoking_untyped_handlers()
     {
         var (query, registry, _) = CreateQuery();
         registry.Register("button", ".button");
@@ -151,7 +151,7 @@ public sealed class QueryClassesAndStructureTests
 
         query.Select(".button").On("click", () => untypedCount++).On<MouseEventArgs>("click", args => observed = args).Trigger("click", payload);
 
-        Assert.Equal(1, untypedCount);
+        Assert.Equal(0, untypedCount);
         var captured = Assert.IsType<MouseEventArgs>(observed);
         Assert.Same(payload, captured);
         Assert.Equal(37, captured.ClientX);
@@ -164,6 +164,15 @@ public sealed class QueryClassesAndStructureTests
         registry.Register("button", ".button");
 
         Assert.Throws<ArgumentException>(() => query.Select(".button").On<KeyboardEventArgs>("click", _ => { }));
+    }
+
+    [Fact]
+    public void Typed_On_rejects_event_names_without_a_typed_Blazor_descriptor()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+
+        Assert.Throws<ArgumentException>(() => query.Select(".button").On<MouseEventArgs>("unknown", _ => { }));
     }
 
     [Fact]
@@ -180,6 +189,23 @@ public sealed class QueryClassesAndStructureTests
 
         Assert.Equal(0, first);
         Assert.Equal(1, second);
+    }
+
+    [Fact]
+    public void Typed_Trigger_does_not_dispatch_untyped_handlers_or_silently_skip_an_untyped_only_registration()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var untyped = 0;
+        var typed = 0;
+        var selection = query.Select(".button").On("click", () => untyped++);
+
+        selection.Trigger("click", new MouseEventArgs());
+        Assert.Equal(0, untyped);
+
+        selection.On<MouseEventArgs>("click", _ => typed++).Trigger("click", new MouseEventArgs());
+        Assert.Equal(0, untyped);
+        Assert.Equal(1, typed);
     }
 
     [Fact]

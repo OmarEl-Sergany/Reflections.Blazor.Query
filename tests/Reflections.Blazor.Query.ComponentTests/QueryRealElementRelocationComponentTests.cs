@@ -541,6 +541,28 @@ public sealed class QueryRealElementRelocationComponentTests
         Assert.Equal(29, Assert.IsType<MouseEventArgs>(observed).ClientX);
     }
 
+    [Fact]
+    public void Typed_Submit_renders_the_framework_event_args_callback_and_dispatches_it()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "form");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "form");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "form");
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+        EventArgs? observed = null;
+        query.Select(".form").On<EventArgs>("submit", args => observed = args);
+
+        cut.Find("form").Submit();
+
+        Assert.IsType<EventArgs>(observed);
+    }
+
     private static int CountOccurrences(string value, string fragment)
     {
         var count = 0;

@@ -148,3 +148,14 @@ Event registrations are keyed to an owned element identity. Destroying that iden
 1. Disposing a mounted real `QueryElement` removes every event registration for its key.
 2. Removing a virtual node removes its own registrations and recursively removes those of virtual descendants.
 3. Removing one key does not clear registrations for another live element.
+
+---
+
+# Native event descriptor completion — research
+
+## Acceptance checklist
+
+1. Use the native Blazor argument types for every supported event helper and reject unsupported typed event names.
+2. Ensure `Submit` uses Blazor's actual submit argument type.
+3. Define `Trigger<TEventArgs>` so it cannot silently discard the payload or unexpectedly invoke untyped handlers.
+4. Test that each typed descriptor emits the expected callback type, including form and mouse/keyboard cases.

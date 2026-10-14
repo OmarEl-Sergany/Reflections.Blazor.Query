@@ -107,7 +107,7 @@ Implement with Blazor event descriptors and generated handler metadata:
 
 Compatibility note: `Bind` and `Unbind` are legacy jQuery names. They may be provided only as compatibility aliases over the supported event model and must be clearly marked as legacy in documentation.
 
-Typed overloads (`On<TEventArgs>`, `Off<TEventArgs>`, and `Trigger<TEventArgs>`) are available for supported browser events. The normalized event name determines the only permitted argument type (`MouseEventArgs`, `KeyboardEventArgs`, `ChangeEventArgs`, `FocusEventArgs`, or `EventArgs`); mismatches are rejected before state mutation. Typed and untyped handlers share one Blazor-owned binding and dispatch pipeline.
+Typed overloads (`On<TEventArgs>`, `Off<TEventArgs>`, and `Trigger<TEventArgs>`) are available for supported browser events. A single event descriptor maps the normalized event name to its Blazor callback type; mismatches and unsupported event names are rejected before state mutation. `Trigger<TEventArgs>` dispatches typed registrations only; parameterless `Trigger` retains the untyped synthetic event contract. Typed and untyped handlers are rendered through the same Blazor-owned event attribute.
 
 Event registrations are lifecycle-owned state: removing a virtual element cascades registration cleanup to virtual descendants, and disposing a mounted `QueryElement` clears untyped, typed, and delegated-root registrations for that key. This avoids callback retention in long-lived layout or application render states.
 

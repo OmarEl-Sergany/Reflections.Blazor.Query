@@ -141,6 +141,25 @@ public class QueryRenderState
         }
         NotifyChanged();
     }
+    internal void TriggerTyped<TEventArgs>(string elementKey, string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs
+    {
+        ArgumentNullException.ThrowIfNull(eventArgs);
+        eventName = NormalizeEventName(eventName);
+        QueryEventDescriptors.Validate<TEventArgs>(eventName);
+        if (!_typedEventHandlers.TryGetValue((elementKey, eventName), out var handlers))
+            return;
+        foreach (var entry in handlers.ToArray())
+        {
+            if (entry.ArgumentType != typeof(TEventArgs))
+                continue;
+            entry.Handler(eventArgs);
+            if (entry.Once)
+                handlers.Remove(entry);
+        }
+        if (handlers.Count == 0)
+            _typedEventHandlers.Remove((elementKey, eventName));
+        NotifyChanged();
+    }
     internal void Delegate(string rootKey, string selector, string eventName, Action<QueryEventTarget> handler)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootKey);

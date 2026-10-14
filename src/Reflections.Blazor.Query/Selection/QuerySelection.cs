@@ -82,7 +82,7 @@ namespace Reflections.Blazor.Query
         public QuerySelection Trigger<TEventArgs>(string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs
         {
             ArgumentNullException.ThrowIfNull(eventArgs);
-            foreach (var key in RequireResolvedKeys()) _state.Trigger(key, eventName, eventArgs);
+            foreach (var key in RequireResolvedKeys()) _state.TriggerTyped(key, eventName, eventArgs);
             return this;
         }
         public QuerySelection TriggerHandler(string eventName) => Trigger(eventName);

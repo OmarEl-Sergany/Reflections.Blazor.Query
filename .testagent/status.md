@@ -179,3 +179,21 @@
 
 - `Removing_a_virtual_parent_removes_its_event_registrations_and_those_of_virtual_descendants_only` proves recursive cleanup and live-key isolation.
 - `Disposing_QueryElement_releases_its_untyped_typed_and_delegated_event_registrations` proves lifecycle cleanup via a real component disposal.
+
+---
+
+# Native event descriptor completion — status
+
+## Delivered
+
+- Event name validation and render callback construction now share one descriptor table. `onsubmit` uses the framework-supported `EventArgs` callback type; load and error use their corresponding Blazor argument types.
+- `Trigger<TEventArgs>` dispatches only typed registrations, preserving the semantic distinction from parameterless synthetic `Trigger`.
+- Unknown typed event names and argument mismatches fail before registrations are changed.
+
+## Assertion review
+
+- `Typed_On_rejects_event_names_without_a_typed_Blazor_descriptor` and `Typed_On_rejects_an_event_argument_type_that_does_not_match_the_browser_event` cover descriptor validation.
+- `Typed_Trigger_does_not_dispatch_untyped_handlers_or_silently_skip_an_untyped_only_registration` covers the typed trigger boundary.
+- `Typed_Submit_renders_the_framework_event_args_callback_and_dispatches_it` proves form submit dispatch uses the framework callback contract.
+- `Typed_On_and_Trigger_preserve_the_native_event_payload_without_invoking_untyped_handlers` proves event payload identity and typed-only dispatch.
+- Validation: 122 unit and 34 component tests pass.

@@ -6,42 +6,48 @@ namespace Reflections.Blazor.Query;
 
 internal static class QueryEventDescriptors
 {
+    private static readonly IReadOnlyDictionary<string, EventDescriptor> Descriptors = new Dictionary<string, EventDescriptor>(StringComparer.Ordinal)
+    {
+        ["onclick"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["ondblclick"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onmousedown"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onmouseup"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onmousemove"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onmouseover"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onmouseout"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onmouseenter"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onmouseleave"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["oncontextmenu"] = new(typeof(MouseEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onkeydown"] = new(typeof(KeyboardEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<KeyboardEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onkeyup"] = new(typeof(KeyboardEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<KeyboardEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onkeypress"] = new(typeof(KeyboardEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<KeyboardEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onchange"] = new(typeof(ChangeEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<ChangeEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onselect"] = new(typeof(EventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<EventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onfocus"] = new(typeof(FocusEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<FocusEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onblur"] = new(typeof(FocusEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<FocusEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onfocusin"] = new(typeof(FocusEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<FocusEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onfocusout"] = new(typeof(FocusEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<FocusEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onsubmit"] = new(typeof(EventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<EventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onresize"] = new(typeof(EventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<EventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onscroll"] = new(typeof(EventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<EventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onerror"] = new(typeof(Microsoft.AspNetCore.Components.Web.ErrorEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.ErrorEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onload"] = new(typeof(ProgressEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<ProgressEventArgs>(receiver, args => state.Trigger(key, name, args)))),
+        ["onunload"] = new(typeof(EventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<EventArgs>(receiver, args => state.Trigger(key, name, args))))
+    };
+
     public static void Validate<TEventArgs>(string eventName) where TEventArgs : EventArgs
     {
-        if (!TryGetArgumentType(eventName, out var expected) || expected != typeof(TEventArgs))
-            throw new ArgumentException($"Event '{eventName}' requires '{expected?.Name ?? "a supported Blazor event-argument type"}', not '{typeof(TEventArgs).Name}'.", nameof(eventName));
+        if (!Descriptors.TryGetValue(eventName, out var descriptor) || descriptor.ArgumentType != typeof(TEventArgs))
+            throw new ArgumentException($"Event '{eventName}' requires '{(Descriptors.TryGetValue(eventName, out descriptor) ? descriptor.ArgumentType.Name : "a supported Blazor event-argument type")}', not '{typeof(TEventArgs).Name}'.", nameof(eventName));
     }
 
     public static bool AddBinding(RenderTreeBuilder builder, int sequence, object receiver, QueryRenderState state, string elementKey, string eventName)
     {
-        switch (eventName)
-        {
-            case "onclick": case "ondblclick": case "onmousedown": case "onmouseup": case "onmousemove": case "onmouseover": case "onmouseout": case "onmouseenter": case "onmouseleave": case "oncontextmenu":
-                builder.AddAttribute(sequence, eventName, EventCallback.Factory.Create<MouseEventArgs>(receiver, args => state.Trigger(elementKey, eventName, args))); return true;
-            case "onkeydown": case "onkeyup": case "onkeypress":
-                builder.AddAttribute(sequence, eventName, EventCallback.Factory.Create<KeyboardEventArgs>(receiver, args => state.Trigger(elementKey, eventName, args))); return true;
-            case "onchange": case "onselect":
-                builder.AddAttribute(sequence, eventName, EventCallback.Factory.Create<ChangeEventArgs>(receiver, args => state.Trigger(elementKey, eventName, args))); return true;
-            case "onfocus": case "onblur": case "onfocusin": case "onfocusout":
-                builder.AddAttribute(sequence, eventName, EventCallback.Factory.Create<FocusEventArgs>(receiver, args => state.Trigger(elementKey, eventName, args))); return true;
-            case "onsubmit": case "onresize": case "onscroll": case "onerror": case "onload": case "onunload":
-                builder.AddAttribute(sequence, eventName, EventCallback.Factory.Create<EventArgs>(receiver, args => state.Trigger(elementKey, eventName, args))); return true;
-            default:
-                return false;
-        }
+        if (!Descriptors.TryGetValue(eventName, out var descriptor))
+            return false;
+        descriptor.AddBinding(builder, sequence, receiver, state, elementKey, eventName);
+        return true;
     }
 
-    private static bool TryGetArgumentType(string eventName, out Type? argumentType)
-    {
-        argumentType = eventName switch
-        {
-            "onclick" or "ondblclick" or "onmousedown" or "onmouseup" or "onmousemove" or "onmouseover" or "onmouseout" or "onmouseenter" or "onmouseleave" or "oncontextmenu" => typeof(MouseEventArgs),
-            "onkeydown" or "onkeyup" or "onkeypress" => typeof(KeyboardEventArgs),
-            "onchange" or "onselect" => typeof(ChangeEventArgs),
-            "onfocus" or "onblur" or "onfocusin" or "onfocusout" => typeof(FocusEventArgs),
-            "onsubmit" or "onresize" or "onscroll" or "onerror" or "onload" or "onunload" => typeof(EventArgs),
-            _ => null
-        };
-        return argumentType is not null;
-    }
+    private sealed record EventDescriptor(Type ArgumentType, Action<RenderTreeBuilder, int, object, QueryRenderState, string, string> AddBinding);
 }

@@ -81,3 +81,12 @@
 1. Centralize per-key event cleanup in `QueryRenderState` for untyped, typed, and delegated-root maps.
 2. Invoke it from real-element unregistration and virtual-node removal before recursive child cleanup.
 3. Add unit coverage for recursive virtual cleanup and live-key isolation, plus a bUnit disposal regression.
+
+---
+
+# Native event descriptor completion — plan
+
+1. Centralize native event name and argument type metadata; drive both validation and render binding from the same descriptor.
+2. Correct form-submit binding to `SubmitEventArgs` and model other supported events with the corresponding Blazor event args.
+3. Make typed `Trigger` validate registrations and dispatch typed handlers only; keep untyped `Trigger` semantics unchanged.
+4. Add table-driven descriptor validation and rendered callback tests for mouse, keyboard, change, focus, and submit events.
