@@ -226,3 +226,18 @@
 - `Typed_Bind_Unbind_and_TriggerHandler_preserve_payload_and_remove_only_the_requested_handler` proves payload delivery and targeted unbinding.
 - `TriggerHandler_without_event_arguments_remains_an_untyped_source_compatible_alias` covers the existing overload.
 - `Generated_metadata_advertises_typed_event_compatibility_aliases` verifies generated API metadata.
+
+---
+
+# Hover event helper completion — status
+
+## Delivered
+
+- Added typed `Hover` composition for `MouseEnter` and `MouseLeave`; existing untyped overload remains available.
+- Reconciled README checkboxes and the Sprint 4 event helper checklist with implemented APIs.
+
+## Assertion review
+
+- `Typed_Hover_composes_mouse_enter_and_leave_callbacks` checks typed composition at the state dispatch boundary.
+- `Typed_Hover_delivers_mouse_enter_and_leave_payloads_from_Blazor` checks both native payloads through a rendered component.
+- Validation: 127 unit + 36 component tests passed; full solution build completed with 0 warnings and 0 errors.

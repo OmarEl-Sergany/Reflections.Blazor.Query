@@ -181,3 +181,14 @@ Event registrations are keyed to an owned element identity. Destroying that iden
 2. `TriggerHandler` has a typed overload that dispatches only typed callbacks for the selected elements.
 3. Existing parameterless `TriggerHandler` behavior remains source-compatible.
 4. Generated metadata, README, and project plan identify these compatibility APIs.
+
+---
+
+# Hover event helper completion — research
+
+## Acceptance checklist
+
+1. `Hover` accepts typed enter and leave callbacks using Blazor `MouseEventArgs`.
+2. The typed overload composes with `mouseenter` and `mouseleave` dispatch without changing the existing `Action` overload.
+3. Rendered component coverage proves both event payloads arrive through Blazor callbacks.
+4. Generated metadata and the README event support checklist reflect the implementation.

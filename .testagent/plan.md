@@ -108,3 +108,11 @@
 2. Add typed `TriggerHandler<TEventArgs>` forwarding to typed local dispatch.
 3. Test targeted unbinding, typed payload dispatch, and existing parameterless aliases.
 4. Mark compatibility APIs in metadata and documentation.
+
+---
+
+# Hover event helper completion — plan
+
+1. Add a `Hover(Action<MouseEventArgs>, Action<MouseEventArgs>)` overload that composes typed mouse-enter and mouse-leave helpers.
+2. Test both callback payload paths in a rendered component, preserving the existing untyped helper.
+3. Advertise `Hover` and `TypedHover` metadata and reconcile README event checkboxes.

@@ -591,6 +591,30 @@ public sealed class QueryRealElementRelocationComponentTests
         Assert.Equal("updated", Assert.IsType<ChangeEventArgs>(change).Value);
     }
 
+    [Fact]
+    public void Typed_Hover_delivers_mouse_enter_and_leave_payloads_from_Blazor()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "surface");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "div");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "surface");
+            builder.CloseComponent();
+        });
+        MouseEventArgs? entered = null;
+        MouseEventArgs? left = null;
+        new Query(state, registry).Select(".surface").Hover(args => entered = args, args => left = args);
+
+        cut.Find("div").MouseEnter(new MouseEventArgs { ClientX = 12 });
+        cut.Find("div").MouseLeave(new MouseEventArgs { ClientX = 34 });
+
+        Assert.Equal(12, Assert.IsType<MouseEventArgs>(entered).ClientX);
+        Assert.Equal(34, Assert.IsType<MouseEventArgs>(left).ClientX);
+    }
+
     private static int CountOccurrences(string value, string fragment)
     {
         var count = 0;

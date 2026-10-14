@@ -180,6 +180,8 @@ namespace Reflections.Blazor.Query
         public QuerySelection DblClick(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("dblclick", handler);
         public QuerySelection DblClick() => Trigger("dblclick");
         public QuerySelection Hover(Action enterHandler, Action leaveHandler) => MouseEnter(enterHandler).MouseLeave(leaveHandler);
+        public QuerySelection Hover(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> enterHandler, Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> leaveHandler) =>
+            MouseEnter(enterHandler).MouseLeave(leaveHandler);
         public QuerySelection Error(Action handler) => On("error", handler);
         public QuerySelection Error(Action<Microsoft.AspNetCore.Components.Web.ErrorEventArgs> handler) => On("error", handler);
         public QuerySelection Error() => Trigger("error");

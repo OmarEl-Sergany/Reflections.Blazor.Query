@@ -261,6 +261,22 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
+    public void Typed_Hover_composes_mouse_enter_and_leave_callbacks()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("surface", ".surface");
+        var entered = 0;
+        var left = 0;
+        var selection = query.Select(".surface").Hover(_ => entered++, _ => left++);
+
+        selection.Trigger<MouseEventArgs>("mouseenter", new MouseEventArgs());
+        selection.Trigger<MouseEventArgs>("mouseleave", new MouseEventArgs());
+
+        Assert.Equal(1, entered);
+        Assert.Equal(1, left);
+    }
+
+    [Fact]
     public void Removing_a_virtual_parent_removes_its_event_registrations_and_those_of_virtual_descendants_only()
     {
         var (query, registry, state) = CreateQuery();

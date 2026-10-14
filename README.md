@@ -133,28 +133,28 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] Typed event helpers — `Click`, `Change`, `Submit`, focus helpers, keyboard helpers, mouse helpers, `ContextMenu`, `DblClick`, `Error`, `Load`, and `Unload` accept native Blazor event argument callbacks. Their existing parameterless forms remain synthetic C# triggers. `Resize` and `Scroll` remain untyped because Blazor does not provide their measurements in event args.
 - [x] Event registration lifecycle — removing a virtual node or disposing a real `QueryElement` releases its untyped, typed, and delegated-root callbacks. Event state cannot outlive its owning element identity.
 - [x] `TriggerHandler` / `Bind` / `Unbind` — typed and untyped aliases over the library-owned event pipeline. `Bind` / `Unbind` remain legacy compatibility names; `TriggerHandler<TEventArgs>` dispatches typed handlers for the selected elements.
-- [ ] `Blur`
-- [ ] `Change`
-- [ ] `Click`
-- [ ] `ContextMenu`
-- [ ] `DblClick`
-- [ ] `Focus`
-- [ ] `FocusIn`
-- [ ] `FocusOut`
-- [ ] `Hover`
-- [ ] `KeyDown`
-- [ ] `KeyPress`
-- [ ] `KeyUp`
-- [ ] `MouseDown`
-- [ ] `MouseEnter`
-- [ ] `MouseLeave`
-- [ ] `MouseMove`
-- [ ] `MouseOut`
-- [ ] `MouseOver`
-- [ ] `MouseUp`
-- [ ] `Resize`
-- [ ] `Scroll`
-- [ ] `Submit`
+- [x] `Blur`
+- [x] `Change`
+- [x] `Click`
+- [x] `ContextMenu`
+- [x] `DblClick`
+- [x] `Focus`
+- [x] `FocusIn`
+- [x] `FocusOut`
+- [x] `Hover`
+- [x] `KeyDown`
+- [x] `KeyPress`
+- [x] `KeyUp`
+- [x] `MouseDown`
+- [x] `MouseEnter`
+- [x] `MouseLeave`
+- [x] `MouseMove`
+- [x] `MouseOut`
+- [x] `MouseOver`
+- [x] `MouseUp`
+- [x] `Resize`
+- [x] `Scroll`
+- [x] `Submit`
 - [ ] `Animate`
 - [ ] `ClearQueue`
 - [ ] `Delay`
