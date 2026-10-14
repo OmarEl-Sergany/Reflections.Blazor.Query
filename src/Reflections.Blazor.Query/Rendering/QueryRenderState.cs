@@ -229,8 +229,14 @@ public class QueryRenderState
     internal void UnregisterRealElement(string key)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        if (!_realElementFragments.Remove(key))
+        var removedFragment = _realElementFragments.Remove(key);
+        var removedEvents = RemoveEventRegistrations(key);
+        if (!removedFragment)
+        {
+            if (removedEvents)
+                NotifyChanged();
             return;
+        }
         DetachRealChildQuiet(key);
         HandleHostRemoval(key);
         NotifyChanged();
@@ -323,10 +329,29 @@ public class QueryRenderState
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         if (!_virtualNodes.Remove(key, out var node))
             return;
+        RemoveEventRegistrations(key);
         HandleHostRemoval(key);
         if (node.ParentKey is not null && _virtualChildKeys.TryGetValue(node.ParentKey, out var siblings))
             siblings.Remove(key);
         NotifyChanged();
+    }
+    private bool RemoveEventRegistrations(string elementKey)
+    {
+        var removed = false;
+        removed |= RemoveEntries(_eventHandlers, elementKey);
+        removed |= RemoveEntries(_typedEventHandlers, elementKey);
+        var delegatedKeys = _delegatedEventHandlers.Keys.Where(key => string.Equals(key.RootKey, elementKey, StringComparison.Ordinal)).ToArray();
+        foreach (var key in delegatedKeys)
+            _delegatedEventHandlers.Remove(key);
+        removed |= delegatedKeys.Length > 0;
+        return removed;
+    }
+    private static bool RemoveEntries<TValue>(Dictionary<(string Key, string EventName), TValue> entries, string elementKey)
+    {
+        var keys = entries.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).ToArray();
+        foreach (var key in keys)
+            entries.Remove(key);
+        return keys.Length > 0;
     }
     internal string CreateDetachedVirtualNode(string key, string tagName, string? className, string? text, bool isHtml)
     {

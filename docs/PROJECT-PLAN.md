@@ -109,6 +109,8 @@ Compatibility note: `Bind` and `Unbind` are legacy jQuery names. They may be pro
 
 Typed overloads (`On<TEventArgs>`, `Off<TEventArgs>`, and `Trigger<TEventArgs>`) are available for supported browser events. The normalized event name determines the only permitted argument type (`MouseEventArgs`, `KeyboardEventArgs`, `ChangeEventArgs`, `FocusEventArgs`, or `EventArgs`); mismatches are rejected before state mutation. Typed and untyped handlers share one Blazor-owned binding and dispatch pipeline.
 
+Event registrations are lifecycle-owned state: removing a virtual element cascades registration cleanup to virtual descendants, and disposing a mounted `QueryElement` clears untyped, typed, and delegated-root registrations for that key. This avoids callback retention in long-lived layout or application render states.
+
 ### Tier 4 - explicit compatibility or non-core features
 
 `Context`, `Error`, `Get`, `JQuery`, `Load`, `Ready`, `SelectJS`, `Unload` require separate design decisions because they depend on browser globals, arbitrary JavaScript, document lifecycle, or Ajax-era behavior. `SelectJS` remains an opt-in escape hatch with explicit documentation that it can bypass Blazor ownership rules.

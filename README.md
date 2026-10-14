@@ -130,6 +130,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [ ] `Clone` **of a real, Razor-declared element** — remains blocked on generator-level key minting (two elements can't share a `data-rbq-key`).
 - [x] Component scoping — `QueryScopeHost` creates and cascades an `IQueryScope` without a nested DI container. Scoped queries filter registry resolution, traversal, and cleanup to their own component identity; unscoped `Query` remains the explicit page/layout orchestration API.
 - [x] `On` / `Off` / `One` / `Trigger` — library-owned C# handlers rendered as Blazor event bindings. The generic overloads (`On<TEventArgs>`, `Off<TEventArgs>`, `Trigger<TEventArgs>`) preserve native Blazor arguments for supported event names, while untyped handlers remain source-compatible. `One` consumes its handler after the first dispatch; no browser-side listener registration occurs.
+- [x] Event registration lifecycle — removing a virtual node or disposing a real `QueryElement` releases its untyped, typed, and delegated-root callbacks. Event state cannot outlive its owning element identity.
 - [ ] `TriggerHandler`
 - [ ] `Bind` (legacy alias)
 - [ ] `Unbind` (legacy alias)

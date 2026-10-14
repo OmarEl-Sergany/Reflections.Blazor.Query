@@ -83,4 +83,27 @@ public sealed class QueryElementComponentTests
         selection.Html("<strong>trusted</strong>");
         cut.WaitForAssertion(() => Assert.Contains("<strong>trusted</strong>", cut.Markup, StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void Disposing_QueryElement_releases_its_untyped_typed_and_delegated_event_registrations()
+    {
+        using var context = new BunitContext();
+        var registry = new QueryElementRegistry();
+        var renderState = new QueryRenderState();
+        context.Services.AddSingleton(registry);
+        context.Services.AddSingleton(renderState);
+        context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+        context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
+        var cut = context.Render<QueryElement>(parameters => parameters
+            .Add(component => component.ElementKey, "root")
+            .Add(component => component.TagName, "div")
+            .Add(component => component.Class, "root"));
+        var selection = new Query(renderState, registry).Select(".root");
+        selection.On("click", () => { }).On<Microsoft.AspNetCore.Components.Web.MouseEventArgs>("click", _ => { }).DelegateJS(".item", "click", _ => { });
+
+        cut.Instance.Dispose();
+
+        Assert.Empty(renderState.EventNamesFor("root"));
+        Assert.Empty(renderState.DelegatedEventNamesFor("root"));
+    }
 }

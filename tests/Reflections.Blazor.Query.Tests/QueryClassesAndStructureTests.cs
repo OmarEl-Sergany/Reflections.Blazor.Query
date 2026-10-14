@@ -182,6 +182,33 @@ public sealed class QueryClassesAndStructureTests
         Assert.Equal(1, second);
     }
 
+    [Fact]
+    public void Removing_a_virtual_parent_removes_its_event_registrations_and_those_of_virtual_descendants_only()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("host", ".host");
+        registry.Register("live", ".live");
+        var parent = query.Select(".host").AppendElement("section", "parent");
+        var child = parent.AppendElement("button", "child");
+        var parentKey = parent.ToArray().Single();
+        var childKey = child.ToArray().Single();
+        var removedCount = 0;
+        var liveCount = 0;
+        parent.On("click", () => removedCount++);
+        child.On<MouseEventArgs>("click", _ => removedCount++);
+        query.Select(".live").On("click", () => liveCount++);
+
+        state.RemoveVirtualNode(parentKey);
+        state.Trigger(parentKey, "click");
+        state.Trigger(childKey, "click", new MouseEventArgs());
+        query.Select(".live").Trigger("click");
+
+        Assert.Empty(state.EventNamesFor(parentKey));
+        Assert.Empty(state.EventNamesFor(childKey));
+        Assert.Equal(0, removedCount);
+        Assert.Equal(1, liveCount);
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();

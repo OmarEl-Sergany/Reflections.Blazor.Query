@@ -134,3 +134,17 @@ Typed browser callbacks must be rendered as the matching Blazor `EventCallback<T
 2. Typed and untyped handlers registered for the same event both run from one rendered Blazor binding.
 3. Typed registration rejects a mismatched event-argument type before mutating state.
 4. Existing untyped event APIs remain source-compatible.
+
+---
+
+# Event registration lifecycle — research
+
+## Boundary
+
+Event registrations are keyed to an owned element identity. Destroying that identity must remove untyped, typed, and delegated-root registrations in the same state transition; registry removal alone cannot release callbacks retained by `QueryRenderState`.
+
+## Acceptance checklist
+
+1. Disposing a mounted real `QueryElement` removes every event registration for its key.
+2. Removing a virtual node removes its own registrations and recursively removes those of virtual descendants.
+3. Removing one key does not clear registrations for another live element.

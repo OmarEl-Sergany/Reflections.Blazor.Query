@@ -73,3 +73,11 @@
 2. Store typed handlers alongside existing untyped handlers and dispatch both from one event record.
 3. Render the descriptor-selected `EventCallback<TEventArgs>` for real and virtual nodes.
 4. Add direct tests for payload preservation, shared typed/untyped dispatch, and type mismatch rejection.
+
+---
+
+# Event registration lifecycle — plan
+
+1. Centralize per-key event cleanup in `QueryRenderState` for untyped, typed, and delegated-root maps.
+2. Invoke it from real-element unregistration and virtual-node removal before recursive child cleanup.
+3. Add unit coverage for recursive virtual cleanup and live-key isolation, plus a bUnit disposal regression.

@@ -165,3 +165,17 @@
 - `Typed_On_rejects_an_event_argument_type_that_does_not_match_the_browser_event` proves pre-mutation contract validation.
 - `Typed_Off_removes_only_the_matching_typed_handler` proves targeted typed removal.
 - `Typed_On_renders_a_Blazor_owned_click_binding_that_preserves_mouse_event_arguments` proves a rendered Blazor click binding supplies the typed payload.
+
+---
+
+# Event registration lifecycle — status
+
+## Delivered
+
+- Per-element cleanup removes untyped, typed, and delegated-root registrations when a real element unregisters or a virtual node is removed.
+- Virtual-host removal cascades through virtual descendants; unrelated live registrations are preserved.
+
+## Assertion review
+
+- `Removing_a_virtual_parent_removes_its_event_registrations_and_those_of_virtual_descendants_only` proves recursive cleanup and live-key isolation.
+- `Disposing_QueryElement_releases_its_untyped_typed_and_delegated_event_registrations` proves lifecycle cleanup via a real component disposal.
