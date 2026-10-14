@@ -3,7 +3,7 @@ trigger:
 pr:
 - master
 pool:
-  vmImage: windows-latest
+  name: Default
 variables:
   BuildConfiguration: Release
 steps:
