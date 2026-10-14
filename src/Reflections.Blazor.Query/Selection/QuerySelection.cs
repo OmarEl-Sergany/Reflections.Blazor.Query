@@ -138,6 +138,7 @@ namespace Reflections.Blazor.Query
         public QuerySelection FocusOut(Action<Microsoft.AspNetCore.Components.Web.FocusEventArgs> handler) => On("focusout", handler);
         public QuerySelection FocusOut() => Trigger("focusout");
         public QuerySelection SelectJS(Action handler) => On("select", handler);
+        public QuerySelection SelectJS(Action<EventArgs> handler) => On("select", handler);
         public QuerySelection SelectJS() => Trigger("select");
         public QuerySelection KeyDown(Action handler) => On("keydown", handler);
         public QuerySelection KeyDown(Action<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs> handler) => On("keydown", handler);

@@ -116,3 +116,11 @@
 1. Add a `Hover(Action<MouseEventArgs>, Action<MouseEventArgs>)` overload that composes typed mouse-enter and mouse-leave helpers.
 2. Test both callback payload paths in a rendered component, preserving the existing untyped helper.
 3. Advertise `Hover` and `TypedHover` metadata and reconcile README event checkboxes.
+
+---
+
+# Select event helper completion — plan
+
+1. Add `SelectJS(Action<EventArgs>)` and metadata for `TypedSelectJS`.
+2. Test typed registration and verify the existing `SelectJS()` synthetic trigger.
+3. Add a bUnit rendered event test and remove inaccurate JS-escape-hatch documentation.

@@ -277,6 +277,22 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
+    public void Typed_SelectJS_registers_native_event_args_and_keeps_synthetic_trigger()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("input", ".input");
+        var observed = false;
+        var syntheticCount = 0;
+        var selection = query.Select(".input").SelectJS((EventArgs _) => observed = true);
+
+        selection.Trigger<EventArgs>("select", EventArgs.Empty);
+        query.Select(".input").SelectJS(() => syntheticCount++).SelectJS();
+
+        Assert.True(observed);
+        Assert.Equal(1, syntheticCount);
+    }
+
+    [Fact]
     public void Removing_a_virtual_parent_removes_its_event_registrations_and_those_of_virtual_descendants_only()
     {
         var (query, registry, state) = CreateQuery();

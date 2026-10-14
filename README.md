@@ -193,7 +193,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [ ] `JQuery` — review required or deferred.
 - [ ] `Load` (non-Ajax) — review required or deferred.
 - [ ] `Ready` — review required or deferred.
-- [ ] `SelectJS` — review required or deferred; explicit escape hatch that can bypass Blazor ownership rules.
+- [x] `SelectJS` — Blazor-owned text-selection event helper with typed `EventArgs` and parameterless synthetic trigger overloads.
 - [ ] `Size` — review required or deferred.
 - [ ] `Unload` — review required or deferred.
 

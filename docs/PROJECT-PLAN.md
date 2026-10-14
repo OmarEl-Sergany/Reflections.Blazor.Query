@@ -118,7 +118,7 @@ Event registrations are lifecycle-owned state: removing a virtual element cascad
 
 ### Tier 4 - explicit compatibility or non-core features
 
-`Context`, `Error`, `Get`, `JQuery`, `Load`, `Ready`, `SelectJS`, `Unload` require separate design decisions because they depend on browser globals, arbitrary JavaScript, document lifecycle, or Ajax-era behavior. `SelectJS` remains an opt-in escape hatch with explicit documentation that it can bypass Blazor ownership rules.
+`Context`, `Error`, `Get`, `JQuery`, `Load`, `Ready`, and `Unload` require separate design decisions because they depend on browser globals, arbitrary JavaScript, document lifecycle, or Ajax-era behavior. `SelectJS` is implemented as a normal Blazor-owned text-selection event with no JavaScript escape hatch.
 
 `DelegateJS` / `Undelegate` are implemented as a constrained, safe delegation boundary: the host loads `_content/Reflections.Blazor.Query/queryEvents.js` after `blazor.web.js` with `autostart="false"`, registers the finite custom event set, then calls `Blazor.start()`. The initializer supplies only the nearest `data-rbq-key`; C# retains handler state and validates descendant, scope, and selector membership before invoking the handler. Only bubbling events are supported; it is not a general JavaScript escape hatch.
 

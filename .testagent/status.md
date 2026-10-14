@@ -241,3 +241,18 @@
 - `Typed_Hover_composes_mouse_enter_and_leave_callbacks` checks typed composition at the state dispatch boundary.
 - `Typed_Hover_delivers_mouse_enter_and_leave_payloads_from_Blazor` checks both native payloads through a rendered component.
 - Validation: 127 unit + 36 component tests passed; full solution build completed with 0 warnings and 0 errors.
+
+---
+
+# Select event helper completion — status
+
+## Delivered
+
+- Added typed `SelectJS(EventArgs)` registration while preserving the parameterless synthetic trigger.
+- Documentation now identifies `SelectJS` as a Blazor-owned text-selection event instead of an interop escape hatch.
+
+## Assertion review
+
+- `Typed_SelectJS_registers_native_event_args_and_keeps_synthetic_trigger` covers typed and synthetic dispatch.
+- `Typed_SelectJS_delivers_native_select_event_args_from_Blazor` covers rendered event delivery.
+- Validation: 128 unit + 37 component tests passed; full solution build completed with 0 warnings and 0 errors.

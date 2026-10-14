@@ -615,6 +615,27 @@ public sealed class QueryRealElementRelocationComponentTests
         Assert.Equal(34, Assert.IsType<MouseEventArgs>(left).ClientX);
     }
 
+    [Fact]
+    public void Typed_SelectJS_delivers_native_select_event_args_from_Blazor()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "input");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "input");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "input");
+            builder.CloseComponent();
+        });
+        EventArgs? observed = null;
+        new Query(state, registry).Select(".input").SelectJS(args => observed = args);
+
+        cut.Find("input").Select();
+
+        Assert.NotNull(observed);
+    }
+
     private static int CountOccurrences(string value, string fragment)
     {
         var count = 0;

@@ -192,3 +192,14 @@ Event registrations are keyed to an owned element identity. Destroying that iden
 2. The typed overload composes with `mouseenter` and `mouseleave` dispatch without changing the existing `Action` overload.
 3. Rendered component coverage proves both event payloads arrive through Blazor callbacks.
 4. Generated metadata and the README event support checklist reflect the implementation.
+
+---
+
+# Select event helper completion — research
+
+## Acceptance checklist
+
+1. `SelectJS` exposes a typed `EventArgs` overload for Blazor's native `onselect` event.
+2. The existing parameterless synthetic trigger remains unchanged.
+3. A rendered component test proves native select-event dispatch.
+4. Documentation describes this as a Blazor event helper, not a JavaScript escape hatch.
