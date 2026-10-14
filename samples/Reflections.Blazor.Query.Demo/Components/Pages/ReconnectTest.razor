@@ -1,0 +1,47 @@
+@page "/reconnect-test"
+@inject Query Query
+
+<PageTitle>Reconnect effect test</PageTitle>
+<h1>Server reconnect effect test</h1>
+<p>Test-only surface for validating measured slide completion across a SignalR circuit reconnect.</p>
+<p data-testid="page-ready">@(_ready ? "ready" : "loading")</p>
+<QueryElement TagName="div" ElementKey="reconnect-test-slide" Class="reconnect-test-slide">
+    Reconnect test slide content.
+</QueryElement>
+<button data-testid="start-slide" @onclick="RunSlideAsync">Start slide</button>
+<p data-testid="slide-status">@_status</p>
+
+@code {
+    [SupplyParameterFromQuery(Name = "duration")]
+    public int DurationMilliseconds { get; set; } = 3000;
+
+    private string _status = "idle";
+    private bool _ready;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ready = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RunSlideAsync()
+    {
+        _status = "running";
+        StateHasChanged();
+
+        try
+        {
+            await Query.Select(".reconnect-test-slide").SlideDown(TimeSpan.FromMilliseconds(DurationMilliseconds));
+            _status = "completed";
+        }
+        catch (Exception exception)
+        {
+            _status = $"failed: {exception.GetType().Name}";
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

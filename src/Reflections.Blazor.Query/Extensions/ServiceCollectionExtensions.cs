@@ -15,6 +15,8 @@ public static class QueryServiceCollectionExtensions
         services.AddScoped<Query>();
         services.AddScoped<LayoutQueryRenderState>();
         services.AddScoped<LayoutQuery>();
+        services.AddScoped<ApplicationQueryRenderState>();
+        services.AddScoped<ApplicationQuery>();
         return services;
     }
 }

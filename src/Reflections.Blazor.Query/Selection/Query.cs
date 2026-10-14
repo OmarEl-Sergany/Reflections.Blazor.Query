@@ -53,4 +53,22 @@ namespace Reflections.Blazor.Query
     }
 
     public sealed class LayoutQueryRenderState : QueryRenderState { }
+
+    /// <summary>
+    /// Render state whose lifetime is explicitly owned by the Blazor application/circuit rather than a page.
+    /// </summary>
+    public sealed class ApplicationQueryRenderState : QueryRenderState { }
+
+    /// <summary>
+    /// Query facade for application-lifetime state. Mount a QueryHost with this state and
+    /// <c>ClearOnNavigation="false"</c> around the application content it owns.
+    /// </summary>
+    public sealed class ApplicationQuery : Query
+    {
+        public ApplicationQuery(
+            ApplicationQueryRenderState state,
+            QueryElementRegistry? registry = null,
+            QueryMeasurementCoordinator? measurements = null,
+            QueryFormCoordinator? forms = null) : base(state, registry, measurements, forms) { }
+    }
 }

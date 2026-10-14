@@ -1,0 +1,66 @@
+@page "/measurement-proof"
+@inject Query Query
+
+<PageTitle>Query measurement proof</PageTitle>
+<h1>Query measurement proof</h1>
+<QueryElement TagName="div" ElementKey="measurement-parent" Id="measurement-parent"
+              Class="measurement-parent" style="position: relative; width: 400px; height: 300px;">
+    <QueryElement TagName="div" ElementKey="measurement-target" ParentElementKey="measurement-parent"
+                  Id="measurement-target" Class="measurement-target"
+                  data-testid="measurement-target"
+                  style="box-sizing: content-box; width: 120px; height: 80px; padding: 10px; border: 5px solid black; position: absolute; left: 11px; top: 7px; overflow: auto;">
+        <QueryElement TagName="div" ElementKey="measurement-content" Class="measurement-content"
+                      style="width: 30px; height: 240px;" />
+    </QueryElement>
+</QueryElement>
+<button data-testid="measure-all" @onclick="MeasureAllAsync">Measure all metrics</button>
+@if (_snapshot is not null)
+{
+    <output data-testid="measurement-results"
+            data-height="@Format(_snapshot.Height)"
+            data-width="@Format(_snapshot.Width)"
+            data-inner-height="@Format(_snapshot.InnerHeight)"
+            data-inner-width="@Format(_snapshot.InnerWidth)"
+            data-outer-height="@Format(_snapshot.OuterHeight)"
+            data-outer-width="@Format(_snapshot.OuterWidth)"
+            data-offset-left="@Format(_snapshot.Offset?.Left)"
+            data-offset-top="@Format(_snapshot.Offset?.Top)"
+            data-position-left="@Format(_snapshot.Position?.Left)"
+            data-position-top="@Format(_snapshot.Position?.Top)"
+            data-offset-parent="@(_snapshot.OffsetParent ?? "unavailable")">measured</output>
+}
+
+@code {
+    private MeasurementSnapshot? _snapshot;
+
+    private async Task MeasureAllAsync()
+    {
+        var target = Query.Select(".measurement-target");
+        var dimensions = await Task.WhenAll(
+            target.HeightAsync().AsTask(),
+            target.WidthAsync().AsTask(),
+            target.InnerHeightAsync().AsTask(),
+            target.InnerWidthAsync().AsTask(),
+            target.OuterHeightAsync().AsTask(),
+            target.OuterWidthAsync().AsTask());
+        var positions = await Task.WhenAll(target.OffsetAsync().AsTask(), target.PositionAsync().AsTask());
+        var offsetParent = await target.OffsetParentAsync();
+        _snapshot = new(dimensions[0], dimensions[1], dimensions[2], dimensions[3], dimensions[4], dimensions[5],
+            positions[0], positions[1], offsetParent);
+    }
+
+    private static string Format(double? value) => value is null
+        ? "unavailable"
+        : Math.Round(value.Value, 2).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private sealed record MeasurementSnapshot(
+        double? Height,
+        double? Width,
+        double? InnerHeight,
+        double? InnerWidth,
+        double? OuterHeight,
+        double? OuterWidth,
+        QueryPoint? Offset,
+        QueryPoint? Position,
+        string? OffsetParent);
+}

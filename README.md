@@ -4,7 +4,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 138/138 passed](https://img.shields.io/badge/tests-138%2F138%20passed-success)
+![Tests 254/254 passed](https://img.shields.io/badge/tests-254%2F254%20passed-success)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
@@ -31,18 +31,23 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - `tests/` — unit, generator, render-state, and component tests.
 - `docs/PROJECT-PLAN.md` — full scope, API compatibility matrix, and sprint-by-sprint delivery plan.
 - `docs/MEASUREMENT-BOUNDARY.md` — the read-only, queued, coalesced JS measurement contract.
+- `docs/PERFORMANCE-BASELINE.md` — reproducible in-process performance baselines and their measurement boundaries.
 - `docs/COMPONENT-SCOPING.md` — component-level query scoping design.
 
-## Current status (as of 2026-08-28, `master`)
+## Current status (validated 2026-10-14, `feature/4468-lifecycle-hardening`)
 
-- **Active stage:** Sprint 3 — Classes and DOM structure (Feature 4468), essentially complete. Classes, visibility, removal, and structural insertion — including moving and wrapping *real, Razor-declared* elements via `AppendTo`/`PrependTo`/`Before`/`After`/`Wrap`/`WrapAll`/`WrapInner`, not just library-created ones — are all done. `Serialize`/`SerializeArray` (read-only form observation) are also implemented. Remaining gap: cloning a real element (needs generator-level key minting).
-- **Validation:** 138/138 unit and component tests passing.
+- **Completed:** Sprint 3 — Classes and DOM structure (Feature 4468), and Sprint 4 — Events and Forms (Feature 4469). Sprint 5 (Effects and Queues, Feature 4470) is in progress; `Animate`, fade effects, slide effects, and queue APIs through `Promise` are implemented slices.
+- **Clone contract:** `Clone()` supports library-created virtual elements only. It does not duplicate a live Razor component instance.
+- **Automated validation:** 254/254 .NET unit/component tests and all 14 local Playwright cases pass. Playwright covers Server, WebAssembly, and Auto lifecycle scenarios plus real-browser measurement metrics and host-path performance in every runtime. Auto performance is measured first on Server and again after warm reload on cached WebAssembly. Manual slide smoke checks passed in Server, WebAssembly, and Auto.
+- **Sprint 5 validation:** The latest Release solution build has 0 warnings/errors. NuGet audit reports no vulnerable packages, and the runtime package includes its README and RCL static assets. ASP.NET Core component packages were updated to 10.0.13 to address the current advisories.
+- **Sprint 5 closure:** implementation and local validation are complete. Formal closure still requires an Azure Pipeline run on this source revision with its published artifact evidence, plus host-specific browser performance measurements (Server transport/browser and WebAssembly client/render/interop). Automated slide/queue interactions are Server-covered; WebAssembly and Auto currently have lifecycle/navigation browser coverage plus manual slide smoke evidence.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 
-### Done (merged to `master`)
+### Implemented capabilities
 
 - [x] Generated per-element render-state metadata and stable generated element keys.
 - [x] Page, layout, and application render scopes with correct navigation/disposal semantics.
+- [x] Explicit application-scope orchestration via scoped `ApplicationQueryRenderState` / `ApplicationQuery`; mount an application-lifetime `QueryHost` with `ClearOnNavigation="false"` to preserve its state across route changes.
 - [x] Batched updates (`BeginBatch`) producing a single coalesced render.
 - [x] Shared DI registration for the library.
 - [x] Server, WebAssembly, and Auto demo hosts with working proof-of-concept pages.
@@ -121,13 +126,13 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `WrapAll(tagName, className?)` — inserts one library-created wrapper before the first selected sibling, then reparents every selected real or virtual element into it in selector/render order. All selected elements must share one registered parent; cross-parent wrapping is rejected before any state changes.
 - [x] `WrapInner(tagName, className?)` — moves a mounted `QueryElement`'s entire component-owned `ChildContent` render fragment and its existing library-owned direct children into a generated wrapper. This is render-tree relocation, not DOM mutation. Virtual targets are intentionally rejected because they have no component-owned Razor fragment.
 - [x] `Detach()` — orphans an element from wherever it's currently attached, keeping its state intact so it can be re-attached later via `AppendTo`/`PrependTo`. For a relocated real element, this "springs it back" to render at its own declared Razor position again. For a real element that was never relocated, or a virtual element, this matches existing `Remove()`/detach-in-place semantics.
-- [x] `Clone()` — duplicates a **virtual** element's tag, class, attributes, properties, added classes, content, appended/prepended fragments, and hidden state under a new key, unattached until explicitly `AppendTo`/`PrependTo`'d somewhere. Throws for a real `QueryElement`, since two elements cannot share a `data-rbq-key` without generator-level key minting (not implemented).
+- [x] `Clone()` — duplicates a **virtual** element's tag, class, attributes, properties, added classes, content, appended/prepended fragments, and hidden state under a new key, unattached until explicitly `AppendTo`/`PrependTo`'d somewhere. Real Razor component instances are intentionally not cloneable: duplicating rendered output would not duplicate Blazor component parameters, callbacks, or lifecycle semantics.
 - [x] `InsertBefore(target)` / `InsertAfter(target)` — jQuery-compatible receiver-order aliases over `target.Before(this)` / `target.After(this)`, preserving the existing single-anchor safety contract.
 - [x] `ReplaceWith(replacement)` / `ReplaceAll(target)` / `Replace(replacement)` — moves one existing real or virtual replacement into one target slot, then removes the target. Multiple-target replacement and cloning are deliberately rejected.
 
-### In progress / remaining (not yet started)
+### Explicit boundary and other implemented capabilities
 
-- [ ] `Clone` **of a real, Razor-declared element** — remains blocked on generator-level key minting (two elements can't share a `data-rbq-key`).
+- [ ] `Clone` of a real `QueryElement` — not a generator key-minting task. Reconsider only if a safe contract is designed for cloning static render descriptions without pretending to duplicate a live component instance.
 - [x] Component scoping — `QueryScopeHost` creates and cascades an `IQueryScope` without a nested DI container. Scoped queries filter registry resolution, traversal, and cleanup to their own component identity; unscoped `Query` remains the explicit page/layout orchestration API.
 - [x] `On` / `Off` / `One` / `Trigger` — library-owned C# handlers rendered as Blazor event bindings. Generic overloads preserve native Blazor arguments for supported event names; `Trigger<TEventArgs>` dispatches typed handlers only. `Func<Task>` and `Func<TEventArgs, Task>` registrations are awaited by Blazor; use `TriggerAsync` for synthetic async dispatch and `OffAsync` / `UnbindAsync` to remove an async handler by delegate. Untyped handlers remain source-compatible, and `One` consumes its callback before its first dispatch.
 - [x] Typed event helpers — `Click`, `Change`, `Submit`, focus helpers, keyboard helpers, mouse helpers, `ContextMenu`, `DblClick`, `Error`, `Load`, and `Unload` accept native Blazor event argument callbacks. Their existing parameterless forms remain synthetic C# triggers. `Resize` and `Scroll` remain untyped because Blazor does not provide their measurements in event args.
@@ -155,21 +160,27 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `Resize`
 - [x] `Scroll`
 - [x] `Submit`
-- [ ] `Animate`
-- [ ] `ClearQueue`
-- [ ] `Delay`
-- [ ] `Dequeue`
-- [ ] `FadeIn`
-- [ ] `FadeOut`
-- [ ] `FadeTo`
-- [ ] `FadeToggle`
-- [ ] `Finish`
-- [ ] `Promise`
-- [ ] `Queue`
-- [ ] `SlideDown`
-- [ ] `SlideToggle`
-- [ ] `SlideUp`
-- [ ] `Stop`
+- [x] `Animate(IReadOnlyDictionary<string, string>, TimeSpan)` — applies caller-supplied CSS targets and per-property transitions through Blazor-owned state; does not await completion.
+- [x] `Queue(Func<Task>)` / `Queue(Func<CancellationToken, Task>)` — enqueue per-element asynchronous callbacks; named queues default to `fx` and start only when dequeued.
+- [x] `Dequeue` — starts and awaits sequential execution for each selected element; concurrent calls share the active drain.
+- [x] `ClearQueue` — clears pending callbacks without canceling the active callback. Render-state clear or element removal signals cancellation to token-aware callbacks; plain `Func<Task>` callbacks can only finish naturally.
+- [x] `Delay(TimeSpan, string)` — enqueues a cancellable delay on the selected element queues; starts only when `Dequeue` is called.
+- [x] `Stop(bool clearQueue = false, string queueName = "fx")` — signals cancellation and awaits the active drain; pending work is preserved by default or discarded when requested. Tokenless callbacks finish naturally.
+- [x] `Finish(string queueName = "fx")` — finishable queue items run their completion action, queued delays are skipped, and ordinary callbacks run normally. It also settles library-owned fade/transition CSS at target state; `Show`/`Hide` clear finish-owned fade styles. Tokenless active callbacks finish naturally.
+- [x] `Promise(string queueName = "fx")` — awaits current selected queue emptiness without starting work. Callback faults remain observable through `Dequeue`; clearing discarded pending work resolves the promise, while element/render-state teardown cancels it.
+- [x] `ClearQueue`
+- [x] `Delay`
+- [x] `Dequeue`
+- [x] `FadeIn(TimeSpan duration)` — Blazor-rendered keyframe fade; clears library hidden state before animating.
+- [x] `FadeOut(TimeSpan duration)` — Blazor-rendered keyframe fade; preserves the layout slot, with `Hide()` available for layout removal.
+- [x] `FadeTo(TimeSpan duration, double opacity)` — applies a batched, generated-key CSS opacity transition through Blazor-owned render state.
+- [x] `FadeToggle(TimeSpan duration)` — alternates Query-managed visibility; does not inspect arbitrary CSS or external DOM state.
+- [x] `Finish`
+- [x] `Promise`
+- [x] `Queue`
+- [x] `SlideDown(TimeSpan)`, `SlideToggle(TimeSpan)`, and `SlideUp(TimeSpan)` — await measured-height slides directly; completion restores natural height, and slide-up hides only after animation end.
+- [x] `QueueSlideDown`, `QueueSlideToggle`, and `QueueSlideUp` — enqueue the same measured effects for callers who need explicit queue control.
+- [x] `Stop`
 - [ ] Independent NuGet packaging for the library and generator (Feature 4471)
 - [ ] Migration guide (Feature 4471)
 - [ ] Public documentation and developer experience site (Feature 4472)
@@ -253,6 +264,18 @@ var position = await Query.Select(".release-card").PositionAsync();
 ```powershell
 dotnet build Reflections.Blazor.Query.slnx
 dotnet test Reflections.Blazor.Query.slnx
+
+# Run local performance baselines (results go under ignored output/benchmarks/)
+dotnet run -c Release --project benchmarks/Reflections.Blazor.Query.Benchmarks -- --filter "*" --artifacts output/benchmarks/latest --noOverwrite
+```
+
+Run the real-browser Interactive Server navigation and reconnect scenarios with Playwright (Chromium is required):
+
+```powershell
+cd tests/BrowserE2E
+npm ci
+npx playwright install chromium
+npm test
 ```
 
 ## Contributing

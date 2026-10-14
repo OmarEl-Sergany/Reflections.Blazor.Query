@@ -107,8 +107,11 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(sequence++, property.Key, property.Value);
         foreach (var eventName in renderState.EventNamesFor(ElementKey))
         {
-            if (!QueryEventDescriptors.AddBinding(builder, sequence++, this, renderState, ElementKey, eventName))
-                builder.AddAttribute(sequence - 1, eventName, EventCallback.Factory.Create(this, () => renderState.TriggerAsync(ElementKey, eventName)));
+            var framesAdded = QueryEventDescriptors.AddBinding(builder, sequence, this, renderState, ElementKey, eventName);
+            if (framesAdded == 0)
+                builder.AddAttribute(sequence++, eventName, EventCallback.Factory.Create(this, () => renderState.TriggerAsync(ElementKey, eventName)));
+            else
+                sequence += framesAdded;
         }
         foreach (var eventName in renderState.DelegatedEventNamesFor(ElementKey))
             builder.AddAttribute(sequence++, QueryDelegatedEvents.AttributeName(eventName),
@@ -176,8 +179,11 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(sequence++, property.Key, property.Value);
         foreach (var eventName in renderState.EventNamesFor(elementKey))
         {
-            if (!QueryEventDescriptors.AddBinding(builder, sequence++, renderState, renderState, elementKey, eventName))
-                builder.AddAttribute(sequence - 1, eventName, (Action)(() => renderState.Trigger(elementKey, eventName)));
+            var framesAdded = QueryEventDescriptors.AddBinding(builder, sequence, renderState, renderState, elementKey, eventName);
+            if (framesAdded == 0)
+                builder.AddAttribute(sequence++, eventName, (Action)(() => renderState.Trigger(elementKey, eventName)));
+            else
+                sequence += framesAdded;
         }
         foreach (var fragment in renderState.PrependedFor(elementKey))
             AddFragment(builder, ref sequence, fragment);

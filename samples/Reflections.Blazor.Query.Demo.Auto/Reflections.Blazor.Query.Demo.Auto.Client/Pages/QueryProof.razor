@@ -9,6 +9,8 @@
     <button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
     <button class="btn btn-outline-primary ms-2" @onclick="MeasureAsync">Measure target</button>
     <button class="btn btn-outline-secondary ms-2" @onclick="MeasurePositionAsync">Measure position</button>
+    <button class="btn btn-outline-info ms-2" @onclick="ToggleSlide">Toggle slide</button>
+    <QueryElement TagName="p" ElementKey="auto-slide-target" Class="slide-target">This paragraph exercises measured slide animation and Blazor-owned completion in Auto.</QueryElement>
     @if (_applied)
     {
         <p role="status">Style applied in Interactive Auto.</p>
@@ -29,6 +31,8 @@
     private QueryPoint? _offset;
     private QueryPoint? _position;
     private string? _offsetParent;
+
+    private async Task ToggleSlide() => await Query.Select(".slide-target").SlideToggle(TimeSpan.FromMilliseconds(600));
 
     private void ApplyStyle()
     {

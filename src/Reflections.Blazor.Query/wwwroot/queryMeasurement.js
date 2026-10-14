@@ -39,6 +39,12 @@ export function measure(requests) {
                 relatedElementKey = offsetParent?.getAttribute("data-rbq-key") ?? null;
                 break;
             }
+            case 9: {
+                const padding = cssPixels(style.paddingTop) + cssPixels(style.paddingBottom);
+                const border = cssPixels(style.borderTopWidth) + cssPixels(style.borderBottomWidth);
+                value = element.scrollHeight - padding + (style.boxSizing === "border-box" ? border : 0);
+                break;
+            }
             default: value = null;
         }
 

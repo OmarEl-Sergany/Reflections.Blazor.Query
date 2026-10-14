@@ -65,6 +65,54 @@ public sealed class QueryMeasurementCoordinatorTests
     }
 
     [Fact]
+    public async Task Application_scope_measurements_survive_page_and_layout_invalidation_until_application_invalidation()
+    {
+        var bridge = new ApplicationScopeMeasurementBridge();
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var page = new QueryRenderState();
+        var layout = new LayoutQueryRenderState();
+        var application = new ApplicationQueryRenderState();
+
+        Assert.Equal(10, await ReadAsync(coordinator, application));
+        coordinator.Invalidate(page);
+        coordinator.Invalidate(layout);
+
+        Assert.Equal(10, await ReadAsync(coordinator, application));
+        Assert.Single(bridge.Batches);
+
+        coordinator.Invalidate(application);
+        Assert.Equal(20, await ReadAsync(coordinator, application));
+        Assert.Equal(2, bridge.Batches.Count);
+    }
+
+    [Fact]
+    public async Task Application_invalidation_cancels_in_flight_measurement_and_rejects_late_result()
+    {
+        var bridge = new SequencedMeasurementBridge();
+        await using var coordinator = new QueryMeasurementCoordinator(bridge);
+        var application = new ApplicationQueryRenderState();
+
+        var staleRead = coordinator.RequestAsync(application, "application-panel", MeasurementKind.Height).AsTask();
+        var firstFlush = coordinator.FlushAsync().AsTask();
+        await bridge.FirstStarted.Task;
+
+        coordinator.Invalidate(application);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => staleRead);
+        bridge.CompleteFirst([new MeasurementReading("application-panel", MeasurementKind.Height, 5)]);
+        await firstFlush;
+
+        var currentRead = coordinator.RequestAsync(application, "application-panel", MeasurementKind.Height).AsTask();
+        var secondFlush = coordinator.FlushAsync().AsTask();
+        await bridge.SecondStarted.Task;
+        bridge.CompleteSecond([new MeasurementReading("application-panel", MeasurementKind.Height, 25)]);
+        await secondFlush;
+
+        Assert.Equal(25, await currentRead);
+        Assert.Equal(25, await coordinator.RequestAsync(application, "application-panel", MeasurementKind.Height));
+        Assert.Equal(2, bridge.Batches.Count);
+    }
+
+    [Fact]
     public async Task Navigation_or_element_disposal_cancels_pending_measurement_without_late_cache_population()
     {
         var bridge = new FakeMeasurementBridge([new MeasurementReading("panel", MeasurementKind.Height, 42)]);
@@ -215,6 +263,33 @@ public sealed class QueryMeasurementCoordinatorTests
             Batches.Add(requests.ToArray());
             return ValueTask.FromResult(readings);
         }
+    }
+
+    private sealed class ApplicationScopeMeasurementBridge : IQueryMeasurementBridge
+    {
+        public List<IReadOnlyList<MeasurementRequest>> Batches { get; } = [];
+
+        public ValueTask<IReadOnlyList<MeasurementReading>> MeasureAsync(
+            IReadOnlyList<MeasurementRequest> requests,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Batches.Add(requests.ToArray());
+            IReadOnlyList<MeasurementReading> readings = requests
+                .Select(request => new MeasurementReading(
+                    request.ElementKey,
+                    request.Kind,
+                    Value: Batches.Count == 1 ? 10 : 20))
+                .ToArray();
+            return ValueTask.FromResult(readings);
+        }
+    }
+
+    private static async Task<double?> ReadAsync(QueryMeasurementCoordinator coordinator, QueryRenderState state)
+    {
+        var value = coordinator.RequestAsync(state, "application-panel", MeasurementKind.Width).AsTask();
+        await coordinator.FlushAsync();
+        return await value;
     }
 
     private sealed class DelayedMeasurementBridge : IQueryMeasurementBridge

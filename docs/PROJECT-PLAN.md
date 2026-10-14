@@ -1,14 +1,23 @@
 # Reflections.Blazor.Query — Implementation Plan
 
-This plan follows the Azure DevOps hierarchy and repository delivery policy. Foundation and selection/traversal are implemented; the active work is Feature 4467.
+This plan follows the Azure DevOps hierarchy and repository delivery policy. Sprints 0–4 are complete in the repository; Sprint 4 is formally closed. Sprint 5 (Feature 4470: effects and queues) implementation is complete, with two evidence gates still preventing formal closure.
 
-## 🚀 Active Phase: Sprint 2 (Feature 4467)
+## 🚀 Active Phase: Sprint 5 (Feature 4470)
 
-**Current focus:** Attributes, properties, data, text, and dimensions.
+**Current focus:** Obtain final remote CI evidence and immutable artifact identity for the completed effects and queue slices.
 
-- **Assigned to:** `DEVOPS22-SVR\Omar`
-- **Branch:** `feature/4467-attributes-data`
-- **Status:** 61/61 tests passing ✅ · 0 warnings · 0 errors · manual browser validation passed
+- **Status:** Implementation and local validation complete; formal closure pending the remote CI/artifact evidence below. `Animate`, fades, measured slide effects, and queue APIs through `Promise` are implemented vertical slices.
+
+**Sprint 5 exit gates (ordered):**
+
+1. [x] Manual real-browser slide smoke in Interactive Server, WebAssembly, and Auto. Verified RCL JS assets, `rbqanimationend`, measured height, and Blazor completion; Auto was observed first on Server then on WebAssembly after cached-runtime reload.
+2. [x] Add and locally execute the CI-integrated browser suite: Server 8/8, WebAssembly 3/3, and Auto 3/3 scenarios passed on 2026-10-14. [ ] Run the Azure Pipeline against this source revision and retain its published JUnit/performance/diagnostic artifacts.
+3. [x] Add repeatable in-process baselines for batched measurement and render-state effects at 1/10/100/1000 keys, plus host-specific 25-sample browser baselines for Server, WebAssembly, and Auto Server-to-cached-WebAssembly; record scope and timing attribution limits in [Performance Baseline](PERFORMANCE-BASELINE.md).
+4. [x] Resolve the current NuGet advisories by updating ASP.NET Core component packages to 10.0.13; Release solution build and package archive validation passed locally. [ ] Capture and verify immutable artifact identity through the remote CI publication workflow.
+
+The latest local validation passed on 2026-10-14: 254/254 .NET tests and all 14 configured browser tests across Server, WebAssembly, and Auto; Release solution build with zero warnings/errors; no vulnerable NuGet packages; and a valid runtime `.nupkg` containing the assembly, README, and RCL static web assets. Local host-specific performance evidence is recorded; formal closure remains contingent on a pipeline run and immutable artifact verification for the pushed source revision. Automated effects/reconnect cases currently run on Server; WASM and Auto include lifecycle/navigation, measurement, and performance coverage, while slide interaction in those hosts has manual smoke evidence.
+
+Remote closure check on 2026-10-14: Azure DevOps definitions 14 and 15 both reference `/azure-pipelines.yml`, but the project currently has no recorded build runs. Work item 4470 (“Effects and queues”) remains **New**, assigned to Omar El Sergany. The remote `feature/4468-lifecycle-hardening` ref is at `30906c9b`; after the current working tree is pushed, run CI on that exact commit and verify the published browser/performance and runtime package artifacts before closing the work item.
 
 ### Implemented matrix
 
@@ -25,20 +34,24 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 - [x] Implement `OffsetAsync`, `PositionAsync`, and `OffsetParentAsync` under the existing read-only batch boundary.
 - [x] Implement the generated-key measurement queue, coalesced `QueryHost.OnAfterRenderAsync` flush, immutable snapshot DTOs, and no-public-`ElementReference` boundary.
 - [x] Implement render-owned `Height(double)` and `Width(double)` writes using generated-key CSS rules.
-- [ ] Add page/layout/application navigation and disposal coverage for cancellation, cache invalidation, and late-result rejection.
+- [x] Add page/layout/application measurement-scope coverage for navigation/disposal invalidation, cancellation, cache retention, and late-result rejection. Application scope uses explicit `ApplicationQueryRenderState` / `ApplicationQuery` services; application cache is retained until explicit invalidation or its owning host/service scope is disposed.
 - [x] Manually verify the `HeightAsync` / `WidthAsync` queue and JS module in Interactive Server, WebAssembly, and Auto.
 - [x] Manually verify typed `OffsetAsync`, `PositionAsync`, and external-parent `OffsetParentAsync` results in Interactive Server, WebAssembly, and Auto.
-- [ ] Add automated browser coverage for every measurement metric, navigation, disposal, cancellation, and late-result behavior.
+- [x] Add automated browser coverage for every public measurement metric in Server, WebAssembly, and Auto; unit/component tests cover navigation, disposal, cancellation, cache invalidation, and late-result rejection.
 
 ### 🗺️ Long-term roadmap (Epic 4464)
 
-#### Sprint 3 — Classes & DOM Structure (Feature 4468)
+#### Sprint 3 — Classes & DOM Structure (Feature 4468) — Complete
 
-- [ ] Class manipulation: `AddClass`, `RemoveClass`, `ToggleClass`, `HasClass`.
-- [ ] Structural state trees: `Append`, `Prepend`, `Before`, `After`, `Wrap`, and their supported counterparts.
-- [ ] Logical component query capabilities using generated `ComponentScopeKey` metadata; no per-component DI lifetime.
+- [x] Class manipulation: `AddClass`, `RemoveClass`, `ToggleClass`, `HasClass`, `Show`, `Hide`, and `Toggle`.
+- [x] Structural state operations: append/prepend, sibling insertion and relocation, replacement, wrapping, removal, emptying, and detachment for supported real and virtual elements.
+- [x] Stable element identity, ordered state reconciliation, and disposal behavior for relocation and nested virtual elements.
+- [x] Logical component query isolation using `IQueryScope`/`QueryScopeHost`; no per-component DI lifetime.
+- [x] `Clone()` for library-created virtual elements; clones receive unique library keys and start unattached.
 
-#### Sprint 4 — Events & Forms (Feature 4469)
+**Explicit boundary:** `Clone()` does not clone a real Razor-declared `QueryElement`. A Razor element is a live Blazor component instance with its own parameters, callbacks, and lifecycle; synthesizing a second live instance from its rendered output would not preserve those semantics. This is intentionally unsupported, not a missing generated-key feature. Use a reusable Razor component or create a virtual element when a second instance is required.
+
+#### Sprint 4 — Events & Forms (Feature 4469) — Complete
 
 - [x] Fluent event binding: `On`, `Off`, `One`, `Trigger`, and awaitable `TriggerAsync`, with `OffAsync`/`UnbindAsync` for async delegate removal and native `TEventArgs` overloads for supported Blazor event descriptors.
 - [x] Event helpers: `Blur`, `Change`, `Click`, `ContextMenu`, `DblClick`, `Focus`, `FocusIn`, `FocusOut`, `Hover`, keyboard and mouse helpers, `Resize`, `Scroll`, and `Submit`; both synchronous and `Task`-returning overloads are supported, with native Blazor event args where available.
@@ -48,8 +61,33 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 #### Sprint 5 — Effects & Queues (Feature 4470)
 
-- [ ] C#-driven render-state transitions: `Animate`, `FadeIn`, and `SlideUp`.
-- [ ] Queue tracking: `Queue`, `Delay`, `Stop`, and `Finish`.
+- [x] Add synchronous `FadeTo(TimeSpan, double)` as a batched, Blazor-rendered CSS opacity transition with validated inputs.
+- [x] Add `FadeIn(TimeSpan)` and `FadeOut(TimeSpan)` as batched per-key CSS keyframe state rendered through `QueryHost`; `FadeOut` preserves layout, and `Show`/`Hide` cancel library-owned fade animations.
+- [x] Add `FadeToggle(TimeSpan)` over Query-managed visibility state, without reading computed styles or external DOM.
+- [x] Add `Animate(IReadOnlyDictionary<string, string>, TimeSpan)` as a batched per-key CSS transition and target-state update; transition completion is not awaited.
+- [x] Add named per-element callback queues (`Queue`, `Dequeue`, `ClearQueue`, `Delay`) with explicit start, awaited sequential draining, pending-only clear, and cancellation signaling on state/element removal for token-aware callbacks.
+- [x] Measured slide effects: awaitable `SlideDown`, `SlideToggle`, and `SlideUp` start and complete directly; `QueueSlideDown`, `QueueSlideToggle`, and `QueueSlideUp` provide explicit queue composition. Effects read `scrollHeight` through the read-only measurement batch and render Blazor-owned keyframes. Temporary styles are removed at completion.
+- [x] Server circuit reconnect recovery: on successful reconnection, the RCL checks Query slide animations and re-dispatches completion only for browser-confirmed finished animations. An animation still running is not forced to completion; no DOM styles are written.
+- [x] Queue tracking and cancellable delay: `Queue`, `Dequeue`, `ClearQueue`, and `Delay`.
+- [x] Add `Stop(bool clearQueue = false, string queueName = "fx")`: signal cancellation, await the active drain, and preserve pending callbacks unless clearing is requested. Tokenless callbacks finish naturally.
+- [x] Add finish-aware work items and `Finish(string queueName = "fx")`: execute supplied completion delegates, skip queued delays, run non-finishable callbacks normally, and settle library-owned fade/transition state at its target. `Show`/`Hide` clear finish-owned fade styles.
+- [x] Add `Promise(string queueName = "fx")`: observe currently queued work without auto-start; resolve on queue emptiness/explicit clearing and cancel on owner teardown. Callback failures remain reported by `Dequeue`.
+- [x] Manual browser smoke: verify slide up/down completion and JS initializer in Interactive Server, WebAssembly, and Auto; verify Auto's initial Server and cached WebAssembly executions.
+- [x] CI integration for browser E2E: the Azure Pipeline runs the Playwright Server reconnect suite and publishes JUnit results/failure traces.
+- [x] Automate Server slide/reconnect, navigation, element disposal, queue cancellation, and expired-circuit cases; automate navigation lifecycle on WebAssembly and Auto.
+- [ ] Extend automated slide/queue interaction and JS-initializer coverage across WebAssembly and Auto (manual slide smoke is not a substitute for these automated cases).
+- [x] Server reconnect browser E2E: a controllable SignalR disconnect verifies an in-progress animation continues and a browser-confirmed completion while disconnected settles after reconnection.
+- [x] Server navigation browser E2E: page-scoped CSS is cleared when navigating away, while layout-scoped CSS remains rendered.
+- [x] Server component-disposal browser E2E: removing a `QueryElement` unregisters its selector metadata; a subsequent query resolves zero matches.
+- [x] Server queue-disposal browser E2E: disposing the element that owns active token-aware queued work cancels the callback and removes the element.
+- [x] Nested-host component lifecycle: renderer-driven removal of an inner `QueryHost` cancels its active token-aware queue and unregisters its element while preserving the outer layout's rendered state.
+- [x] Server expired-circuit browser E2E: after the test-configured retention window, the active queue is not resumed and the page reports its fresh `idle` state.
+- [x] WebAssembly browser E2E: applying page-scoped CSS, navigating away, and returning confirms the old page state is cleared and not replayed.
+- [x] Auto browser E2E: verifies a fresh visit uses a Server circuit, a warm reload handles interactions without opening a new circuit (cached WebAssembly), and page state is cleared on navigation and not replayed on return.
+- [x] Performance core baseline: BenchmarkDotNet coverage for measurement request coalescing and render-state `Animate` updates over 1/10/100/1000 keys, with allocation and latency snapshots recorded in [Performance Baseline](PERFORMANCE-BASELINE.md).
+- [ ] Performance host baselines: measure browser/Blazor render and interop costs separately for Interactive Server (including transport) and WebAssembly; the in-process numbers must not be presented as host-mode performance.
+- [x] Dependency/release local gate: resolve NU1903 advisories, build Release with zero warnings/errors, and validate the runtime package contains its README and static web assets.
+- [ ] Remote release evidence: verify the Azure Pipeline run and immutable published artifact identity for this source revision.
 
 ## Product goal
 
@@ -155,35 +193,53 @@ Managed selector subset: `*`, tag, id, class, and compound tag/id/class selector
 
 ### Sprint 2 - attributes, properties, data, text, and dimensions (Feature 4467)
 
-- `Attr`, `Prop`, `Data`, `RemoveAttr`, `RemoveProp`, `RemoveData`, `Text_Get`, `Text_Set`, `Html`, and `Val` are implemented and tested.
-- Implement dimensions and position reads, plus render-owned `Height_Set` and `Width_Set` writes.
-- Define safe value serialization and element ownership rules.
-- Add render output snapshots and accessibility checks.
+- [x] `Attr`, `Prop`, `Data`, `RemoveAttr`, `RemoveProp`, `RemoveData`, `Text_Get`, `Text_Set`, `Html`, and `Val` are implemented and tested.
+- [x] Implement dimensions and position reads, plus render-owned `Height_Set` and `Width_Set` writes.
+- [x] Define safe value serialization and element ownership rules.
+- [x] Add render output snapshots and accessibility checks.
+
+**Status: Complete.** Final scope validation passed with 254/254 unit/component tests, 11/11 Playwright cases across all three interactive hosting modes, and a zero-warning Release solution build. Application-scoped state and read-only browser measurement are covered by unit, component, and real-browser tests.
+
+Sprint 2 measurement validation: `ApplicationQueryRenderState` and `ApplicationQuery` are registered as scoped services through `AddBlazorQuery`. Their application-lifetime state is isolated from the page `Query` and `LayoutQuery` states; mount a long-lived `QueryHost` with that state and `ClearOnNavigation="false"`. Measurement unit/component tests cover page, layout, and application cache lifetimes, including cancellation and stale-result rejection. Playwright exercises all public metrics against actual browser layout in Server, WebAssembly, and Auto.
 
 Measurement architecture is specified in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). `HeightAsync`, `WidthAsync`, `InnerHeightAsync`, `InnerWidthAsync`, `OuterHeightAsync`, `OuterWidthAsync`, `OffsetAsync`, `PositionAsync`, and `OffsetParentAsync` are implemented as asynchronous, read-only browser observations. `Height(double)` and `Width(double)` are generated-key render-owned CSS writes. The read path is queued, coalesced, flushed once by `QueryHost.OnAfterRenderAsync`, and never mutates the DOM.
 
 ### Sprint 3 - classes and structural manipulation (Feature 4468)
 
-- Implement class operations and `Show`/`Hide`/`Toggle`.
-- Implement append/prepend/before/after/replace/wrap/remove/empty/detach/clone operations.
-- Define stable keys and reconciliation behavior for repeated and reordered elements.
-- Add `IQueryScope` / `IQueryScopeFactory`, generated/cascaded component scope keys, constrained subtree selection, and repeated-component disposal coverage.
+- **Complete:** Class and visibility state operations, supported real/virtual structural moves, insertion, replacement, wrapping, removal, emptying, and detach semantics.
+- **Complete:** Stable keys, render-state reconciliation, and lifecycle/disposal coverage for supported structures.
+- **Complete:** Component-bound query scoping through generated/cascaded scope identity, constrained selection, traversal, and cleanup.
+- **Contract:** `Clone()` duplicates library-created virtual elements only. A live Razor component instance is not cloneable through a DOM-style API; this is an explicit semantic boundary.
+
+Sprint 3 exit evidence: `dotnet test Reflections.Blazor.Query.slnx --no-restore` passes 172 unit/component tests (134 unit, 38 component). This verifies automated behavior; it is not a substitute for browser validation of a specific hosting mode.
 
 ### Sprint 4 - events and form behavior (Feature 4469)
 
-- Implement event registration, delegation semantics, one-time handlers, trigger behavior, and disposal.
-- Integrate Blazor event callbacks and prevent duplicate subscriptions after rerender.
-- Add keyboard, pointer, focus, form, resize, and scroll coverage.
+- [x] Implement event registration, delegation semantics, one-time handlers, trigger behavior, and disposal.
+- [x] Integrate Blazor event callbacks and prevent duplicate subscriptions after rerender.
+- [x] Cover keyboard, pointer, focus, form, resize, and scroll APIs, plus native typed event args where supported.
+- [x] Implement read-only `Serialize` / `SerializeArray` via queued JS observation, with cancellation, stale-result protection, and deterministic coordinator disposal.
+
+Sprint 4 exit evidence: `dotnet test Reflections.Blazor.Query.slnx --no-restore` passes 172 tests (134 unit, 38 component). This confirms automated coverage; it does not claim a fresh interactive browser run in Server, WebAssembly, and Auto for every event/form combination.
 
 ### Sprint 5 - effects, queues, and async behavior (Feature 4470)
 
-- Implement queues, delays, effects, animation cancellation, and promises.
-- Validate behavior during navigation, component disposal, and reconnect.
+- [x] Implement `FadeTo(TimeSpan, double)` using per-generated-key render-state CSS rules; no direct DOM writes, JS bridge, or timer is used.
+- [x] Implement `FadeIn(TimeSpan)` and `FadeOut(TimeSpan)` using host-owned keyframes and per-key render-state animation declarations; fade-out retains the layout slot.
+- [x] Implement `FadeToggle(TimeSpan)` based only on Query-managed visibility state.
+- [x] Implement `Animate(IReadOnlyDictionary<string, string>, TimeSpan)` with a transition declaration per supplied property and a batched target update.
+- [x] Implement awaitable direct `SlideDown`, `SlideToggle`, and `SlideUp` operations plus explicit-queue `QueueSlideDown`, `QueueSlideToggle`, and `QueueSlideUp`; retain measured `scrollHeight`, cancellation/finish cleanup, and natural-layout restoration.
+- [x] Implement named per-element `Queue`, explicit `Dequeue`, and pending-only `ClearQueue`; state/element teardown signals cancellation to token-aware active callbacks (plain `Func<Task>` callbacks are not preemptible).
+- [x] Implement `Delay(TimeSpan, string)` as cancellable queued work; it starts only when its queue is dequeued.
+- [x] Implement awaitable `Stop` with cooperative cancellation and optional pending-queue clearing; tokenless work is awaited rather than preempted.
+- [x] Implement finish-aware queue completion, skipped delays, and terminal render-state CSS for library-owned fades/transitions; `Show`/`Hide` remove finish-owned fade terminal styles. Active tokenless callbacks remain non-preemptible.
+- [x] Implement awaitable completion promises.
+- Validate navigation and component disposal in component tests. Playwright browser tests currently include `page query state clears while layout query state survives navigation`, `a slide that is still running after reconnect completes normally`, and `a slide completed while disconnected settles after reconnect`.
 - Add performance benchmarks and long-running circuit tests.
 
 ### Sprint 6 - compatibility, packaging, and release
 
-- Resolve Tier 4 decisions.
+- Resolve Tier 4 decisions and mark non-goals explicitly; do not expand the core API matrix merely to reproduce removed/legacy jQuery behavior.
 - Publish API documentation and migration guide.
 - Package the library and generator independently with version alignment.
 - Build once, publish immutable artifacts, and promote the same artifact through environments.

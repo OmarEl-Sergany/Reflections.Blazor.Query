@@ -1,0 +1,99 @@
+@page "/host-performance"
+@rendermode InteractiveAuto
+@using System.Diagnostics
+@inject Reflections.Blazor.Query.Query Query
+
+<QueryHost>
+    <PageTitle>Query host performance</PageTitle>
+    <h1>Query host performance</h1>
+    <p>Diagnostic route for uncached, coalesced read-only browser measurement.</p>
+    <QueryElement TagName="div" ElementKey="host-perf-parent" Class="host-perf-fixtures" aria-hidden="true">
+        @for (var index = 0; index < SampleCount; index++)
+        {
+            <QueryElement @key="index" TagName="div" ElementKey="@($"host-perf-target-{index}")" ParentElementKey="host-perf-parent"
+                          Id="@($"host-perf-target-{index}")" Class="host-perf-target" />
+        }
+    </QueryElement>
+    <button data-testid="measure-one" @onclick="MeasureNextAsync">Measure next uncached target</button>
+    <output data-testid="host-perf-results" data-runtime="@RuntimeKind" data-completed="@_completed"
+            data-handler-ms="@Format(_handlerMilliseconds)" data-width="@Format(_lastWidth)"
+            data-valid="@(_measurementsValid ? "true" : "false")" data-height="@Format(_lastHeight)"
+            data-inner-height="@Format(_lastInnerHeight)" data-inner-width="@Format(_lastInnerWidth)"
+            data-outer-height="@Format(_lastOuterHeight)" data-outer-width="@Format(_lastOuterWidth)"
+            data-offset-left="@Format(_offset?.Left)" data-position-left="@Format(_position?.Left)"
+            data-offset-parent="@_offsetParent">
+        Completed @_completed of @SampleCount
+    </output>
+</QueryHost>
+
+@code {
+    private const int SampleCount = 25;
+    private int _completed;
+    private double _handlerMilliseconds;
+    private double? _lastWidth;
+    private double? _lastHeight;
+    private double? _lastInnerHeight;
+    private double? _lastInnerWidth;
+    private double? _lastOuterHeight;
+    private double? _lastOuterWidth;
+    private QueryPoint? _offset;
+    private QueryPoint? _position;
+    private bool _measurementsValid;
+    private string? _offsetParent;
+
+    private static string RuntimeKind => OperatingSystem.IsBrowser() ? "wasm" : "server";
+
+    private async Task MeasureNextAsync()
+    {
+        if (_completed >= SampleCount)
+            return;
+
+        var stopwatch = Stopwatch.StartNew();
+        var selection = Query.Select($"#host-perf-target-{_completed}");
+        var height = selection.HeightAsync().AsTask();
+        var width = selection.WidthAsync().AsTask();
+        var innerHeight = selection.InnerHeightAsync().AsTask();
+        var innerWidth = selection.InnerWidthAsync().AsTask();
+        var outerHeight = selection.OuterHeightAsync().AsTask();
+        var outerWidth = selection.OuterWidthAsync().AsTask();
+        var offset = selection.OffsetAsync().AsTask();
+        var position = selection.PositionAsync().AsTask();
+        var offsetParent = selection.OffsetParentAsync().AsTask();
+
+        await Task.WhenAll(height, width, innerHeight, innerWidth, outerHeight, outerWidth, offset, position, offsetParent);
+        var measuredHeight = await height;
+        var measuredWidth = await width;
+        var measuredInnerHeight = await innerHeight;
+        var measuredInnerWidth = await innerWidth;
+        var measuredOuterHeight = await outerHeight;
+        var measuredOuterWidth = await outerWidth;
+        var measuredOffset = await offset;
+        var measuredPosition = await position;
+        var measuredOffsetParent = await offsetParent;
+        stopwatch.Stop();
+
+        _lastWidth = measuredWidth;
+        _lastHeight = measuredHeight;
+        _lastInnerHeight = measuredInnerHeight;
+        _lastInnerWidth = measuredInnerWidth;
+        _lastOuterHeight = measuredOuterHeight;
+        _lastOuterWidth = measuredOuterWidth;
+        _offset = measuredOffset;
+        _position = measuredPosition;
+        _offsetParent = measuredOffsetParent;
+        _measurementsValid = measuredHeight == 110
+            && measuredWidth == 150
+            && measuredInnerHeight == 100
+            && measuredInnerWidth == 140
+            && measuredOuterHeight == 110
+            && measuredOuterWidth == 150
+            && measuredOffset is not null
+            && measuredPosition is not null
+            && string.Equals(measuredOffsetParent, "host-perf-parent", StringComparison.Ordinal);
+        _handlerMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+        _completed++;
+    }
+
+    private static string Format(double value) => value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
+    private static string Format(double? value) => value?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) ?? "unavailable";
+}

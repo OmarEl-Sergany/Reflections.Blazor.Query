@@ -49,6 +49,400 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        /// <summary>
+        /// Transitions the selected elements' opacity to <paramref name="opacity"/> using Blazor-owned CSS state.
+        /// </summary>
+        /// <param name="duration">The CSS transition duration. Must be non-negative.</param>
+        /// <param name="opacity">The target opacity in the inclusive range [0, 1].</param>
+        /// <returns>This selection for fluent composition.</returns>
+        public QuerySelection FadeTo(TimeSpan duration, double opacity)
+        {
+            if (!double.IsFinite(opacity) || opacity is < 0 or > 1)
+                throw new ArgumentOutOfRangeException(nameof(opacity), opacity, "Opacity must be finite and between 0 and 1.");
+            if (duration < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(duration), duration, "Transition duration cannot be negative.");
+
+            var durationCss = duration.TotalMilliseconds.ToString("0.####", CultureInfo.InvariantCulture);
+            var opacityCss = opacity.ToString("0.#################", CultureInfo.InvariantCulture);
+            using (_state.BeginBatch())
+            {
+                foreach (var key in RequireResolvedKeys())
+                {
+                    var elementSelector = $"[data-rbq-key=\"{EscapeKey(key)}\"]";
+                    _state.ClearEffectAnimation(elementSelector);
+                    _state.SetEffectTransition(elementSelector, $"opacity {durationCss}ms ease");
+                    _state.SetCss(elementSelector, "opacity", opacityCss);
+                }
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// Applies CSS target values with browser transitions emitted by the Blazor-owned stylesheet.
+        /// This call updates state synchronously; it does not await transition completion.
+        /// </summary>
+        /// <param name="properties">CSS property names and caller-supplied CSS values.</param>
+        /// <param name="duration">Transition duration. Must be non-negative.</param>
+        public QuerySelection Animate(IReadOnlyDictionary<string, string> properties, TimeSpan duration)
+        {
+            ArgumentNullException.ThrowIfNull(properties);
+            if (duration < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(duration), duration, "Animation duration cannot be negative.");
+
+            var targets = properties
+                .Select(pair =>
+                {
+                    ValidateCssPropertyName(pair.Key);
+                    ArgumentException.ThrowIfNullOrWhiteSpace(pair.Value);
+                    return pair;
+                })
+                .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                .ToArray();
+            if (targets.Length == 0)
+                return this;
+
+            var durationCss = duration.TotalMilliseconds.ToString("0.####", CultureInfo.InvariantCulture);
+            var transition = string.Join(", ", targets.Select(target => $"{target.Key} {durationCss}ms ease"));
+            using (_state.BeginBatch())
+            {
+                foreach (var key in RequireResolvedKeys())
+                {
+                    var selector = $"[data-rbq-key=\"{EscapeKey(key)}\"]";
+                    _state.ClearEffectAnimation(selector);
+                    _state.SetEffectTransition(selector, transition);
+                    foreach (var target in targets)
+                        _state.SetCss(selector, target.Key, target.Value);
+                }
+            }
+
+            return this;
+        }
+
+        /// <summary>Adds an asynchronous callback to each selected element's named queue.</summary>
+        public QuerySelection Queue(Func<Task> callback, string queueName = "fx")
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            foreach (var key in RequireResolvedKeys())
+                _state.QueueEffect(key, queueName, _ => callback());
+            return this;
+        }
+
+        /// <summary>Adds a callback with an explicit finish action to each selected element's queue.</summary>
+        public QuerySelection Queue(Func<Task> callback, Func<Task> finish, string queueName = "fx")
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            ArgumentNullException.ThrowIfNull(finish);
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            foreach (var key in RequireResolvedKeys())
+                _state.QueueEffect(key, queueName, _ => callback(), _ => finish());
+            return this;
+        }
+
+        /// <summary>
+        /// Adds an asynchronous callback to each selected element's named queue. The token is canceled
+        /// when the element or its owning render state is removed.
+        /// </summary>
+        public QuerySelection Queue(Func<CancellationToken, Task> callback, string queueName = "fx")
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            foreach (var key in RequireResolvedKeys())
+                _state.QueueEffect(key, queueName, callback);
+            return this;
+        }
+
+        /// <summary>Adds a cancellation-aware callback with a cancellation-aware finish action.</summary>
+        public QuerySelection Queue(
+            Func<CancellationToken, Task> callback,
+            Func<CancellationToken, Task> finish,
+            string queueName = "fx")
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            ArgumentNullException.ThrowIfNull(finish);
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            foreach (var key in RequireResolvedKeys())
+                _state.QueueEffect(key, queueName, callback, finish);
+            return this;
+        }
+
+        /// <summary>Adds a cancellable delay to each selected element's named queue.</summary>
+        /// <param name="duration">Delay duration. Must be non-negative.</param>
+        /// <param name="queueName">Queue to receive the delay; defaults to <c>fx</c>.</param>
+        public QuerySelection Delay(TimeSpan duration, string queueName = "fx")
+        {
+            if (duration < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(duration), duration, "Delay duration cannot be negative.");
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+
+            foreach (var key in RequireResolvedKeys())
+                _state.QueueEffect(
+                    key,
+                    queueName,
+                    cancellationToken => Task.Delay(duration, cancellationToken),
+                    _ => Task.CompletedTask);
+            return this;
+        }
+
+        /// <summary>
+        /// Starts the selected elements' named queues and awaits each element's sequential drain. A queue
+        /// must be started explicitly; concurrent calls for the same element share its active drain.
+        /// </summary>
+        public async ValueTask<QuerySelection> Dequeue(string queueName = "fx")
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            var tasks = RequireResolvedKeys().Select(key => _state.DequeueEffects(key, queueName));
+            await Task.WhenAll(tasks);
+            return this;
+        }
+
+        /// <summary>Clears pending callbacks without canceling a callback that is already running.</summary>
+        public QuerySelection ClearQueue(string queueName = "fx")
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            foreach (var key in RequireResolvedKeys())
+                _state.ClearEffectQueue(key, queueName);
+            return this;
+        }
+
+        /// <summary>
+        /// Requests cancellation of each selected element's active queue action and awaits the drain ending.
+        /// Pending actions are retained unless <paramref name="clearQueue"/> is true. Tokenless actions
+        /// cannot be preempted and must finish naturally before this method completes.
+        /// </summary>
+        public async ValueTask<QuerySelection> Stop(bool clearQueue = false, string queueName = "fx")
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            await Task.WhenAll(RequireResolvedKeys()
+                .Select(key => _state.StopEffectQueueAsync(key, queueName, clearQueue)));
+            return this;
+        }
+
+        /// <summary>
+        /// Completes each selected element's queue. Finish actions replace ordinary execution where provided,
+        /// delays are skipped, and callbacks without finish actions run normally. Active tokenless callbacks
+        /// must complete naturally before finishing can continue.
+        /// </summary>
+        public async ValueTask<QuerySelection> Finish(string queueName = "fx")
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            var keys = RequireResolvedKeys();
+            try
+            {
+                await Task.WhenAll(keys.Select(key => _state.FinishEffectQueueAsync(key, queueName)));
+            }
+            finally
+            {
+                using (_state.BeginBatch())
+                    foreach (var key in keys)
+                        _state.FinishEffectStyles(key);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Waits for the currently queued work for each selected element to become empty. This does not start
+        /// queues; call <see cref="Dequeue(string)"/> to execute queued work. Callback failures are reported
+        /// by Dequeue, while this completion signal represents queue emptiness rather than callback success.
+        /// </summary>
+        public async ValueTask<QuerySelection> Promise(string queueName = "fx")
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+            await Task.WhenAll(RequireResolvedKeys().Select(key => _state.WaitForEffectQueueAsync(key, queueName)));
+            return this;
+        }
+
+        /// <summary>Runs a measured slide-down effect and completes when the browser reports its animation end.</summary>
+        public ValueTask<QuerySelection> SlideDown(TimeSpan duration) => RunSlide(duration, "fx", SlideDirection.Down);
+
+        /// <summary>Runs a measured slide-up effect and completes when the browser reports its animation end.</summary>
+        public ValueTask<QuerySelection> SlideUp(TimeSpan duration) => RunSlide(duration, "fx", SlideDirection.Up);
+
+        /// <summary>Runs a measured slide toggle based on Query-owned visibility and completes after animation end.</summary>
+        public ValueTask<QuerySelection> SlideToggle(TimeSpan duration) => RunSlide(duration, "fx", null);
+
+        /// <summary>Queues a measured slide-down effect without starting the queue.</summary>
+        public QuerySelection QueueSlideDown(TimeSpan duration, string queueName = "fx") => QueueSlide(duration, queueName, SlideDirection.Down);
+
+        /// <summary>Queues a measured slide-up effect without starting the queue.</summary>
+        public QuerySelection QueueSlideUp(TimeSpan duration, string queueName = "fx") => QueueSlide(duration, queueName, SlideDirection.Up);
+
+        /// <summary>Queues a measured slide toggle without starting the queue.</summary>
+        public QuerySelection QueueSlideToggle(TimeSpan duration, string queueName = "fx") => QueueSlide(duration, queueName, null);
+
+        private ValueTask<QuerySelection> RunSlide(TimeSpan duration, string queueName, SlideDirection? requestedDirection)
+        {
+            QueueSlide(duration, queueName, requestedDirection);
+            return Dequeue(queueName);
+        }
+
+        private QuerySelection QueueSlide(TimeSpan duration, string queueName, SlideDirection? requestedDirection)
+        {
+            if (duration < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(duration), duration, "Slide duration cannot be negative.");
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+
+            var keys = RequireResolvedKeys();
+            if (keys.Count > 0 && _measurements is null)
+                throw new InvalidOperationException("Slide effects require a QueryMeasurementCoordinator registered through AddBlazorQuery().");
+
+            foreach (var key in keys)
+            {
+                SlideDirection? actualDirection = null;
+                _state.QueueEffect(
+                    key,
+                    queueName,
+                    async cancellationToken =>
+                    {
+                        var direction = requestedDirection ?? (_state.IsHidden(key) ? SlideDirection.Down : SlideDirection.Up);
+                        actualDirection = direction;
+                        if (direction == SlideDirection.Up && _state.IsHidden(key))
+                            return;
+
+                        var wasHidden = _state.IsHidden(key);
+                        try
+                        {
+                            if (direction == SlideDirection.Down)
+                                _state.Show(key);
+                            _state.PrepareSlideEffect(key, wasHidden, concealForMeasurement: direction == SlideDirection.Down);
+                            _measurements!.InvalidateElement(_state, key);
+                            var naturalHeight = await _measurements.RequestAsync(
+                                _state,
+                                key,
+                                MeasurementKind.ScrollHeight,
+                                cancellationToken);
+                            if (naturalHeight is null || !double.IsFinite(naturalHeight.Value) || naturalHeight.Value < 0)
+                                throw new InvalidOperationException($"The browser did not return a valid scroll height for element '{key}'.");
+
+                            if (naturalHeight.Value == 0 || duration == TimeSpan.Zero)
+                            {
+                                _state.CompleteSlideEffect(key, hide: direction == SlideDirection.Up);
+                                return;
+                            }
+
+                            var animationName = direction == SlideDirection.Down ? "rbq-slide-down" : "rbq-slide-up";
+                            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                            Action<EventArgs> onAnimationEnd = _ => completion.TrySetResult();
+                            _state.On(key, "rbqanimationend", onAnimationEnd, once: false);
+                            try
+                            {
+                                _state.StartSlideEffect(
+                                    key,
+                                    animationName,
+                                    duration.TotalMilliseconds.ToString("0.####", CultureInfo.InvariantCulture),
+                                    naturalHeight.Value);
+                                await completion.Task.WaitAsync(cancellationToken);
+                                _state.CompleteSlideEffect(key, hide: direction == SlideDirection.Up);
+                            }
+                            finally
+                            {
+                                _state.Off(key, "rbqanimationend", onAnimationEnd);
+                            }
+                        }
+                        catch
+                        {
+                            _state.CancelSlideEffect(key);
+                            throw;
+                        }
+                    },
+                    _ =>
+                    {
+                        var direction = actualDirection
+                            ?? requestedDirection
+                            ?? (_state.IsHidden(key) ? SlideDirection.Down : SlideDirection.Up);
+                        _state.CompleteSlideEffect(key, hide: direction == SlideDirection.Up);
+                        return Task.CompletedTask;
+                    });
+            }
+
+            return this;
+        }
+
+        /// <summary>Fades selected elements in using Blazor-owned CSS animation state.</summary>
+        public QuerySelection FadeIn(TimeSpan duration) => ApplyFade("rbq-fade-in", duration);
+
+        /// <summary>
+        /// Fades selected elements out using Blazor-owned CSS animation state. The element's layout slot
+        /// remains occupied; call <see cref="Hide"/> separately when removal from layout is desired.
+        /// </summary>
+        public QuerySelection FadeOut(TimeSpan duration) => ApplyFade("rbq-fade-out", duration);
+
+        /// <summary>
+        /// Toggles fade visibility tracked by this Query state. Visibility imposed by arbitrary CSS or
+        /// external code is intentionally not inspected.
+        /// </summary>
+        public QuerySelection FadeToggle(TimeSpan duration)
+        {
+            ValidateFadeDuration(duration);
+            var durationCss = duration.TotalMilliseconds.ToString("0.####", CultureInfo.InvariantCulture);
+            using (_state.BeginBatch())
+            {
+                foreach (var key in RequireResolvedKeys())
+                {
+                    var animationName = _state.IsEffectHidden(key) ? "rbq-fade-in" : "rbq-fade-out";
+                    ApplyFadeForKey(key, animationName, durationCss);
+                }
+            }
+
+            return this;
+        }
+
+        private QuerySelection ApplyFade(string animationName, TimeSpan duration)
+        {
+            ValidateFadeDuration(duration);
+
+            var durationCss = duration.TotalMilliseconds.ToString("0.####", CultureInfo.InvariantCulture);
+            using (_state.BeginBatch())
+            {
+                foreach (var key in RequireResolvedKeys())
+                    ApplyFadeForKey(key, animationName, durationCss);
+            }
+
+            return this;
+        }
+
+        private void ApplyFadeForKey(string key, string animationName, string durationCss)
+        {
+            if (animationName == "rbq-fade-in")
+                _state.Show(key);
+            else
+                _state.SetEffectHidden(key, hidden: true);
+
+            var selector = $"[data-rbq-key=\"{EscapeKey(key)}\"]";
+            _state.SetEffectAnimation(selector, $"{animationName} {durationCss}ms ease both");
+        }
+
+        private static void ValidateFadeDuration(TimeSpan duration)
+        {
+            if (duration < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(duration), duration, "Animation duration cannot be negative.");
+        }
+
+        private enum SlideDirection
+        {
+            Down,
+            Up
+        }
+
+        private static void ValidateCssPropertyName(string propertyName)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+            var customProperty = propertyName.StartsWith("--", StringComparison.Ordinal);
+            var start = customProperty ? 2 : propertyName[0] == '-' ? 1 : 0;
+            if (start == propertyName.Length || (!customProperty && !IsAsciiLetter(propertyName[start])))
+                throw new ArgumentException("CSS property names must be valid CSS identifiers.", nameof(propertyName));
+
+            for (var index = start; index < propertyName.Length; index++)
+            {
+                var character = propertyName[index];
+                if (!IsAsciiLetter(character) && !char.IsAsciiDigit(character) && character is not '-' and not '_')
+                    throw new ArgumentException("CSS property names must be valid CSS identifiers.", nameof(propertyName));
+            }
+        }
+
+        private static bool IsAsciiLetter(char character) => character is >= 'a' and <= 'z' or >= 'A' and <= 'Z';
+
         public QuerySelection On(string eventName, Action handler)
         {
             foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: false);
@@ -1319,7 +1713,7 @@ namespace Reflections.Blazor.Query
             ? ":not(*)"
             : string.Join(", ", keys.Select(key => $"[data-rbq-key=\"{EscapeKey(key)}\"]"));
 
-        private static string EscapeKey(string key) => key.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        internal static string EscapeKey(string key) => key.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
         private static string ValidateSelector(string selector)
         {

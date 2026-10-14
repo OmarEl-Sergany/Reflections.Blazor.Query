@@ -1,0 +1,16 @@
+@page "/navigation-state-test"
+@inject Query Query
+@inject LayoutQuery LayoutQuery
+
+<PageTitle>Navigation state test</PageTitle>
+<h1>Navigation state test</h1>
+<QueryElement TagName="p" ElementKey="navigation-state-page-target" Class="navigation-state-page-target">Page-scoped target</QueryElement>
+<p data-testid="navigation-state-ready">styles-applied</p>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Query.Select(".navigation-state-page-target").Css("color", "red");
+        LayoutQuery.Select(".sidebar").Css("background-color", "black");
+    }
+}

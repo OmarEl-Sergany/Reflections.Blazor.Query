@@ -1,0 +1,44 @@
+@page "/circuit-queue-test"
+@inject Query Query
+
+<PageTitle>Circuit queue test</PageTitle>
+<h1>Circuit queue test</h1>
+<p data-testid="circuit-queue-ready">@(_ready ? "ready" : "loading")</p>
+<QueryElement TagName="div" ElementKey="circuit-queue-target" Class="circuit-queue-target">Circuit queue owner</QueryElement>
+<button data-testid="start-circuit-queue" @onclick="StartQueue">Start long-running queued work</button>
+<p data-testid="circuit-queue-status">@_status</p>
+
+@code {
+    private bool _ready;
+    private string _status = "idle";
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ready = true;
+            StateHasChanged();
+        }
+    }
+
+    private void StartQueue()
+    {
+        var selection = Query.Select(".circuit-queue-target");
+        selection.Queue(async cancellationToken =>
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken));
+        _status = "running";
+        _ = ObserveDrainAsync(selection);
+    }
+
+    private static async Task ObserveDrainAsync(QuerySelection selection)
+    {
+        try
+        {
+            await selection.Dequeue();
+        }
+        catch (OperationCanceledException)
+        {
+            // Circuit/owner teardown cancels active token-aware queue work.
+        }
+    }
+}

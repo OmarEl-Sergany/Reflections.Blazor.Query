@@ -4,6 +4,11 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace Reflections.Blazor.Query;
 
+[EventHandler("onrbqanimationend", typeof(EventArgs), enableStopPropagation: true, enablePreventDefault: false)]
+public static class QueryCustomEventHandlers
+{
+}
+
 internal static class QueryEventDescriptors
 {
     private static readonly IReadOnlyDictionary<string, EventDescriptor> Descriptors = new Dictionary<string, EventDescriptor>(StringComparer.Ordinal)
@@ -32,6 +37,7 @@ internal static class QueryEventDescriptors
         ["onscroll"] = new(typeof(EventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<EventArgs>(receiver, args => state.TriggerAsync(key, name, (EventArgs)args)))),
         ["onerror"] = new(typeof(Microsoft.AspNetCore.Components.Web.ErrorEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.ErrorEventArgs>(receiver, args => state.TriggerAsync(key, name, (EventArgs)args)))),
         ["onload"] = new(typeof(ProgressEventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<ProgressEventArgs>(receiver, args => state.TriggerAsync(key, name, (EventArgs)args)))),
+        ["onrbqanimationend"] = new(typeof(EventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<EventArgs>(receiver, args => state.TriggerAsync(key, name, args))), StopPropagation: true),
         ["onunload"] = new(typeof(EventArgs), static (builder, sequence, receiver, state, key, name) => builder.AddAttribute(sequence, name, EventCallback.Factory.Create<EventArgs>(receiver, args => state.TriggerAsync(key, name, (EventArgs)args))))
     };
 
@@ -41,13 +47,18 @@ internal static class QueryEventDescriptors
             throw new ArgumentException($"Event '{eventName}' requires '{(Descriptors.TryGetValue(eventName, out descriptor) ? descriptor.ArgumentType.Name : "a supported Blazor event-argument type")}', not '{typeof(TEventArgs).Name}'.", nameof(eventName));
     }
 
-    public static bool AddBinding(RenderTreeBuilder builder, int sequence, object receiver, QueryRenderState state, string elementKey, string eventName)
+    public static int AddBinding(RenderTreeBuilder builder, int sequence, object receiver, QueryRenderState state, string elementKey, string eventName)
     {
         if (!Descriptors.TryGetValue(eventName, out var descriptor))
-            return false;
+            return 0;
         descriptor.AddBinding(builder, sequence, receiver, state, elementKey, eventName);
-        return true;
+        if (descriptor.StopPropagation)
+            builder.AddEventStopPropagationAttribute(sequence + 1, eventName, true);
+        return descriptor.StopPropagation ? 2 : 1;
     }
 
-    private sealed record EventDescriptor(Type ArgumentType, Action<RenderTreeBuilder, int, object, QueryRenderState, string, string> AddBinding);
+    private sealed record EventDescriptor(
+        Type ArgumentType,
+        Action<RenderTreeBuilder, int, object, QueryRenderState, string, string> AddBinding,
+        bool StopPropagation = false);
 }
