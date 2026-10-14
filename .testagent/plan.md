@@ -90,3 +90,12 @@
 2. Correct form-submit binding to `SubmitEventArgs` and model other supported events with the corresponding Blazor event args.
 3. Make typed `Trigger` validate registrations and dispatch typed handlers only; keep untyped `Trigger` semantics unchanged.
 4. Add table-driven descriptor validation and rendered callback tests for mouse, keyboard, change, focus, and submit events.
+
+---
+
+# Typed event helper APIs — plan
+
+1. Add event-specific `Action<TEventArgs>` overloads to helpers whose descriptor types are established.
+2. Keep parameterless helper overloads for existing synthetic triggers.
+3. Add unit API composition assertions and bUnit payload delivery tests for mouse, keyboard, and change events.
+4. Update generated metadata and README/project-plan matrix.

@@ -197,3 +197,17 @@
 - `Typed_Submit_renders_the_framework_event_args_callback_and_dispatches_it` proves form submit dispatch uses the framework callback contract.
 - `Typed_On_and_Trigger_preserve_the_native_event_payload_without_invoking_untyped_handlers` proves event payload identity and typed-only dispatch.
 - Validation: 122 unit and 34 component tests pass.
+
+---
+
+# Typed event helper APIs — status
+
+## Delivered
+
+- Added native-argument overloads to click/change/submit, focus, keyboard, mouse, context-menu, double-click, load/error, and unload helper methods.
+- Kept the existing no-argument trigger overloads. Resize and scroll remain generic event handlers because their useful values are not included in Blazor's callback payload.
+
+## Assertion review
+
+- `Typed_event_helpers_bind_to_their_native_argument_types_and_keep_synthetic_trigger_overloads` proves overload composition and unchanged synthetic trigger behavior.
+- `Typed_event_helpers_deliver_mouse_keyboard_and_change_payloads_from_Blazor` verifies browser args reach the event helpers in a real rendered component.

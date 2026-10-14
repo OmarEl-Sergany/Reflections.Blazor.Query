@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components;
 using Reflections.Blazor.Query;
 
 namespace Reflections.Blazor.Query.Tests;
@@ -206,6 +207,28 @@ public sealed class QueryClassesAndStructureTests
         selection.On<MouseEventArgs>("click", _ => typed++).Trigger("click", new MouseEventArgs());
         Assert.Equal(0, untyped);
         Assert.Equal(1, typed);
+    }
+
+    [Fact]
+    public void Typed_event_helpers_bind_to_their_native_argument_types_and_keep_synthetic_trigger_overloads()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var mouse = 0;
+        var keyboard = 0;
+        var change = 0;
+
+        query.Select(".button")
+            .Click((MouseEventArgs _) => mouse++)
+            .KeyDown((KeyboardEventArgs _) => keyboard++)
+            .Change((ChangeEventArgs _) => change++)
+            .Click()
+            .KeyDown()
+            .Change();
+
+        Assert.Equal(0, mouse);
+        Assert.Equal(0, keyboard);
+        Assert.Equal(0, change);
     }
 
     [Fact]

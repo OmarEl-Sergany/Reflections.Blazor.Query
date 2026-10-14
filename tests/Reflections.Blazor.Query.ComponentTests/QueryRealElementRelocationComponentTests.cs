@@ -563,6 +563,34 @@ public sealed class QueryRealElementRelocationComponentTests
         Assert.IsType<EventArgs>(observed);
     }
 
+    [Fact]
+    public void Typed_event_helpers_deliver_mouse_keyboard_and_change_payloads_from_Blazor()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "surface");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "button");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "surface");
+            builder.CloseComponent();
+        });
+        var selection = new Query(state, registry).Select(".surface");
+        MouseEventArgs? mouse = null;
+        KeyboardEventArgs? keyboard = null;
+        ChangeEventArgs? change = null;
+        selection.Click(args => mouse = args).KeyDown(args => keyboard = args).Change(args => change = args);
+
+        cut.Find("button").Click(new MouseEventArgs { ClientX = 42 });
+        cut.Find("button").KeyDown(new KeyboardEventArgs { Key = "K" });
+        cut.Find("button").Change(new ChangeEventArgs { Value = "updated" });
+
+        Assert.Equal(42, Assert.IsType<MouseEventArgs>(mouse).ClientX);
+        Assert.Equal("K", Assert.IsType<KeyboardEventArgs>(keyboard).Key);
+        Assert.Equal("updated", Assert.IsType<ChangeEventArgs>(change).Value);
+    }
+
     private static int CountOccurrences(string value, string fragment)
     {
         var count = 0;

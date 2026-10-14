@@ -159,3 +159,14 @@ Event registrations are keyed to an owned element identity. Destroying that iden
 2. Ensure `Submit` uses Blazor's actual submit argument type.
 3. Define `Trigger<TEventArgs>` so it cannot silently discard the payload or unexpectedly invoke untyped handlers.
 4. Test that each typed descriptor emits the expected callback type, including form and mouse/keyboard cases.
+
+---
+
+# Typed event helper APIs — research
+
+## Acceptance checklist
+
+1. Existing event helpers expose typed callback overloads for their matching Blazor event argument type.
+2. Existing parameterless trigger helpers remain unchanged.
+3. Component tests prove mouse, keyboard, and change helper overloads deliver native payloads.
+4. Generator metadata and API docs identify the typed helper surface.
