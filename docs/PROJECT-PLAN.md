@@ -105,7 +105,7 @@ Implement with Blazor event descriptors and generated handler metadata:
 
 `Bind`, `Blur`, `Change`, `Click`, `ContextMenu`, `DBLClick`, `Focus`, `FocusIn`, `FocusOut`, `Hover`, `KeyDown`, `KeyPress`, `KeyUp`, `MouseDown`, `MouseEnter`, `MouseLeave`, `MouseMove`, `MouseOut`, `MouseOver`, `MouseUp`, `Off`, `One`, `Resize`, `Scroll`, `Submit`, `Unbind`.
 
-Compatibility note: `Bind` and `Unbind` are legacy jQuery names. They may be provided only as compatibility aliases over the supported event model and must be clearly marked as legacy in documentation.
+Compatibility note: `Bind` and `Unbind` are legacy jQuery names, implemented only as compatibility aliases over `On` and `Off`. `TriggerHandler` and its typed overload use local library-owned dispatch for the selected elements and do not bubble to a parent element.
 
 Typed overloads (`On<TEventArgs>`, `Off<TEventArgs>`, and `Trigger<TEventArgs>`) are available for supported browser events. A single event descriptor maps the normalized event name to its Blazor callback type; mismatches and unsupported event names are rejected before state mutation. `Trigger<TEventArgs>` dispatches typed registrations only; parameterless `Trigger` retains the untyped synthetic event contract. Typed and untyped handlers are rendered through the same Blazor-owned event attribute.
 

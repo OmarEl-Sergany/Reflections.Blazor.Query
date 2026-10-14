@@ -132,9 +132,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `On` / `Off` / `One` / `Trigger` — library-owned C# handlers rendered as Blazor event bindings. Generic overloads preserve native Blazor arguments for supported event names; `Trigger<TEventArgs>` dispatches typed handlers only. Untyped handlers remain source-compatible, and `One` consumes its callback after its first dispatch.
 - [x] Typed event helpers — `Click`, `Change`, `Submit`, focus helpers, keyboard helpers, mouse helpers, `ContextMenu`, `DblClick`, `Error`, `Load`, and `Unload` accept native Blazor event argument callbacks. Their existing parameterless forms remain synthetic C# triggers. `Resize` and `Scroll` remain untyped because Blazor does not provide their measurements in event args.
 - [x] Event registration lifecycle — removing a virtual node or disposing a real `QueryElement` releases its untyped, typed, and delegated-root callbacks. Event state cannot outlive its owning element identity.
-- [ ] `TriggerHandler`
-- [ ] `Bind` (legacy alias)
-- [ ] `Unbind` (legacy alias)
+- [x] `TriggerHandler` / `Bind` / `Unbind` — typed and untyped aliases over the library-owned event pipeline. `Bind` / `Unbind` remain legacy compatibility names; `TriggerHandler<TEventArgs>` dispatches typed handlers for the selected elements.
 - [ ] `Blur`
 - [ ] `Change`
 - [ ] `Click`

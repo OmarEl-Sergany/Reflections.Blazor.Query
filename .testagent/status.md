@@ -211,3 +211,18 @@
 
 - `Typed_event_helpers_bind_to_their_native_argument_types_and_keep_synthetic_trigger_overloads` proves overload composition and unchanged synthetic trigger behavior.
 - `Typed_event_helpers_deliver_mouse_keyboard_and_change_payloads_from_Blazor` verifies browser args reach the event helpers in a real rendered component.
+
+---
+
+# Event compatibility aliases — status
+
+## Delivered
+
+- Added generic `Bind<TEventArgs>`, `Unbind<TEventArgs>`, and `TriggerHandler<TEventArgs>` forwarding to the typed handler pipeline.
+- Preserved existing untyped signatures and marked Bind/Unbind as legacy aliases in docs.
+
+## Assertion review
+
+- `Typed_Bind_Unbind_and_TriggerHandler_preserve_payload_and_remove_only_the_requested_handler` proves payload delivery and targeted unbinding.
+- `TriggerHandler_without_event_arguments_remains_an_untyped_source_compatible_alias` covers the existing overload.
+- `Generated_metadata_advertises_typed_event_compatibility_aliases` verifies generated API metadata.

@@ -43,6 +43,35 @@ public sealed class QueryClassesAndStructureTests
     }
 
     [Fact]
+    public void Typed_Bind_Unbind_and_TriggerHandler_preserve_payload_and_remove_only_the_requested_handler()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var firstCount = 0;
+        MouseEventArgs? observed = null;
+        Action<MouseEventArgs> first = _ => firstCount++;
+        Action<MouseEventArgs> second = args => observed = args;
+        var payload = new MouseEventArgs { ClientX = 91 };
+
+        query.Select(".button").Bind("click", first).Bind("click", second).Unbind("click", first).TriggerHandler("click", payload);
+
+        Assert.Equal(0, firstCount);
+        Assert.Same(payload, Assert.IsType<MouseEventArgs>(observed));
+    }
+
+    [Fact]
+    public void TriggerHandler_without_event_arguments_remains_an_untyped_source_compatible_alias()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var count = 0;
+
+        query.Select(".button").Bind("click", () => count++).TriggerHandler("click");
+
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
     public void Click_change_and_submit_helpers_bind_and_trigger_their_normalized_events()
     {
         var (query, registry, _) = CreateQuery(); registry.Register("form", ".form"); var count = 0;
@@ -651,6 +680,17 @@ public sealed class QueryClassesAndStructureTests
         Assert.Contains("InsertAfter", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("WrapAll", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("WrapInner", QueryGeneratedMetadata.SupportedOperations);
+    }
+
+    [Fact]
+    public void Generated_metadata_advertises_typed_event_compatibility_aliases()
+    {
+        Assert.Contains("TriggerHandler", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("Bind", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("Unbind", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedTriggerHandler", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedBind", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedUnbind", QueryGeneratedMetadata.SupportedOperations);
     }
 
     [Fact]

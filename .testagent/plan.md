@@ -99,3 +99,12 @@
 2. Keep parameterless helper overloads for existing synthetic triggers.
 3. Add unit API composition assertions and bUnit payload delivery tests for mouse, keyboard, and change events.
 4. Update generated metadata and README/project-plan matrix.
+
+---
+
+# Event compatibility aliases — plan
+
+1. Add typed overloads for `Bind` and `Unbind` forwarding to typed `On`/`Off`.
+2. Add typed `TriggerHandler<TEventArgs>` forwarding to typed local dispatch.
+3. Test targeted unbinding, typed payload dispatch, and existing parameterless aliases.
+4. Mark compatibility APIs in metadata and documentation.

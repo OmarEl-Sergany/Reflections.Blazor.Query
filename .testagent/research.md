@@ -170,3 +170,14 @@ Event registrations are keyed to an owned element identity. Destroying that iden
 2. Existing parameterless trigger helpers remain unchanged.
 3. Component tests prove mouse, keyboard, and change helper overloads deliver native payloads.
 4. Generator metadata and API docs identify the typed helper surface.
+
+---
+
+# Event compatibility aliases — research
+
+## Acceptance checklist
+
+1. `Bind` and `Unbind` support both untyped and typed callbacks and preserve `On`/`Off` removal semantics.
+2. `TriggerHandler` has a typed overload that dispatches only typed callbacks for the selected elements.
+3. Existing parameterless `TriggerHandler` behavior remains source-compatible.
+4. Generated metadata, README, and project plan identify these compatibility APIs.

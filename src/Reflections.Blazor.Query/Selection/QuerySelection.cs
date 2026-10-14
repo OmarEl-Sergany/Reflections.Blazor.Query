@@ -86,8 +86,11 @@ namespace Reflections.Blazor.Query
             return this;
         }
         public QuerySelection TriggerHandler(string eventName) => Trigger(eventName);
+        public QuerySelection TriggerHandler<TEventArgs>(string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs => Trigger(eventName, eventArgs);
         public QuerySelection Bind(string eventName, Action handler) => On(eventName, handler);
+        public QuerySelection Bind<TEventArgs>(string eventName, Action<TEventArgs> handler) where TEventArgs : EventArgs => On(eventName, handler);
         public QuerySelection Unbind(string eventName, Action? handler = null) => Off(eventName, handler);
+        public QuerySelection Unbind<TEventArgs>(string eventName, Action<TEventArgs>? handler = null) where TEventArgs : EventArgs => Off(eventName, handler);
         public QuerySelection DelegateJS(string selector, string eventName, Action<QueryEventTarget> handler)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);
