@@ -22,6 +22,7 @@ public class QueryRenderState
     private readonly Dictionary<string, string> _contentWrapperByOwner = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RenderFragment> _innerContentByWrapper = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Key, string EventName), List<QueryEventHandler>> _eventHandlers = new();
+    private readonly Dictionary<(string Key, string EventName), List<QueryTypedEventHandler>> _typedEventHandlers = new();
     private readonly Dictionary<(string RootKey, string EventName), List<QueryDelegatedEventHandler>> _delegatedEventHandlers = new();
     private readonly Dictionary<string, string> _relocatedParent = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _relocatedChildrenByHost = new(StringComparer.Ordinal);
@@ -69,7 +70,9 @@ public class QueryRenderState
         _innerContentByWrapper.TryGetValue(wrapperKey, out var fragment) ? fragment : null;
     internal IReadOnlyList<string> EventNamesFor(string elementKey) => _eventHandlers.Keys
         .Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal))
-        .Select(key => key.EventName).Distinct(StringComparer.Ordinal).ToArray();
+        .Select(key => key.EventName)
+        .Concat(_typedEventHandlers.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).Select(key => key.EventName))
+        .Distinct(StringComparer.Ordinal).ToArray();
     internal IReadOnlyList<string> DelegatedEventNamesFor(string rootKey) => _delegatedEventHandlers.Keys
         .Where(key => string.Equals(key.RootKey, rootKey, StringComparison.Ordinal))
         .Select(key => key.EventName)
@@ -91,16 +94,51 @@ public class QueryRenderState
         else { handlers.RemoveAll(entry => entry.Handler == handler); if (handlers.Count == 0) _eventHandlers.Remove((elementKey, eventName)); }
         NotifyChanged();
     }
-    internal void Trigger(string elementKey, string eventName)
+    internal void On<TEventArgs>(string elementKey, string eventName, Action<TEventArgs> handler, bool once) where TEventArgs : EventArgs
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        QueryEventDescriptors.Validate<TEventArgs>(eventName);
+        (_typedEventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _typedEventHandlers[(elementKey, eventName)] = [])
+            .Add(new(args => handler((TEventArgs)args), handler, typeof(TEventArgs), once));
+        NotifyChanged();
+    }
+    internal void Off<TEventArgs>(string elementKey, string eventName, Action<TEventArgs>? handler = null) where TEventArgs : EventArgs
     {
         eventName = NormalizeEventName(eventName);
-        if (!_eventHandlers.TryGetValue((elementKey, eventName), out var handlers)) return;
-        foreach (var entry in handlers.ToArray())
+        if (!_typedEventHandlers.TryGetValue((elementKey, eventName), out var handlers))
+            return;
+        handlers.RemoveAll(entry => entry.ArgumentType == typeof(TEventArgs)
+            && (handler is null || entry.OriginalHandler.Equals(handler)));
+        if (handlers.Count == 0)
+            _typedEventHandlers.Remove((elementKey, eventName));
+        NotifyChanged();
+    }
+    internal void Trigger(string elementKey, string eventName, EventArgs? eventArgs = null)
+    {
+        eventName = NormalizeEventName(eventName);
+        if (_eventHandlers.TryGetValue((elementKey, eventName), out var handlers))
         {
-            entry.Handler();
-            if (entry.Once) handlers.Remove(entry);
+            foreach (var entry in handlers.ToArray())
+            {
+                entry.Handler();
+                if (entry.Once) handlers.Remove(entry);
+            }
+            if (handlers.Count == 0) _eventHandlers.Remove((elementKey, eventName));
         }
-        if (handlers.Count == 0) _eventHandlers.Remove((elementKey, eventName));
+        if (eventArgs is not null && _typedEventHandlers.TryGetValue((elementKey, eventName), out var typedHandlers))
+        {
+            foreach (var entry in typedHandlers.ToArray())
+            {
+                if (entry.ArgumentType.IsInstanceOfType(eventArgs))
+                {
+                    entry.Handler(eventArgs);
+                    if (entry.Once) typedHandlers.Remove(entry);
+                }
+            }
+            if (typedHandlers.Count == 0) _typedEventHandlers.Remove((elementKey, eventName));
+        }
         NotifyChanged();
     }
     internal void Delegate(string rootKey, string selector, string eventName, Action<QueryEventTarget> handler)
@@ -485,7 +523,7 @@ public class QueryRenderState
             && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0
             && _prepended.Count == 0 && _appended.Count == 0 && _virtualNodes.Count == 0 && _virtualChildKeys.Count == 0
             && _realElementFragments.Count == 0 && _innerContentByOwner.Count == 0 && _innerWrapperByOwner.Count == 0
-            && _contentWrapperByOwner.Count == 0 && _innerContentByWrapper.Count == 0 && _eventHandlers.Count == 0 && _delegatedEventHandlers.Count == 0 && _relocatedParent.Count == 0
+            && _contentWrapperByOwner.Count == 0 && _innerContentByWrapper.Count == 0 && _eventHandlers.Count == 0 && _typedEventHandlers.Count == 0 && _delegatedEventHandlers.Count == 0 && _relocatedParent.Count == 0
             && _relocatedChildrenByHost.Count == 0)
             return;
         _styles.Clear();
@@ -507,6 +545,7 @@ public class QueryRenderState
         _contentWrapperByOwner.Clear();
         _innerContentByWrapper.Clear();
         _eventHandlers.Clear();
+        _typedEventHandlers.Clear();
         _delegatedEventHandlers.Clear();
         _relocatedParent.Clear();
         _relocatedChildrenByHost.Clear();
@@ -598,5 +637,6 @@ public class QueryRenderState
 public sealed record QueryStyleRule(string Selector, string Property, string Value);
 internal sealed record QueryContent(string Value, bool IsHtml);
 internal sealed record QueryEventHandler(Action Handler, bool Once);
+internal sealed record QueryTypedEventHandler(Action<EventArgs> Handler, Delegate OriginalHandler, Type ArgumentType, bool Once);
 internal sealed record QueryDelegatedEventHandler(string Selector, Action<QueryEventTarget> Handler);
 internal sealed record QueryVirtualNode(string Key, string? ParentKey, string TagName, string? ClassName, string? Text, bool IsHtml);

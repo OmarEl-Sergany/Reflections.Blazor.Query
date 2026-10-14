@@ -106,7 +106,10 @@ public sealed class QueryElement : ComponentBase, IDisposable
         foreach (var property in renderState.PropertiesFor(ElementKey))
             builder.AddAttribute(sequence++, property.Key, property.Value);
         foreach (var eventName in renderState.EventNamesFor(ElementKey))
-            builder.AddAttribute(sequence++, eventName, (Action)(() => renderState.Trigger(ElementKey, eventName)));
+        {
+            if (!QueryEventDescriptors.AddBinding(builder, sequence++, this, renderState, ElementKey, eventName))
+                builder.AddAttribute(sequence - 1, eventName, (Action)(() => renderState.Trigger(ElementKey, eventName)));
+        }
         foreach (var eventName in renderState.DelegatedEventNamesFor(ElementKey))
             builder.AddAttribute(sequence++, QueryDelegatedEvents.AttributeName(eventName),
                 EventCallback.Factory.Create<QueryEventTarget>(this, target => renderState.TriggerDelegated(ElementKey, eventName, target, Registry)));
@@ -172,7 +175,10 @@ public sealed class QueryElement : ComponentBase, IDisposable
         foreach (var property in renderState.PropertiesFor(elementKey))
             builder.AddAttribute(sequence++, property.Key, property.Value);
         foreach (var eventName in renderState.EventNamesFor(elementKey))
-            builder.AddAttribute(sequence++, eventName, (Action)(() => renderState.Trigger(elementKey, eventName)));
+        {
+            if (!QueryEventDescriptors.AddBinding(builder, sequence++, renderState, renderState, elementKey, eventName))
+                builder.AddAttribute(sequence - 1, eventName, (Action)(() => renderState.Trigger(elementKey, eventName)));
+        }
         foreach (var fragment in renderState.PrependedFor(elementKey))
             AddFragment(builder, ref sequence, fragment);
         var content = renderState.ContentFor(elementKey) ?? (node.Text is null ? null : new QueryContent(node.Text, node.IsHtml));

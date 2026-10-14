@@ -54,6 +54,11 @@ namespace Reflections.Blazor.Query
             foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: false);
             return this;
         }
+        public QuerySelection On<TEventArgs>(string eventName, Action<TEventArgs> handler) where TEventArgs : EventArgs
+        {
+            foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: false);
+            return this;
+        }
         public QuerySelection One(string eventName, Action handler)
         {
             foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: true);
@@ -64,9 +69,20 @@ namespace Reflections.Blazor.Query
             foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName, handler);
             return this;
         }
+        public QuerySelection Off<TEventArgs>(string eventName, Action<TEventArgs>? handler = null) where TEventArgs : EventArgs
+        {
+            foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName, handler);
+            return this;
+        }
         public QuerySelection Trigger(string eventName)
         {
             foreach (var key in RequireResolvedKeys()) _state.Trigger(key, eventName);
+            return this;
+        }
+        public QuerySelection Trigger<TEventArgs>(string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs
+        {
+            ArgumentNullException.ThrowIfNull(eventArgs);
+            foreach (var key in RequireResolvedKeys()) _state.Trigger(key, eventName, eventArgs);
             return this;
         }
         public QuerySelection TriggerHandler(string eventName) => Trigger(eventName);

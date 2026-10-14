@@ -2,6 +2,7 @@ using Bunit;
 using System;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Reflections.Blazor.Query;
 
@@ -516,6 +517,28 @@ public sealed class QueryRealElementRelocationComponentTests
         cut.Find("button").Click();
 
         Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public void Typed_On_renders_a_Blazor_owned_click_binding_that_preserves_mouse_event_arguments()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "button");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "button");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "button");
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+        MouseEventArgs? observed = null;
+        query.Select(".button").On<MouseEventArgs>("click", args => observed = args);
+
+        cut.Find("button").Click(new MouseEventArgs { ClientX = 29 });
+
+        Assert.Equal(29, Assert.IsType<MouseEventArgs>(observed).ClientX);
     }
 
     private static int CountOccurrences(string value, string fragment)

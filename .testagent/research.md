@@ -119,3 +119,18 @@ Blazor event callbacks carry typed event arguments but do not expose the browser
 - No JS-managed listener registration, mutation, selector matching, or handler storage.
 - Typed handlers must render as Blazor `EventCallback<TEventArgs>` bindings.
 - Delegated routing must reject a target outside the delegating root or scope.
+
+---
+
+# Typed event arguments — research
+
+## Boundary
+
+Typed browser callbacks must be rendered as the matching Blazor `EventCallback<TEventArgs>` determined by the normalized DOM event name. A generic runtime callback cannot safely replace that mapping without reflection or a loose `object` payload, both of which weaken the public contract.
+
+## Acceptance checklist
+
+1. `On<TEventArgs>` and `Trigger<TEventArgs>` retain the concrete event-argument object through C# dispatch.
+2. Typed and untyped handlers registered for the same event both run from one rendered Blazor binding.
+3. Typed registration rejects a mismatched event-argument type before mutating state.
+4. Existing untyped event APIs remain source-compatible.

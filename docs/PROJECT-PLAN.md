@@ -40,7 +40,7 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 #### Sprint 4 — Events & Forms (Feature 4469)
 
-- [ ] Fluent event binding: `On`, `Off`, `One`, and `Trigger`.
+- [x] Fluent event binding: `On`, `Off`, `One`, and `Trigger`, including native `TEventArgs` overloads for supported Blazor event descriptors.
 - [x] Form-state handlers: `Serialize` and `SerializeArray` — read-only form observation (`SerializeAsync` / `SerializeArrayAsync`) via the queued, coalesced, read-only JS boundary defined in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). jQuery "successful control" semantics; no DOM mutation.
 
 #### Sprint 5 — Effects & Queues (Feature 4470)
@@ -106,6 +106,8 @@ Implement with Blazor event descriptors and generated handler metadata:
 `Bind`, `Blur`, `Change`, `Click`, `ContextMenu`, `DBLClick`, `Focus`, `FocusIn`, `FocusOut`, `Hover`, `KeyDown`, `KeyPress`, `KeyUp`, `MouseDown`, `MouseEnter`, `MouseLeave`, `MouseMove`, `MouseOut`, `MouseOver`, `MouseUp`, `Off`, `One`, `Resize`, `Scroll`, `Submit`, `Unbind`.
 
 Compatibility note: `Bind` and `Unbind` are legacy jQuery names. They may be provided only as compatibility aliases over the supported event model and must be clearly marked as legacy in documentation.
+
+Typed overloads (`On<TEventArgs>`, `Off<TEventArgs>`, and `Trigger<TEventArgs>`) are available for supported browser events. The normalized event name determines the only permitted argument type (`MouseEventArgs`, `KeyboardEventArgs`, `ChangeEventArgs`, `FocusEventArgs`, or `EventArgs`); mismatches are rejected before state mutation. Typed and untyped handlers share one Blazor-owned binding and dispatch pipeline.
 
 ### Tier 4 - explicit compatibility or non-core features
 

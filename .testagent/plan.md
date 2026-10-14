@@ -64,3 +64,12 @@
 3. Add a read-only JS target-key resolver and an injectable bridge contract.
 4. Add DelegateJS and Undelegate with root and component-scope validation.
 5. Cover typed invocation, rejected out-of-scope targets, and browser event dispatch in unit/component tests.
+
+---
+
+# Typed event arguments — plan
+
+1. Add a finite normalized event-name to native Blazor event-args descriptor map.
+2. Store typed handlers alongside existing untyped handlers and dispatch both from one event record.
+3. Render the descriptor-selected `EventCallback<TEventArgs>` for real and virtual nodes.
+4. Add direct tests for payload preservation, shared typed/untyped dispatch, and type mismatch rejection.

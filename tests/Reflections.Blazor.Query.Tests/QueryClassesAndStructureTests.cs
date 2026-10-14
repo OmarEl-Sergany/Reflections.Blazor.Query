@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Microsoft.AspNetCore.Components.Web;
 using Reflections.Blazor.Query;
 
 namespace Reflections.Blazor.Query.Tests;
@@ -137,6 +138,48 @@ public sealed class QueryClassesAndStructureTests
 
         var virtualRoot = query.Select(".root").AppendElement("div", "virtual-root");
         Assert.Throws<InvalidOperationException>(() => virtualRoot.DelegateJS(".item", "click", _ => { }));
+    }
+
+    [Fact]
+    public void Typed_On_and_Trigger_preserve_the_native_event_payload_and_share_dispatch_with_untyped_handlers()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        MouseEventArgs? observed = null;
+        var untypedCount = 0;
+        var payload = new MouseEventArgs { ClientX = 37, ClientY = 19 };
+
+        query.Select(".button").On("click", () => untypedCount++).On<MouseEventArgs>("click", args => observed = args).Trigger("click", payload);
+
+        Assert.Equal(1, untypedCount);
+        var captured = Assert.IsType<MouseEventArgs>(observed);
+        Assert.Same(payload, captured);
+        Assert.Equal(37, captured.ClientX);
+    }
+
+    [Fact]
+    public void Typed_On_rejects_an_event_argument_type_that_does_not_match_the_browser_event()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+
+        Assert.Throws<ArgumentException>(() => query.Select(".button").On<KeyboardEventArgs>("click", _ => { }));
+    }
+
+    [Fact]
+    public void Typed_Off_removes_only_the_matching_typed_handler()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var first = 0;
+        var second = 0;
+        Action<MouseEventArgs> firstHandler = _ => first++;
+        Action<MouseEventArgs> secondHandler = _ => second++;
+
+        query.Select(".button").On("click", firstHandler).On("click", secondHandler).Off("click", firstHandler).Trigger("click", new MouseEventArgs());
+
+        Assert.Equal(0, first);
+        Assert.Equal(1, second);
     }
 
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()

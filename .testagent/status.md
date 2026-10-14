@@ -147,4 +147,21 @@
 ## Validation
 
 - Unit tests: 116 passed.
-- Component tests: 31 passed.
+- Component tests: 32 passed after the typed-event component regression was added.
+
+---
+
+# Typed event arguments — status
+
+## Delivered
+
+- `On<TEventArgs>`, `Off<TEventArgs>`, and `Trigger<TEventArgs>` preserve supported native Blazor event arguments without reflection dispatch.
+- The event descriptor map renders the correct `EventCallback<TEventArgs>` from the normalized browser event name, allowing typed and existing untyped callbacks to share one binding.
+- Mismatched event/name argument types fail before any registration is stored.
+
+## Assertion review
+
+- `Typed_On_and_Trigger_preserve_the_native_event_payload_and_share_dispatch_with_untyped_handlers` proves payload identity and compatibility with untyped handlers.
+- `Typed_On_rejects_an_event_argument_type_that_does_not_match_the_browser_event` proves pre-mutation contract validation.
+- `Typed_Off_removes_only_the_matching_typed_handler` proves targeted typed removal.
+- `Typed_On_renders_a_Blazor_owned_click_binding_that_preserves_mouse_event_arguments` proves a rendered Blazor click binding supplies the typed payload.
