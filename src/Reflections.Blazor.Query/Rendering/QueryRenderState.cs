@@ -23,6 +23,8 @@ public class QueryRenderState
     private readonly Dictionary<string, RenderFragment> _innerContentByWrapper = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Key, string EventName), List<QueryEventHandler>> _eventHandlers = new();
     private readonly Dictionary<(string Key, string EventName), List<QueryTypedEventHandler>> _typedEventHandlers = new();
+    private readonly Dictionary<(string Key, string EventName), List<QueryAsyncEventHandler>> _asyncEventHandlers = new();
+    private readonly Dictionary<(string Key, string EventName), List<QueryTypedAsyncEventHandler>> _typedAsyncEventHandlers = new();
     private readonly Dictionary<(string RootKey, string EventName), List<QueryDelegatedEventHandler>> _delegatedEventHandlers = new();
     private readonly Dictionary<string, string> _relocatedParent = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _relocatedChildrenByHost = new(StringComparer.Ordinal);
@@ -72,6 +74,8 @@ public class QueryRenderState
         .Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal))
         .Select(key => key.EventName)
         .Concat(_typedEventHandlers.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).Select(key => key.EventName))
+        .Concat(_asyncEventHandlers.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).Select(key => key.EventName))
+        .Concat(_typedAsyncEventHandlers.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).Select(key => key.EventName))
         .Distinct(StringComparer.Ordinal).ToArray();
     internal IReadOnlyList<string> DelegatedEventNamesFor(string rootKey) => _delegatedEventHandlers.Keys
         .Where(key => string.Equals(key.RootKey, rootKey, StringComparison.Ordinal))
@@ -89,9 +93,33 @@ public class QueryRenderState
     internal void Off(string elementKey, string eventName, Action? handler = null)
     {
         eventName = NormalizeEventName(eventName);
-        if (!_eventHandlers.TryGetValue((elementKey, eventName), out var handlers)) return;
-        if (handler is null) _eventHandlers.Remove((elementKey, eventName));
-        else { handlers.RemoveAll(entry => entry.Handler == handler); if (handlers.Count == 0) _eventHandlers.Remove((elementKey, eventName)); }
+        var key = (elementKey, eventName);
+        if (handler is null)
+        {
+            _eventHandlers.Remove(key);
+            _asyncEventHandlers.Remove(key);
+        }
+        else if (_eventHandlers.TryGetValue(key, out var handlers))
+        {
+            handlers.RemoveAll(entry => entry.Handler == handler);
+            if (handlers.Count == 0) _eventHandlers.Remove(key);
+        }
+        NotifyChanged();
+    }
+    internal void On(string elementKey, string eventName, Func<Task> handler, bool once)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        (_asyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _asyncEventHandlers[(elementKey, eventName)] = []).Add(new(handler, once));
+        NotifyChanged();
+    }
+    internal void Off(string elementKey, string eventName, Func<Task>? handler)
+    {
+        eventName = NormalizeEventName(eventName);
+        if (!_asyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers)) return;
+        if (handler is null) _asyncEventHandlers.Remove((elementKey, eventName));
+        else { handlers.RemoveAll(entry => entry.Handler == handler); if (handlers.Count == 0) _asyncEventHandlers.Remove((elementKey, eventName)); }
         NotifyChanged();
     }
     internal void On<TEventArgs>(string elementKey, string eventName, Action<TEventArgs> handler, bool once) where TEventArgs : EventArgs
@@ -107,12 +135,38 @@ public class QueryRenderState
     internal void Off<TEventArgs>(string elementKey, string eventName, Action<TEventArgs>? handler = null) where TEventArgs : EventArgs
     {
         eventName = NormalizeEventName(eventName);
-        if (!_typedEventHandlers.TryGetValue((elementKey, eventName), out var handlers))
+        var key = (elementKey, eventName);
+        if (handler is null)
+        {
+            _typedEventHandlers.Remove(key);
+            _typedAsyncEventHandlers.Remove(key);
+        }
+        else if (_typedEventHandlers.TryGetValue(key, out var handlers))
+        {
+            handlers.RemoveAll(entry => entry.ArgumentType == typeof(TEventArgs) && entry.OriginalHandler.Equals(handler));
+            if (handlers.Count == 0) _typedEventHandlers.Remove(key);
+        }
+        NotifyChanged();
+    }
+    internal void On<TEventArgs>(string elementKey, string eventName, Func<TEventArgs, Task> handler, bool once) where TEventArgs : EventArgs
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        QueryEventDescriptors.Validate<TEventArgs>(eventName);
+        (_typedAsyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _typedAsyncEventHandlers[(elementKey, eventName)] = [])
+            .Add(new(args => handler((TEventArgs)args), handler, typeof(TEventArgs), once));
+        NotifyChanged();
+    }
+    internal void Off<TEventArgs>(string elementKey, string eventName, Func<TEventArgs, Task>? handler) where TEventArgs : EventArgs
+    {
+        eventName = NormalizeEventName(eventName);
+        if (!_typedAsyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers))
             return;
         handlers.RemoveAll(entry => entry.ArgumentType == typeof(TEventArgs)
             && (handler is null || entry.OriginalHandler.Equals(handler)));
         if (handlers.Count == 0)
-            _typedEventHandlers.Remove((elementKey, eventName));
+            _typedAsyncEventHandlers.Remove((elementKey, eventName));
         NotifyChanged();
     }
     internal void Trigger(string elementKey, string eventName, EventArgs? eventArgs = null)
@@ -158,6 +212,81 @@ public class QueryRenderState
         }
         if (handlers.Count == 0)
             _typedEventHandlers.Remove((elementKey, eventName));
+        NotifyChanged();
+    }
+    internal async Task TriggerAsync(string elementKey, string eventName, EventArgs? eventArgs = null)
+    {
+        eventName = NormalizeEventName(eventName);
+        var key = (elementKey, eventName);
+        if (_eventHandlers.TryGetValue(key, out var synchronous))
+        {
+            foreach (var entry in synchronous.ToArray())
+            {
+                if (entry.Once) synchronous.Remove(entry);
+                entry.Handler();
+            }
+            if (synchronous.Count == 0) _eventHandlers.Remove(key);
+        }
+        if (_asyncEventHandlers.TryGetValue(key, out var asynchronous))
+        {
+            foreach (var entry in asynchronous.ToArray())
+            {
+                if (entry.Once) asynchronous.Remove(entry);
+                await entry.Handler();
+            }
+            if (asynchronous.Count == 0) _asyncEventHandlers.Remove(key);
+        }
+        if (eventArgs is not null)
+        {
+            if (_typedEventHandlers.TryGetValue(key, out var typed))
+            {
+                foreach (var entry in typed.ToArray())
+                {
+                    if (!entry.ArgumentType.IsInstanceOfType(eventArgs)) continue;
+                    if (entry.Once) typed.Remove(entry);
+                    entry.Handler(eventArgs);
+                }
+                if (typed.Count == 0) _typedEventHandlers.Remove(key);
+            }
+            if (_typedAsyncEventHandlers.TryGetValue(key, out var typedAsync))
+            {
+                foreach (var entry in typedAsync.ToArray())
+                {
+                    if (!entry.ArgumentType.IsInstanceOfType(eventArgs)) continue;
+                    if (entry.Once) typedAsync.Remove(entry);
+                    await entry.Handler(eventArgs);
+                }
+                if (typedAsync.Count == 0) _typedAsyncEventHandlers.Remove(key);
+            }
+        }
+        NotifyChanged();
+    }
+    internal async Task TriggerAsync<TEventArgs>(string elementKey, string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs
+    {
+        ArgumentNullException.ThrowIfNull(eventArgs);
+        eventName = NormalizeEventName(eventName);
+        QueryEventDescriptors.Validate<TEventArgs>(eventName);
+        var key = (elementKey, eventName);
+        if (_typedEventHandlers.TryGetValue(key, out var synchronous))
+        {
+            foreach (var entry in synchronous.ToArray())
+            {
+                if (entry.ArgumentType != typeof(TEventArgs)) continue;
+                if (entry.Once) synchronous.Remove(entry);
+                entry.Handler(eventArgs);
+            }
+            if (synchronous.Count == 0) _typedEventHandlers.Remove(key);
+        }
+        if (_typedAsyncEventHandlers.TryGetValue(key, out var asynchronous))
+        {
+            foreach (var entry in asynchronous.ToArray())
+            {
+                if (entry.ArgumentType != typeof(TEventArgs)) continue;
+                if (entry.Once) asynchronous.Remove(entry);
+                await entry.Handler(eventArgs);
+            }
+            if (asynchronous.Count == 0) _typedAsyncEventHandlers.Remove(key);
+        }
         NotifyChanged();
     }
     internal void Delegate(string rootKey, string selector, string eventName, Action<QueryEventTarget> handler)
@@ -359,6 +488,8 @@ public class QueryRenderState
         var removed = false;
         removed |= RemoveEntries(_eventHandlers, elementKey);
         removed |= RemoveEntries(_typedEventHandlers, elementKey);
+        removed |= RemoveEntries(_asyncEventHandlers, elementKey);
+        removed |= RemoveEntries(_typedAsyncEventHandlers, elementKey);
         var delegatedKeys = _delegatedEventHandlers.Keys.Where(key => string.Equals(key.RootKey, elementKey, StringComparison.Ordinal)).ToArray();
         foreach (var key in delegatedKeys)
             _delegatedEventHandlers.Remove(key);
@@ -567,7 +698,7 @@ public class QueryRenderState
             && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0
             && _prepended.Count == 0 && _appended.Count == 0 && _virtualNodes.Count == 0 && _virtualChildKeys.Count == 0
             && _realElementFragments.Count == 0 && _innerContentByOwner.Count == 0 && _innerWrapperByOwner.Count == 0
-            && _contentWrapperByOwner.Count == 0 && _innerContentByWrapper.Count == 0 && _eventHandlers.Count == 0 && _typedEventHandlers.Count == 0 && _delegatedEventHandlers.Count == 0 && _relocatedParent.Count == 0
+            && _contentWrapperByOwner.Count == 0 && _innerContentByWrapper.Count == 0 && _eventHandlers.Count == 0 && _typedEventHandlers.Count == 0 && _asyncEventHandlers.Count == 0 && _typedAsyncEventHandlers.Count == 0 && _delegatedEventHandlers.Count == 0 && _relocatedParent.Count == 0
             && _relocatedChildrenByHost.Count == 0)
             return;
         _styles.Clear();
@@ -590,6 +721,8 @@ public class QueryRenderState
         _innerContentByWrapper.Clear();
         _eventHandlers.Clear();
         _typedEventHandlers.Clear();
+        _asyncEventHandlers.Clear();
+        _typedAsyncEventHandlers.Clear();
         _delegatedEventHandlers.Clear();
         _relocatedParent.Clear();
         _relocatedChildrenByHost.Clear();
@@ -682,5 +815,7 @@ public sealed record QueryStyleRule(string Selector, string Property, string Val
 internal sealed record QueryContent(string Value, bool IsHtml);
 internal sealed record QueryEventHandler(Action Handler, bool Once);
 internal sealed record QueryTypedEventHandler(Action<EventArgs> Handler, Delegate OriginalHandler, Type ArgumentType, bool Once);
+internal sealed record QueryAsyncEventHandler(Func<Task> Handler, bool Once);
+internal sealed record QueryTypedAsyncEventHandler(Func<EventArgs, Task> Handler, Delegate OriginalHandler, Type ArgumentType, bool Once);
 internal sealed record QueryDelegatedEventHandler(string Selector, Action<QueryEventTarget> Handler);
 internal sealed record QueryVirtualNode(string Key, string? ParentKey, string TagName, string? ClassName, string? Text, bool IsHtml);

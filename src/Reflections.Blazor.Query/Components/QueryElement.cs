@@ -108,7 +108,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
         foreach (var eventName in renderState.EventNamesFor(ElementKey))
         {
             if (!QueryEventDescriptors.AddBinding(builder, sequence++, this, renderState, ElementKey, eventName))
-                builder.AddAttribute(sequence - 1, eventName, (Action)(() => renderState.Trigger(ElementKey, eventName)));
+                builder.AddAttribute(sequence - 1, eventName, EventCallback.Factory.Create(this, () => renderState.TriggerAsync(ElementKey, eventName)));
         }
         foreach (var eventName in renderState.DelegatedEventNamesFor(ElementKey))
             builder.AddAttribute(sequence++, QueryDelegatedEvents.AttributeName(eventName),

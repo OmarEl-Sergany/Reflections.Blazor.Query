@@ -256,3 +256,23 @@
 - `Typed_SelectJS_registers_native_event_args_and_keeps_synthetic_trigger` covers typed and synthetic dispatch.
 - `Typed_SelectJS_delivers_native_select_event_args_from_Blazor` covers rendered event delivery.
 - Validation: 128 unit + 37 component tests passed; full solution build completed with 0 warnings and 0 errors.
+
+---
+
+# Awaitable native event handlers — status
+
+## Delivered
+
+- Added `Func<Task>` and `Func<TEventArgs, Task>` overloads for `On`, `One`, `Off`, `Bind`, `Unbind`, native event helpers, and `Hover`.
+- Added `TriggerAsync` overloads. Synchronous `Trigger` remains non-blocking and unchanged; native Blazor event callbacks await both sync and async registrations and preserve typed native payloads.
+- Async one-shot handlers are removed before invocation; async registrations participate in element-key discovery and are removed with virtual-node disposal or `Clear`.
+- Updated generator metadata, README, and the Feature 4469 implementation plan.
+
+## Assertion review
+
+- `Async_On_and_TriggerAsync_awaits_typed_handler_and_preserves_event_payload`
+- `Async_One_removes_the_handler_before_awaited_dispatch_and_runs_only_once`
+- `Async_Off_removes_only_the_matching_handler_and_keeps_sync_trigger_compatible`
+- `Async_event_registrations_are_removed_with_their_virtual_node_and_clear`
+- `Async_typed_event_helper_awaits_handler_completion_and_preserves_native_payload`
+- `Generated_metadata_advertises_awaitable_event_operations`

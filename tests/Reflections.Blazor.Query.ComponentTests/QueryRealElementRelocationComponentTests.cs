@@ -1,5 +1,6 @@
 using Bunit;
 using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
@@ -539,6 +540,42 @@ public sealed class QueryRealElementRelocationComponentTests
         cut.Find("button").Click(new MouseEventArgs { ClientX = 29 });
 
         Assert.Equal(29, Assert.IsType<MouseEventArgs>(observed).ClientX);
+    }
+
+    [Fact]
+    public async Task Async_typed_event_helper_awaits_handler_completion_and_preserves_native_payload()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "button");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "button");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "button");
+            builder.CloseComponent();
+        });
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        MouseEventArgs? observed = null;
+        var completed = false;
+        new Query(state, registry).Select(".button").Click(async args =>
+        {
+            observed = args;
+            started.SetResult();
+            await release.Task;
+            completed = true;
+        });
+
+        var dispatch = cut.Find("button").ClickAsync(new MouseEventArgs { ClientX = 63 });
+        await started.Task;
+        Assert.False(completed);
+
+        release.SetResult();
+        await dispatch;
+
+        Assert.True(completed);
+        Assert.Equal(63, Assert.IsType<MouseEventArgs>(observed).ClientX);
     }
 
     [Fact]

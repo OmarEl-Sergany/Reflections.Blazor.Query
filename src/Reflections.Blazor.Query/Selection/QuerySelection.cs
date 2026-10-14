@@ -59,7 +59,27 @@ namespace Reflections.Blazor.Query
             foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: false);
             return this;
         }
+        public QuerySelection On(string eventName, Func<Task> handler)
+        {
+            foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: false);
+            return this;
+        }
+        public QuerySelection On<TEventArgs>(string eventName, Func<TEventArgs, Task> handler) where TEventArgs : EventArgs
+        {
+            foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: false);
+            return this;
+        }
         public QuerySelection One(string eventName, Action handler)
+        {
+            foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: true);
+            return this;
+        }
+        public QuerySelection One(string eventName, Func<Task> handler)
+        {
+            foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: true);
+            return this;
+        }
+        public QuerySelection One<TEventArgs>(string eventName, Func<TEventArgs, Task> handler) where TEventArgs : EventArgs
         {
             foreach (var key in RequireResolvedKeys()) _state.On(key, eventName, handler, once: true);
             return this;
@@ -70,6 +90,16 @@ namespace Reflections.Blazor.Query
             return this;
         }
         public QuerySelection Off<TEventArgs>(string eventName, Action<TEventArgs>? handler = null) where TEventArgs : EventArgs
+        {
+            foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName, handler);
+            return this;
+        }
+        public QuerySelection Off(string eventName, Func<Task>? handler)
+        {
+            foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName, handler);
+            return this;
+        }
+        public QuerySelection Off<TEventArgs>(string eventName, Func<TEventArgs, Task>? handler) where TEventArgs : EventArgs
         {
             foreach (var key in RequireResolvedKeys()) _state.Off(key, eventName, handler);
             return this;
@@ -85,12 +115,27 @@ namespace Reflections.Blazor.Query
             foreach (var key in RequireResolvedKeys()) _state.TriggerTyped(key, eventName, eventArgs);
             return this;
         }
+        public async Task<QuerySelection> TriggerAsync(string eventName)
+        {
+            foreach (var key in RequireResolvedKeys()) await _state.TriggerAsync(key, eventName);
+            return this;
+        }
+        public async Task<QuerySelection> TriggerAsync<TEventArgs>(string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs
+        {
+            ArgumentNullException.ThrowIfNull(eventArgs);
+            foreach (var key in RequireResolvedKeys()) await _state.TriggerAsync(key, eventName, eventArgs);
+            return this;
+        }
         public QuerySelection TriggerHandler(string eventName) => Trigger(eventName);
         public QuerySelection TriggerHandler<TEventArgs>(string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs => Trigger(eventName, eventArgs);
         public QuerySelection Bind(string eventName, Action handler) => On(eventName, handler);
         public QuerySelection Bind<TEventArgs>(string eventName, Action<TEventArgs> handler) where TEventArgs : EventArgs => On(eventName, handler);
+        public QuerySelection Bind(string eventName, Func<Task> handler) => On(eventName, handler);
+        public QuerySelection Bind<TEventArgs>(string eventName, Func<TEventArgs, Task> handler) where TEventArgs : EventArgs => On(eventName, handler);
         public QuerySelection Unbind(string eventName, Action? handler = null) => Off(eventName, handler);
         public QuerySelection Unbind<TEventArgs>(string eventName, Action<TEventArgs>? handler = null) where TEventArgs : EventArgs => Off(eventName, handler);
+        public QuerySelection Unbind(string eventName, Func<Task>? handler) => Off(eventName, handler);
+        public QuerySelection Unbind<TEventArgs>(string eventName, Func<TEventArgs, Task>? handler) where TEventArgs : EventArgs => Off(eventName, handler);
         public QuerySelection DelegateJS(string selector, string eventName, Action<QueryEventTarget> handler)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(selector);
@@ -118,79 +163,130 @@ namespace Reflections.Blazor.Query
         }
         public QuerySelection Click(Action handler) => On("click", handler);
         public QuerySelection Click(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("click", handler);
+        public QuerySelection Click(Func<Task> handler) => On("click", handler);
+        public QuerySelection Click(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("click", handler);
         public QuerySelection Click() => Trigger("click");
         public QuerySelection Change(Action handler) => On("change", handler);
         public QuerySelection Change(Action<Microsoft.AspNetCore.Components.ChangeEventArgs> handler) => On("change", handler);
+        public QuerySelection Change(Func<Task> handler) => On("change", handler);
+        public QuerySelection Change(Func<Microsoft.AspNetCore.Components.ChangeEventArgs, Task> handler) => On("change", handler);
         public QuerySelection Change() => Trigger("change");
         public QuerySelection Submit(Action handler) => On("submit", handler);
         public QuerySelection Submit(Action<EventArgs> handler) => On("submit", handler);
+        public QuerySelection Submit(Func<Task> handler) => On("submit", handler);
+        public QuerySelection Submit(Func<EventArgs, Task> handler) => On("submit", handler);
         public QuerySelection Submit() => Trigger("submit");
         public QuerySelection Focus(Action handler) => On("focus", handler);
         public QuerySelection Focus(Action<Microsoft.AspNetCore.Components.Web.FocusEventArgs> handler) => On("focus", handler);
+        public QuerySelection Focus(Func<Task> handler) => On("focus", handler);
+        public QuerySelection Focus(Func<Microsoft.AspNetCore.Components.Web.FocusEventArgs, Task> handler) => On("focus", handler);
         public QuerySelection Focus() => Trigger("focus");
         public QuerySelection Blur(Action handler) => On("blur", handler);
         public QuerySelection Blur(Action<Microsoft.AspNetCore.Components.Web.FocusEventArgs> handler) => On("blur", handler);
+        public QuerySelection Blur(Func<Task> handler) => On("blur", handler);
+        public QuerySelection Blur(Func<Microsoft.AspNetCore.Components.Web.FocusEventArgs, Task> handler) => On("blur", handler);
         public QuerySelection Blur() => Trigger("blur");
         public QuerySelection FocusIn(Action handler) => On("focusin", handler);
         public QuerySelection FocusIn(Action<Microsoft.AspNetCore.Components.Web.FocusEventArgs> handler) => On("focusin", handler);
+        public QuerySelection FocusIn(Func<Task> handler) => On("focusin", handler);
+        public QuerySelection FocusIn(Func<Microsoft.AspNetCore.Components.Web.FocusEventArgs, Task> handler) => On("focusin", handler);
         public QuerySelection FocusIn() => Trigger("focusin");
         public QuerySelection FocusOut(Action handler) => On("focusout", handler);
         public QuerySelection FocusOut(Action<Microsoft.AspNetCore.Components.Web.FocusEventArgs> handler) => On("focusout", handler);
+        public QuerySelection FocusOut(Func<Task> handler) => On("focusout", handler);
+        public QuerySelection FocusOut(Func<Microsoft.AspNetCore.Components.Web.FocusEventArgs, Task> handler) => On("focusout", handler);
         public QuerySelection FocusOut() => Trigger("focusout");
         public QuerySelection SelectJS(Action handler) => On("select", handler);
         public QuerySelection SelectJS(Action<EventArgs> handler) => On("select", handler);
+        public QuerySelection SelectJS(Func<Task> handler) => On("select", handler);
+        public QuerySelection SelectJS(Func<EventArgs, Task> handler) => On("select", handler);
         public QuerySelection SelectJS() => Trigger("select");
         public QuerySelection KeyDown(Action handler) => On("keydown", handler);
         public QuerySelection KeyDown(Action<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs> handler) => On("keydown", handler);
+        public QuerySelection KeyDown(Func<Task> handler) => On("keydown", handler);
+        public QuerySelection KeyDown(Func<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs, Task> handler) => On("keydown", handler);
         public QuerySelection KeyDown() => Trigger("keydown");
         public QuerySelection KeyUp(Action handler) => On("keyup", handler);
         public QuerySelection KeyUp(Action<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs> handler) => On("keyup", handler);
+        public QuerySelection KeyUp(Func<Task> handler) => On("keyup", handler);
+        public QuerySelection KeyUp(Func<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs, Task> handler) => On("keyup", handler);
         public QuerySelection KeyUp() => Trigger("keyup");
         public QuerySelection KeyPress(Action handler) => On("keypress", handler);
         public QuerySelection KeyPress(Action<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs> handler) => On("keypress", handler);
+        public QuerySelection KeyPress(Func<Task> handler) => On("keypress", handler);
+        public QuerySelection KeyPress(Func<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs, Task> handler) => On("keypress", handler);
         public QuerySelection KeyPress() => Trigger("keypress");
         public QuerySelection MouseDown(Action handler) => On("mousedown", handler);
         public QuerySelection MouseDown(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("mousedown", handler);
+        public QuerySelection MouseDown(Func<Task> handler) => On("mousedown", handler);
+        public QuerySelection MouseDown(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("mousedown", handler);
         public QuerySelection MouseDown() => Trigger("mousedown");
         public QuerySelection MouseUp(Action handler) => On("mouseup", handler);
         public QuerySelection MouseUp(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("mouseup", handler);
+        public QuerySelection MouseUp(Func<Task> handler) => On("mouseup", handler);
+        public QuerySelection MouseUp(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("mouseup", handler);
         public QuerySelection MouseUp() => Trigger("mouseup");
         public QuerySelection MouseMove(Action handler) => On("mousemove", handler);
         public QuerySelection MouseMove(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("mousemove", handler);
+        public QuerySelection MouseMove(Func<Task> handler) => On("mousemove", handler);
+        public QuerySelection MouseMove(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("mousemove", handler);
         public QuerySelection MouseMove() => Trigger("mousemove");
         public QuerySelection MouseOver(Action handler) => On("mouseover", handler);
         public QuerySelection MouseOver(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("mouseover", handler);
+        public QuerySelection MouseOver(Func<Task> handler) => On("mouseover", handler);
+        public QuerySelection MouseOver(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("mouseover", handler);
         public QuerySelection MouseOver() => Trigger("mouseover");
         public QuerySelection MouseOut(Action handler) => On("mouseout", handler);
         public QuerySelection MouseOut(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("mouseout", handler);
+        public QuerySelection MouseOut(Func<Task> handler) => On("mouseout", handler);
+        public QuerySelection MouseOut(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("mouseout", handler);
         public QuerySelection MouseOut() => Trigger("mouseout");
         public QuerySelection Resize(Action handler) => On("resize", handler);
+        public QuerySelection Resize(Func<Task> handler) => On("resize", handler);
         public QuerySelection Resize() => Trigger("resize");
         public QuerySelection Scroll(Action handler) => On("scroll", handler);
+        public QuerySelection Scroll(Func<Task> handler) => On("scroll", handler);
         public QuerySelection Scroll() => Trigger("scroll");
         public QuerySelection MouseEnter(Action handler) => On("mouseenter", handler);
         public QuerySelection MouseEnter(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("mouseenter", handler);
+        public QuerySelection MouseEnter(Func<Task> handler) => On("mouseenter", handler);
+        public QuerySelection MouseEnter(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("mouseenter", handler);
         public QuerySelection MouseEnter() => Trigger("mouseenter");
         public QuerySelection MouseLeave(Action handler) => On("mouseleave", handler);
         public QuerySelection MouseLeave(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("mouseleave", handler);
+        public QuerySelection MouseLeave(Func<Task> handler) => On("mouseleave", handler);
+        public QuerySelection MouseLeave(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("mouseleave", handler);
         public QuerySelection MouseLeave() => Trigger("mouseleave");
         public QuerySelection ContextMenu(Action handler) => On("contextmenu", handler);
         public QuerySelection ContextMenu(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("contextmenu", handler);
+        public QuerySelection ContextMenu(Func<Task> handler) => On("contextmenu", handler);
+        public QuerySelection ContextMenu(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("contextmenu", handler);
         public QuerySelection ContextMenu() => Trigger("contextmenu");
         public QuerySelection DblClick(Action handler) => On("dblclick", handler);
         public QuerySelection DblClick(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> handler) => On("dblclick", handler);
+        public QuerySelection DblClick(Func<Task> handler) => On("dblclick", handler);
+        public QuerySelection DblClick(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> handler) => On("dblclick", handler);
         public QuerySelection DblClick() => Trigger("dblclick");
         public QuerySelection Hover(Action enterHandler, Action leaveHandler) => MouseEnter(enterHandler).MouseLeave(leaveHandler);
         public QuerySelection Hover(Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> enterHandler, Action<Microsoft.AspNetCore.Components.Web.MouseEventArgs> leaveHandler) =>
             MouseEnter(enterHandler).MouseLeave(leaveHandler);
+        public QuerySelection Hover(Func<Task> enterHandler, Func<Task> leaveHandler) => MouseEnter(enterHandler).MouseLeave(leaveHandler);
+        public QuerySelection Hover(Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> enterHandler, Func<Microsoft.AspNetCore.Components.Web.MouseEventArgs, Task> leaveHandler) =>
+            MouseEnter(enterHandler).MouseLeave(leaveHandler);
         public QuerySelection Error(Action handler) => On("error", handler);
         public QuerySelection Error(Action<Microsoft.AspNetCore.Components.Web.ErrorEventArgs> handler) => On("error", handler);
+        public QuerySelection Error(Func<Task> handler) => On("error", handler);
+        public QuerySelection Error(Func<Microsoft.AspNetCore.Components.Web.ErrorEventArgs, Task> handler) => On("error", handler);
         public QuerySelection Error() => Trigger("error");
         public QuerySelection Load(Action handler) => On("load", handler);
         public QuerySelection Load(Action<Microsoft.AspNetCore.Components.Web.ProgressEventArgs> handler) => On("load", handler);
+        public QuerySelection Load(Func<Task> handler) => On("load", handler);
+        public QuerySelection Load(Func<Microsoft.AspNetCore.Components.Web.ProgressEventArgs, Task> handler) => On("load", handler);
         public QuerySelection Load() => Trigger("load");
         public QuerySelection Unload(Action handler) => On("unload", handler);
         public QuerySelection Unload(Action<EventArgs> handler) => On("unload", handler);
+        public QuerySelection Unload(Func<Task> handler) => On("unload", handler);
+        public QuerySelection Unload(Func<EventArgs, Task> handler) => On("unload", handler);
         public QuerySelection Unload() => Trigger("unload");
 
         public QuerySelection Attr(string name, string value)

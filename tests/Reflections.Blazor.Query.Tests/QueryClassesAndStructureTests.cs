@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components;
 using Reflections.Blazor.Query;
@@ -185,6 +186,98 @@ public sealed class QueryClassesAndStructureTests
         var captured = Assert.IsType<MouseEventArgs>(observed);
         Assert.Same(payload, captured);
         Assert.Equal(37, captured.ClientX);
+    }
+
+    [Fact]
+    public async Task Async_On_and_TriggerAsync_awaits_typed_handler_and_preserves_event_payload()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        MouseEventArgs? observed = null;
+        var completed = false;
+
+        query.Select(".button")
+            .On<MouseEventArgs>("click", async args =>
+            {
+                await Task.Yield();
+                observed = args;
+                completed = true;
+            });
+        var payload = new MouseEventArgs { ClientX = 51 };
+
+        await query.Select(".button").TriggerAsync("click", payload);
+
+        Assert.Same(payload, observed);
+        Assert.Equal(51, observed!.ClientX);
+        Assert.True(completed);
+    }
+
+    [Fact]
+    public async Task Async_One_removes_the_handler_before_awaited_dispatch_and_runs_only_once()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var calls = 0;
+        var selection = query.Select(".button").One("click", async () =>
+        {
+            await Task.Yield();
+            calls++;
+        });
+
+        await selection.TriggerAsync("click");
+        await selection.TriggerAsync("click");
+
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task Async_Off_removes_only_the_matching_handler_and_keeps_sync_trigger_compatible()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var removedCalls = 0;
+        var retainedCalls = 0;
+        Func<Task> removed = async () =>
+        {
+            await Task.Yield();
+            removedCalls++;
+        };
+        Func<Task> retained = async () =>
+        {
+            await Task.Yield();
+            retainedCalls++;
+        };
+        var selection = query.Select(".button").On("click", removed).On("click", retained);
+
+        selection.Off("click", removed);
+        selection.Trigger("click");
+        Assert.Equal(0, removedCalls);
+        Assert.Equal(0, retainedCalls);
+
+        await selection.TriggerAsync("click");
+        Assert.Equal(0, removedCalls);
+        Assert.Equal(1, retainedCalls);
+    }
+
+    [Fact]
+    public async Task Async_event_registrations_are_removed_with_their_virtual_node_and_clear()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("host", ".host");
+        var virtualButton = query.Select(".host").AppendElement("button", "async-button");
+        var key = virtualButton.ToArray().Single();
+        var calls = 0;
+        virtualButton.On("click", () =>
+        {
+            calls++;
+            return Task.CompletedTask;
+        });
+
+        state.RemoveVirtualNode(key);
+        await state.TriggerAsync(key, "click");
+
+        Assert.Empty(state.EventNamesFor(key));
+        Assert.Equal(0, calls);
     }
 
     [Fact]
@@ -723,6 +816,17 @@ public sealed class QueryClassesAndStructureTests
         Assert.Contains("TypedTriggerHandler", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("TypedBind", QueryGeneratedMetadata.SupportedOperations);
         Assert.Contains("TypedUnbind", QueryGeneratedMetadata.SupportedOperations);
+    }
+
+    [Fact]
+    public void Generated_metadata_advertises_awaitable_event_operations()
+    {
+        Assert.Contains("AsyncOn", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedAsyncOn", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("AsyncOne", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TriggerAsync", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedTriggerAsync", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("AsyncClick", QueryGeneratedMetadata.SupportedOperations);
     }
 
     [Fact]

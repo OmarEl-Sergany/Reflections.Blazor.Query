@@ -124,3 +124,14 @@
 1. Add `SelectJS(Action<EventArgs>)` and metadata for `TypedSelectJS`.
 2. Test typed registration and verify the existing `SelectJS()` synthetic trigger.
 3. Add a bUnit rendered event test and remove inaccurate JS-escape-hatch documentation.
+
+---
+
+# Awaitable native event handlers — plan
+
+1. Extend untyped and typed registrations with async entries, exact `Off` overloads, one-shot support, event-name discovery, and cleanup.
+2. Add `TriggerAsync` on `QuerySelection` and `QueryRenderState`; keep synchronous trigger semantics non-blocking and compatible.
+3. Make native Blazor event descriptors return/await tasks, including the fallback callback path.
+4. Add unit assertions for async payload dispatch, exact removal, one-shot consumption, and synchronous compatibility.
+5. Add bUnit coverage proving a native event callback awaits handler completion and delivers its event args.
+6. Update source-generator metadata and user docs; run focused tests and the full solution validation.

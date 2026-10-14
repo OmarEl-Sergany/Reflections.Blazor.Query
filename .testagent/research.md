@@ -203,3 +203,27 @@ Event registrations are keyed to an owned element identity. Destroying that iden
 2. The existing parameterless synthetic trigger remains unchanged.
 3. A rendered component test proves native select-event dispatch.
 4. Documentation describes this as a Blazor event helper, not a JavaScript escape hatch.
+
+---
+
+# Awaitable native event handlers — research
+
+## Acceptance checklist
+
+1. `On` and `One` accept `Func<Task>` and `Func<TEventArgs, Task>` handlers while preserving existing synchronous overloads.
+2. `Off` removes the exact asynchronous handler, and one-shot async handlers are removed before their first awaited dispatch.
+3. Native Blazor event callbacks await asynchronous handlers and preserve native event arguments.
+4. Existing synchronous `Trigger` behavior remains unchanged; explicit `TriggerAsync` dispatches async registrations.
+5. Event-name discovery and element cleanup include asynchronous registrations.
+
+## Bounded target inventory
+
+- `QuerySelection`: public async event registration/removal and synthetic async dispatch.
+- `QueryRenderState`: async handler storage, exact removal, one-shot lifecycle, discovery, dispatch, and cleanup.
+- `QueryEventDescriptors` and `QueryElement`: await `Task` from native Blazor callbacks.
+- Unit and bUnit suites: async dispatch, removal, one-shot behavior, native payload, and callback completion.
+- Source-generator metadata and README/project plan: identify the awaitable event surface.
+
+## Existing conventions and risk
+
+Event handlers are split between parameterless `Action` and typed `Action<TEventArgs>` dictionaries. Native descriptors previously called synchronous `Trigger`. Async callbacks must not be adapted to `async void`; Blazor's `EventCallback<T>` must receive the task. Legacy synchronous `Trigger` must never block waiting for async handlers. Delegated event handlers are a separate API and remain outside this batch.

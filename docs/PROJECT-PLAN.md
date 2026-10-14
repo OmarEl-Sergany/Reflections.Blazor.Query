@@ -40,9 +40,9 @@ This plan follows the Azure DevOps hierarchy and repository delivery policy. Fou
 
 #### Sprint 4 — Events & Forms (Feature 4469)
 
-- [x] Fluent event binding: `On`, `Off`, `One`, and `Trigger`, including native `TEventArgs` overloads for supported Blazor event descriptors.
-- [x] Event helpers: `Blur`, `Change`, `Click`, `ContextMenu`, `DblClick`, `Focus`, `FocusIn`, `FocusOut`, `Hover`, keyboard and mouse helpers, `Resize`, `Scroll`, and `Submit`; typed overloads use native Blazor event args where available.
-- [x] Compatibility aliases: `TriggerHandler`, `Bind`, and `Unbind`, including typed alias overloads.
+- [x] Fluent event binding: `On`, `Off`, `One`, `Trigger`, and awaitable `TriggerAsync`, including native `TEventArgs` overloads for supported Blazor event descriptors.
+- [x] Event helpers: `Blur`, `Change`, `Click`, `ContextMenu`, `DblClick`, `Focus`, `FocusIn`, `FocusOut`, `Hover`, keyboard and mouse helpers, `Resize`, `Scroll`, and `Submit`; both synchronous and `Task`-returning overloads are supported, with native Blazor event args where available.
+- [x] Compatibility aliases: `TriggerHandler`, `Bind`, and `Unbind`, including typed and awaitable callback overloads.
 - [x] Delegated routing: `DelegateJS` / `Undelegate` with host pre-start registration and C# root/scope/selector checks.
 - [x] Form-state handlers: `Serialize` and `SerializeArray` — read-only form observation (`SerializeAsync` / `SerializeArrayAsync`) via the queued, coalesced, read-only JS boundary defined in [Measurement and Position Boundary](MEASUREMENT-BOUNDARY.md). jQuery "successful control" semantics; no DOM mutation.
 
