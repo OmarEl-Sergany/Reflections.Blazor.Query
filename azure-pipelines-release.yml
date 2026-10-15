@@ -1,0 +1,45 @@
+trigger: none
+pr: none
+
+parameters:
+- name: ciBuildId
+  displayName: Successful CI build ID
+  type: string
+  default: '864'
+- name: packageVersion
+  displayName: NuGet package version
+  type: string
+  default: '1.0.0'
+
+pool:
+  name: Windows-Pool
+
+steps:
+- task: DownloadBuildArtifacts@0
+  displayName: Download validated CI package artifact
+  inputs:
+    buildType: specific
+    project: Reflections.Blazor.Query
+    pipeline: Reflections.Blazor.Query CI
+    buildVersionToDownload: specific
+    buildId: ${{ parameters.ciBuildId }}
+    downloadType: single
+    artifactName: Reflections.Blazor.Query
+    downloadPath: $(Pipeline.Workspace)/release
+
+- task: PowerShell@2
+  displayName: Validate package identity, license, and NuGet version availability
+  inputs:
+    targetType: inline
+    script: |
+      $packageDirectory = '$(Pipeline.Workspace)/release/Reflections.Blazor.Query/packages'
+      ./eng/verify-packages.ps1 -PackageDirectory $packageDirectory -RequireLicense
+      ./eng/check-nuget-release.ps1 -PackageDirectory $packageDirectory -ExpectedVersion '${{ parameters.packageVersion }}'
+
+- task: NuGetCommand@2
+  displayName: Publish validated packages to NuGet.org
+  inputs:
+    command: push
+    packagesToPush: '$(Pipeline.Workspace)/release/Reflections.Blazor.Query/packages/*.nupkg'
+    nuGetFeedType: external
+    publishFeedCredentials: NuGet.org
