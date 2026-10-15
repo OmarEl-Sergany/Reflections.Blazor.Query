@@ -15,7 +15,7 @@ public sealed class QueryHostContractTests
         var pageState = new QueryRenderState();
         var layoutState = new LayoutQueryRenderState();
 
-        new Query(pageState).Select(".content").Css("color", "red");
+        new BlazorQuery(pageState).Select(".content").Css("color", "red");
         new LayoutQuery(layoutState).Select(".sidebar").Css("background", "black");
 
         Assert.NotSame(pageState, layoutState);
@@ -98,7 +98,7 @@ public sealed class QueryHostContractTests
         var layoutChanges = 0;
         pageState.Changed += () => pageStateChanges++;
         layoutState.Changed += () => layoutChanges++;
-        new Query(pageState).Select(".page").Css("display", "none");
+        new BlazorQuery(pageState).Select(".page").Css("display", "none");
         new LayoutQuery(layoutState).Select(".sidebar").Css("background", "black");
 
         pageState.ClearForTest();
@@ -114,10 +114,10 @@ public sealed class QueryHostContractTests
         var changes = 0;
         void OnChanged() => changes++;
         state.Changed += OnChanged;
-        new Query(state).Select(".page").Css("color", "red");
+        new BlazorQuery(state).Select(".page").Css("color", "red");
         state.Changed -= OnChanged;
 
-        new Query(state).Select(".page").Css("color", "blue");
+        new BlazorQuery(state).Select(".page").Css("color", "blue");
 
         Assert.Equal(1, changes);
     }

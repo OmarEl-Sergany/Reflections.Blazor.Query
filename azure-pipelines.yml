@@ -93,7 +93,7 @@ steps:
       $requiredFiles = @(
         'docs/_site/index.html',
         'docs/_site/index.json',
-        'docs/_site/api/Reflections.Blazor.Query.Query.html',
+        'docs/_site/api/Reflections.Blazor.Query.BlazorQuery.html',
         'docs/_site/api/Reflections.Blazor.Query.QuerySelection.html'
       )
       $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) }

@@ -13,7 +13,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var stages = new List<string>();
 
         selection
@@ -40,7 +40,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var delayElapsed = false;
         var nextRan = false;
 
@@ -64,7 +64,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
 
         Assert.Throws<ArgumentOutOfRangeException>(() => selection.Delay(TimeSpan.FromTicks(-1)));
         Assert.Throws<ArgumentException>(() => selection.Delay(TimeSpan.Zero, " "));
@@ -81,7 +81,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingRan = false;
         selection.Queue(async cancellationToken =>
@@ -112,7 +112,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingRan = false;
         selection.Queue(async cancellationToken =>
@@ -143,7 +143,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         selection.Queue(async () =>
@@ -168,7 +168,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var pendingRan = false;
         var changedCount = 0;
         state.Changed += () => changedCount++;
@@ -194,7 +194,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var stages = new List<string>();
         var changedCount = 0;
         state.Changed += () => changedCount++;
@@ -227,7 +227,7 @@ public sealed class QueryEffectQueueTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
         registry.Register("second", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var enteredCount = 0;
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var activeTokens = new System.Collections.Concurrent.ConcurrentBag<CancellationToken>();
@@ -262,7 +262,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var ordinaryCallbackRan = false;
         selection
             .Delay(TimeSpan.FromDays(1))
@@ -283,7 +283,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var finishCount = 0;
         selection.Queue(
@@ -319,7 +319,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var finishRan = false;
@@ -361,7 +361,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var changedCount = 0;
         state.Changed += () => changedCount++;
 
@@ -383,7 +383,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var callbackRan = false;
         selection.Queue(() =>
         {
@@ -407,7 +407,7 @@ public sealed class QueryEffectQueueTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
         registry.Register("second", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseFirst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseSecond = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -438,8 +438,8 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
-        var emptySelection = new Query(state, registry).Select(".missing");
+        var selection = new BlazorQuery(state, registry).Select(".target");
+        var emptySelection = new BlazorQuery(state, registry).Select(".missing");
 
         Assert.Same(selection, await selection.Promise());
         Assert.Same(emptySelection, await emptySelection.Promise());
@@ -452,7 +452,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var shouldFail = true;
         var laterRan = false;
         selection.Queue(() => shouldFail
@@ -481,7 +481,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         selection.Queue(() => Task.CompletedTask);
         var promise = selection.Promise().AsTask();
 
@@ -496,7 +496,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingRan = false;
         selection.Queue(async cancellationToken =>
@@ -528,7 +528,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         selection.Queue(() => Task.CompletedTask);
         var promise = selection.Promise().AsTask();
 
@@ -544,7 +544,7 @@ public sealed class QueryEffectQueueTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
         registry.Register("second", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var started = 0;
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         selection.Queue(async cancellationToken =>
@@ -567,7 +567,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingRan = false;
@@ -598,7 +598,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingRan = false;
         selection.Queue(async cancellationToken =>
@@ -626,7 +626,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
         selection.Queue(async cancellationToken =>
         {
@@ -650,7 +650,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingRan = false;
         selection.Queue(async cancellationToken =>
@@ -678,7 +678,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
 
         Assert.Throws<ArgumentNullException>(() => selection.Queue((Func<Task>)null!));
         Assert.Throws<ArgumentException>(() => selection.Queue(() => Task.CompletedTask, " "));
@@ -694,7 +694,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var changedCount = 0;
         state.Changed += () => changedCount++;
 
@@ -710,7 +710,7 @@ public sealed class QueryEffectQueueTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".target");
-        var selection = new Query(state, registry).Select(".target");
+        var selection = new BlazorQuery(state, registry).Select(".target");
         var laterRan = false;
         selection.Queue(() => Task.FromException(new InvalidOperationException("queue failure")));
         selection.Queue(() =>

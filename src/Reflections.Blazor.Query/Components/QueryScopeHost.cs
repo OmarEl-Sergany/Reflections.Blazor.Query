@@ -5,7 +5,7 @@ namespace Reflections.Blazor.Query;
 
 public sealed class QueryScopeHost : ComponentBase
 {
-    [Inject] private Query Query { get; set; } = default!;
+    [Inject] private BlazorQuery Query { get; set; } = default!;
     [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
     private IQueryScope? _scope;
     protected override void OnInitialized() => _scope = Query.CreateScope();

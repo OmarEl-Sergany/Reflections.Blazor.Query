@@ -14,6 +14,7 @@ Reflections.Blazor.Query brings familiar jQuery-style orchestration to library-o
 ## Start building
 
 - [Get started](GETTING-STARTED.md) — register services and run the first state-driven query.
+- [Integration fit](INTEGRATION-FIT.md) — supported ownership and interactivity requirements, including CMS and static SSR constraints.
 - [Explore examples](EXAMPLES.md) — batching, scopes, layout state, measurements, effects, queues, and delegation.
 - [Browse the API reference](api/toc.yml) — generated from the current library assembly.
 

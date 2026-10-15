@@ -5,6 +5,8 @@ items:
     href: index.md
   - name: Getting started
     href: GETTING-STARTED.md
+  - name: Integration fit
+    href: INTEGRATION-FIT.md
   - name: Usage examples
     href: EXAMPLES.md
 - name: Architecture

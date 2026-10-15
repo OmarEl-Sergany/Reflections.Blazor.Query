@@ -169,7 +169,7 @@ public sealed class QueryFormSerializationTests
         await using var coordinator = new QueryFormCoordinator(bridge);
         var registry = new QueryElementRegistry();
         registry.Register("form", "form");
-        var selection = new Query(new QueryRenderState(), registry, forms: coordinator).Select("form");
+        var selection = new BlazorQuery(new QueryRenderState(), registry, forms: coordinator).Select("form");
 
         var fields = selection.SerializeArrayAsync().AsTask();
         await coordinator.FlushAsync();
@@ -192,7 +192,7 @@ public sealed class QueryFormSerializationTests
         await using var coordinator = new QueryFormCoordinator(bridge);
         var registry = new QueryElementRegistry();
         registry.Register("form", "form");
-        var selection = new Query(new QueryRenderState(), registry, forms: coordinator).Select("form");
+        var selection = new BlazorQuery(new QueryRenderState(), registry, forms: coordinator).Select("form");
 
         var query = selection.SerializeAsync().AsTask();
         await coordinator.FlushAsync();
@@ -206,7 +206,7 @@ public sealed class QueryFormSerializationTests
         var bridge = new FakeFormBridge([]);
         await using var coordinator = new QueryFormCoordinator(bridge);
         var registry = new QueryElementRegistry();
-        var selection = new Query(new QueryRenderState(), registry, forms: coordinator).Select(".missing");
+        var selection = new BlazorQuery(new QueryRenderState(), registry, forms: coordinator).Select(".missing");
 
         var fields = await selection.SerializeArrayAsync();
         var query = await selection.SerializeAsync();

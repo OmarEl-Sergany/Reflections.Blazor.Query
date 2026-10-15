@@ -3,6 +3,7 @@
 > A Blazor-native, jQuery 4-aligned fluent query library for .NET 10.
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
+![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-blue)
 ![Tests 257/257 passed](https://img.shields.io/badge/tests-257%2F257%20passed-success)
 ![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
@@ -12,9 +13,15 @@ Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without
 
 ## Mission
 
+> **Breaking API change:** The injectable service type is now `BlazorQuery`; update `@inject Query Query` to `@inject BlazorQuery Query`. The `AddBlazorQuery()` registration method and fluent `Query.Select(...)` call pattern are unchanged. See the [migration guide](docs/MIGRATION.md).
+
 jQuery made element orchestration approachable. Blazor made UI rendering stateful, component-based, and transport-agnostic. Combining the two naively is dangerous: a direct `document.querySelector(...).style...` or traditional jQuery write changes the live DOM behind Blazor's renderer. The next diff can overwrite the change, remove an unexpected node, or leave the UI visually and logically divergent.
 
 This library preserves the fluent developer experience while keeping Blazor authoritative. Source-generated metadata identifies eligible elements, operations update library-owned render state, and Blazor's own rendering lifecycle produces the resulting output.
+
+### HTML content trust boundary
+
+`Html`, `AppendHtml`, `PrependHtml`, and the `isHtml: true` element-creation options render raw markup. They do not sanitize or encode input. Treat these APIs as trusted-markup sinks: sanitize CMS or other externally supplied HTML with the application's approved allow-list policy before use. For untrusted values that should display as text, use `Text`, `Append`, `Prepend`, or the default `isHtml: false`.
 
 Supported hosting targets:
 
@@ -35,6 +42,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - `docs/PERFORMANCE-BASELINE.md` — reproducible in-process performance baselines and their measurement boundaries.
 - `docs/COMPONENT-SCOPING.md` — component-level query scoping design.
 - `docs/GETTING-STARTED.md` — host registration, first query, scope lifetime, and delegated-event setup.
+- `docs/INTEGRATION-FIT.md` — element-ownership requirements and fit guidance for CMS, component trees, and static SSR.
 - `docs/EXAMPLES.md` — focused examples for state updates, scoped controls, layout persistence, measurement, effects, and queues.
 - `docs/index.md` — documentation site landing page and architecture summary.
 - `docs/docfx.json` — pinned DocFX site and generated .NET API reference configuration.
@@ -105,7 +113,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `Data`
 - [x] `RemoveData`
 - [x] `Text` (get and set)
-- [x] `Html`
+- [x] `Html` — renders raw markup; caller must sanitize untrusted/CMS content. Use `Text` for encoded text.
 - [x] `Val`
 - [x] `Clear` — atomically clears style, attribute, property, data, and content state.
 - [x] `Height` (get and set)
@@ -128,10 +136,10 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `Empty`
 - [x] `Serialize` / `SerializeArray` — asynchronous (`SerializeAsync` / `SerializeArrayAsync`), read-only form observation. Reads successful form controls from the browser through the same queued, coalesced, read-only JS boundary as layout measurement and returns name/value pairs to C# without mutating the DOM. Coordinator disposal closes admission and waits for an active bridge read before disposing the JS module.
 - [x] `Append` — appends an owned, encoded text fragment after an element's existing content.
-- [x] `AppendHtml` — trusted-markup variant of `Append`, under the same explicit trust boundary as `Html`.
+- [x] `AppendHtml` — trusted-markup variant of `Append`; does not sanitize. Sanitize untrusted/CMS content first.
 - [x] `Prepend` — prepends an owned, encoded text fragment before an element's existing content.
-- [x] `PrependHtml` — trusted-markup variant of `Prepend`.
-- [x] `AppendElement(tagName, className?, text?, isHtml?)` — creates a brand-new, library-owned element (a "virtual node") as the last child of the selected element, registered in `QueryElementRegistry` so it is selectable, styleable, and composable with every other operation (`Attr`, `AddClass`, `Hide`, nested `AppendElement`, etc.). Returns a `QuerySelection` for the new element.
+- [x] `PrependHtml` — trusted-markup variant of `Prepend`; does not sanitize. Sanitize untrusted/CMS content first.
+- [x] `AppendElement(tagName, className?, text?, isHtml?)` — creates a brand-new, library-owned element (a "virtual node") as the last child of the selected element, registered in `QueryElementRegistry` so it is selectable, styleable, and composable with every other operation (`Attr`, `AddClass`, `Hide`, nested `AppendElement`, etc.). Returns a `QuerySelection` for the new element. `text` is encoded by default; `isHtml: true` renders raw markup and requires trusted/sanitized input.
 - [x] `PrependElement(...)` — same, as the first child.
 - [x] `InsertElementBefore(...)` / `InsertElementAfter(...)` — creates a new virtual sibling immediately before/after the selected element, inside that element's registered parent.
 - [x] `AppendTo(target)` / `PrependTo(target)` — moves an element (real, Razor-declared **or** library-created) into another element's child list. For a real `QueryElement`, this works via a live delegate to that component's own render method, captured on every render and invoked by the new host instead of the element's own declared position — the original renders nothing once relocated, so nothing is ever emitted twice. Cross-thread mutations (e.g. from a background service) are safe: a single dispatcher, registered by `QueryHost`, ensures the "source stops / host starts" pair always lands in one Blazor render batch.
@@ -236,11 +244,11 @@ Register the library once in the host application:
 builder.Services.AddBlazorQuery();
 ```
 
-Render elements through the library infrastructure, then inject `Query` into an interactive component. This example styles and annotates a selected card without a browser DOM write:
+Render elements through the library infrastructure, then inject the `BlazorQuery` service (typically aliased to the concise variable name `Query`) into an interactive component. This example styles and annotates a selected card without a browser DOM write:
 
 ```razor
 @page "/release-console"
-@inject Reflections.Blazor.Query.Query Query
+@inject Reflections.Blazor.Query.BlazorQuery Query
 
 <QueryHost>
     <QueryElement TagName="article" ElementKey="release-card" Class="release-card">

@@ -10,7 +10,7 @@ public sealed class QueryCollectionResolverTests
     public void Registry_preserves_generated_element_order()
     {
         var registry = CreateRegistry();
-        var selection = new Query(new QueryRenderState(), registry).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), registry).Select(".item");
 
         Assert.Equal(3, selection.Length);
         Assert.Equal(["first", "second", "third"], selection.ToArray());
@@ -19,7 +19,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void First_Last_and_Eq_select_stable_generated_keys()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
 
         Assert.Equal("[data-rbq-key=\"first\"]", selection.First().Selector);
         Assert.Equal("[data-rbq-key=\"third\"]", selection.Last().Selector);
@@ -31,7 +31,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Slice_supports_positive_and_negative_collection_indexes()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
 
         Assert.Equal(["second", "third"], selection.Slice(1).ToArray());
         Assert.Equal(["first", "second"], selection.Slice(0, -1).ToArray());
@@ -42,7 +42,7 @@ public sealed class QueryCollectionResolverTests
     public void Positional_selection_still_writes_through_render_state()
     {
         var state = new QueryRenderState();
-        var selection = new Query(state, CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(state, CreateRegistry()).Select(".item");
 
         selection.Eq(1).Css("color", "red");
 
@@ -53,7 +53,7 @@ public sealed class QueryCollectionResolverTests
     public void Height_and_Width_write_generated_key_css_rules_for_resolved_elements_only()
     {
         var state = new QueryRenderState();
-        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+        var selection = new BlazorQuery(state, CreateRegistry()).Select(".item").Eq(1);
 
         selection.Height(48.5).Width(320);
 
@@ -78,7 +78,7 @@ public sealed class QueryCollectionResolverTests
     public void Attr_and_RemoveAttr_update_only_resolved_owned_elements()
     {
         var state = new QueryRenderState();
-        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+        var selection = new BlazorQuery(state, CreateRegistry()).Select(".item").Eq(1);
 
         selection.Attr("title", "selected");
 
@@ -95,7 +95,7 @@ public sealed class QueryCollectionResolverTests
     public void Prop_and_RemoveProp_update_only_resolved_owned_elements()
     {
         var state = new QueryRenderState();
-        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+        var selection = new BlazorQuery(state, CreateRegistry()).Select(".item").Eq(1);
 
         selection.Prop("disabled", true);
 
@@ -112,7 +112,7 @@ public sealed class QueryCollectionResolverTests
     public void Data_and_RemoveData_use_json_normalized_owned_state()
     {
         var state = new QueryRenderState();
-        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+        var selection = new BlazorQuery(state, CreateRegistry()).Select(".item").Eq(1);
 
         selection.Data("payload", new DataPayload("selected", 2));
 
@@ -129,7 +129,7 @@ public sealed class QueryCollectionResolverTests
     public void Text_Html_and_Val_use_resolved_owned_render_state()
     {
         var state = new QueryRenderState();
-        var selection = new Query(state, CreateRegistry()).Select(".item").Eq(1);
+        var selection = new BlazorQuery(state, CreateRegistry()).Select(".item").Eq(1);
 
         selection.Text("<strong>encoded</strong>");
         Assert.Equal("<strong>encoded</strong>", selection.Text());
@@ -139,13 +139,13 @@ public sealed class QueryCollectionResolverTests
 
         Assert.Equal("<strong>trusted</strong>", selection.Html());
         Assert.Equal("chosen", selection.Val());
-        Assert.Null(new Query(state, CreateRegistry()).Select(".item").Eq(0).Text());
+        Assert.Null(new BlazorQuery(state, CreateRegistry()).Select(".item").Eq(0).Text());
     }
 
     [Fact]
     public void Unresolved_css_selection_rejects_collection_position_operations()
     {
-        var selection = new Query(new QueryRenderState()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState()).Select(".item");
 
         Assert.Throws<InvalidOperationException>(() => _ = selection.Length);
         Assert.Throws<InvalidOperationException>(() => selection.First());
@@ -155,7 +155,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Get_supports_all_positive_negative_and_missing_indexes()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
 
         Assert.Equal(["first", "second", "third"], selection.Get());
         Assert.Equal("second", selection.Get(1));
@@ -167,7 +167,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Index_returns_collection_position_for_a_stable_key()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
 
         Assert.Equal(0, selection.Index("first"));
         Assert.Equal(2, selection.Index("third"));
@@ -177,7 +177,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Each_visits_keys_in_order_and_can_stop_early()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
         var visited = new List<string>();
 
         var returned = selection.Each((index, key) =>
@@ -193,7 +193,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Map_projects_resolved_keys_without_changing_the_selection()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
 
         var mapped = selection.Map((index, key) => $"{index}-{key}");
 
@@ -204,7 +204,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void PushStack_creates_a_resolved_selection_and_End_restores_its_source()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
 
         var pushed = selection.PushStack(["third", "first"]);
 
@@ -216,7 +216,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Filter_Not_and_Is_use_library_owned_element_metadata()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
 
         var filtered = selection.Filter(".active");
         var excluded = selection.Not(".active");
@@ -231,7 +231,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Add_merges_resolved_keys_in_registry_order()
     {
-        var selection = new Query(new QueryRenderState(), CreateRegistry()).Select(".active");
+        var selection = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".active");
 
         var combined = selection.Add(".item");
 
@@ -245,7 +245,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void AddBack_merges_resolved_previous_selection_in_registry_order()
     {
-        var root = new Query(new QueryRenderState(), CreateRegistry()).Select(".item");
+        var root = new BlazorQuery(new QueryRenderState(), CreateRegistry()).Select(".item");
         var current = root.Eq(-1);
 
         Assert.Equal(["first", "second", "third"], current.AddBack().ToArray());
@@ -256,7 +256,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Closest_and_ParentsUntil_follow_owned_parent_metadata()
     {
-        var query = new Query(new QueryRenderState(), CreateHierarchyRegistry());
+        var query = new BlazorQuery(new QueryRenderState(), CreateHierarchyRegistry());
 
         Assert.Equal(["group"], query.Select(".active").Closest(".group").ToArray());
         Assert.Equal(["group"], query.Select(".active").ParentsUntil(".panel").ToArray());
@@ -266,7 +266,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void NextUntil_and_PrevUntil_stop_at_owned_sibling_boundaries()
     {
-        var query = new Query(new QueryRenderState(), CreateHierarchyRegistry());
+        var query = new BlazorQuery(new QueryRenderState(), CreateHierarchyRegistry());
 
         Assert.Equal(["second"], query.Select(".first").NextUntil(".stop").ToArray());
         Assert.Equal(["second"], query.Select(".first").NextUntil(".stop", ".active").ToArray());
@@ -276,7 +276,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Hierarchy_operations_reject_unresolved_selections()
     {
-        var selection = new Query(new QueryRenderState()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState()).Select(".item");
 
         Assert.Throws<InvalidOperationException>(() => selection.Closest(".panel"));
         Assert.Throws<InvalidOperationException>(() => selection.ParentsUntil(".panel"));
@@ -287,7 +287,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Existing_traversal_operations_resolve_through_owned_hierarchy_metadata()
     {
-        var query = new Query(new QueryRenderState(), CreateHierarchyRegistry());
+        var query = new BlazorQuery(new QueryRenderState(), CreateHierarchyRegistry());
 
         Assert.Equal(["first", "second", "third", "fourth"], query.Select(".group").Children(".item").ToArray());
         Assert.Equal(["leaf"], query.Select(".group").Find(".leaf").ToArray());
@@ -304,7 +304,7 @@ public sealed class QueryCollectionResolverTests
     [Fact]
     public void Is_rejects_unresolved_selections_while_css_filters_remain_composable()
     {
-        var selection = new Query(new QueryRenderState()).Select(".item");
+        var selection = new BlazorQuery(new QueryRenderState()).Select(".item");
 
         Assert.Throws<InvalidOperationException>(() => selection.Is(".active"));
         Assert.Equal(":is(.item):is(.active)", selection.Filter(".active").Selector);

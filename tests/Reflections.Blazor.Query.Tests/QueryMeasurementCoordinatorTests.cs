@@ -135,7 +135,7 @@ public sealed class QueryMeasurementCoordinatorTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".item");
         registry.Register("second", ".item");
-        var selection = new Query(new QueryRenderState(), registry, coordinator).Select(".item").Eq(1);
+        var selection = new BlazorQuery(new QueryRenderState(), registry, coordinator).Select(".item").Eq(1);
 
         var width = selection.WidthAsync().AsTask();
         await coordinator.FlushAsync();
@@ -156,7 +156,7 @@ public sealed class QueryMeasurementCoordinatorTests
         await using var coordinator = new QueryMeasurementCoordinator(bridge);
         var registry = new QueryElementRegistry();
         registry.Register("panel", ".panel");
-        var selection = new Query(new QueryRenderState(), registry, coordinator).Select(".panel");
+        var selection = new BlazorQuery(new QueryRenderState(), registry, coordinator).Select(".panel");
 
         var innerHeight = selection.InnerHeightAsync().AsTask();
         var innerWidth = selection.InnerWidthAsync().AsTask();
@@ -186,7 +186,7 @@ public sealed class QueryMeasurementCoordinatorTests
         var registry = new QueryElementRegistry();
         registry.Register("parent", ".parent");
         registry.RegisterWithParent("child", "parent", ".child");
-        var selection = new Query(new QueryRenderState(), registry, coordinator).Select(".child");
+        var selection = new BlazorQuery(new QueryRenderState(), registry, coordinator).Select(".child");
 
         var offset = selection.OffsetAsync().AsTask();
         var position = selection.PositionAsync().AsTask();

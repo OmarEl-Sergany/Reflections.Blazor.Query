@@ -60,7 +60,7 @@ public sealed class QueryRenderStateTests
     public void Navigation_clear_removes_page_rules()
     {
         var page = new QueryRenderState();
-        new Query(page).Select(".page").Css("color", "red");
+        new BlazorQuery(page).Select(".page").Css("color", "red");
 
         page.ClearForTest();
 
@@ -72,7 +72,7 @@ public sealed class QueryRenderStateTests
     {
         var page = new QueryRenderState();
         var layout = new LayoutQueryRenderState();
-        new Query(page).Select(".page").Css("color", "red");
+        new BlazorQuery(page).Select(".page").Css("color", "red");
         new LayoutQuery(layout).Select(".sidebar").Css("background", "black");
 
         page.ClearForTest();
@@ -88,9 +88,9 @@ public sealed class QueryRenderStateTests
         var layout = new LayoutQueryRenderState();
         var page = new QueryRenderState();
 
-        new Query(application).Select("html").Css("font-size", "16px");
+        new BlazorQuery(application).Select("html").Css("font-size", "16px");
         new LayoutQuery(layout).Select(".sidebar").Css("background", "black");
-        new Query(page).Select(".content").Css("color", "red");
+        new BlazorQuery(page).Select(".content").Css("color", "red");
 
         Assert.Equal(1, application.RuleCountForTest());
         Assert.Equal(1, layout.RuleCountForTest());

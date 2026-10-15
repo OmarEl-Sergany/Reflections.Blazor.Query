@@ -24,7 +24,7 @@ public sealed class QueryHostNavigationComponentTests
         context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
         context.Services.AddSingleton(new QueryElementRegistry());
 
-        new Query(pageState).Select(".page-target").Css("color", "red");
+        new BlazorQuery(pageState).Select(".page-target").Css("color", "red");
         new LayoutQuery(layoutState).Select(".layout-target").Css("color", "blue");
 
         var pageHost = context.Render<QueryHost>(parameters => parameters
@@ -69,7 +69,7 @@ public sealed class QueryHostNavigationComponentTests
                 builder.AddAttribute(2, nameof(QueryElement.Class), "slide-target");
                 builder.CloseComponent();
             }));
-        var selection = new Query(pageState, registry, measurements).Select(".slide-target");
+        var selection = new BlazorQuery(pageState, registry, measurements).Select(".slide-target");
         var slide = selection.SlideUp(TimeSpan.FromSeconds(5)).AsTask();
         var promise = selection.Promise().AsTask();
 
@@ -110,7 +110,7 @@ public sealed class QueryHostNavigationComponentTests
                 builder.AddAttribute(2, nameof(QueryElement.Class), "slide-target");
                 builder.CloseComponent();
             }));
-        var selection = new Query(pageState, registry, measurements).Select(".slide-target");
+        var selection = new BlazorQuery(pageState, registry, measurements).Select(".slide-target");
         var slide = selection.SlideUp(TimeSpan.FromSeconds(5)).AsTask();
         var promise = selection.Promise().AsTask();
 
@@ -182,7 +182,7 @@ public sealed class QueryHostNavigationComponentTests
         // single dispatch slot got clobbered/cleared regardless of which host was still alive.
         hostB.Instance.Dispose();
 
-        await Task.Run(() => new Query(sharedState, registry).Select(".target").Css("color", "green"));
+        await Task.Run(() => new BlazorQuery(sharedState, registry).Select(".target").Css("color", "green"));
 
         hostA.WaitForAssertion(() => Assert.Contains("color: green", hostA.Markup, StringComparison.Ordinal));
     }
@@ -206,7 +206,7 @@ public sealed class QueryHostNavigationComponentTests
             .Add(component => component.InnerState, innerState)
             .Add(component => component.ShowInner, true));
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var innerSelection = new Query(innerState, registry).Select(".inner-target");
+        var innerSelection = new BlazorQuery(innerState, registry).Select(".inner-target");
         innerSelection.Queue(async cancellationToken =>
         {
             started.TrySetResult();
@@ -219,7 +219,7 @@ public sealed class QueryHostNavigationComponentTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             drain.WaitAsync(TimeSpan.FromSeconds(2), Xunit.TestContext.Current.CancellationToken));
-        Assert.Equal(0, new Query(innerState, registry).Select(".inner-target").Length);
+        Assert.Equal(0, new BlazorQuery(innerState, registry).Select(".inner-target").Length);
         Assert.Contains("color: blue", host.Markup, StringComparison.Ordinal);
         Assert.Contains("outer layout", host.Markup, StringComparison.Ordinal);
     }

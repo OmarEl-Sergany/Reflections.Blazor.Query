@@ -765,6 +765,13 @@ namespace Reflections.Blazor.Query
             return key is null ? null : _state.ContentFor(key)?.Value;
         }
 
+        /// <summary>Sets the selected elements' content as raw markup.</summary>
+        /// <param name="value">Markup trusted by the caller.</param>
+        /// <remarks>
+        /// This method does not sanitize or encode its input. Never pass user-controlled or CMS-provided
+        /// content unless it has first been sanitized under the application's HTML trust policy. Use
+        /// <see cref="Text(string)"/> for untrusted text.
+        /// </remarks>
         public QuerySelection Html(string value)
         {
             ArgumentNullException.ThrowIfNull(value);
@@ -847,6 +854,9 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        /// <summary>Appends raw markup to the selected elements' content.</summary>
+        /// <param name="html">Markup trusted by the caller.</param>
+        /// <remarks>Does not sanitize or encode input; sanitize untrusted/CMS content first. Use <see cref="Append(string)"/> for untrusted text.</remarks>
         public QuerySelection AppendHtml(string html)
         {
             ArgumentNullException.ThrowIfNull(html);
@@ -863,6 +873,9 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        /// <summary>Prepends raw markup to the selected elements' content.</summary>
+        /// <param name="html">Markup trusted by the caller.</param>
+        /// <remarks>Does not sanitize or encode input; sanitize untrusted/CMS content first. Use <see cref="Prepend(string)"/> for untrusted text.</remarks>
         public QuerySelection PrependHtml(string html)
         {
             ArgumentNullException.ThrowIfNull(html);
@@ -1132,6 +1145,11 @@ namespace Reflections.Blazor.Query
             return this;
         }
 
+        /// <summary>Creates and appends a library-owned element.</summary>
+        /// <param name="tagName">The element tag name.</param>
+        /// <param name="className">Optional class name.</param>
+        /// <param name="text">Optional initial content, encoded as text unless <paramref name="isHtml"/> is <see langword="true"/>.</param>
+        /// <param name="isHtml">When true, treats <paramref name="text"/> as raw trusted markup; it is not sanitized or encoded.</param>
         public QuerySelection AppendElement(string tagName, string? className = null, string? text = null, bool isHtml = false)
         {
             var results = new List<string>();
@@ -1140,6 +1158,11 @@ namespace Reflections.Blazor.Query
             return PushResolved(results);
         }
 
+        /// <summary>Creates and prepends a library-owned element.</summary>
+        /// <param name="tagName">The element tag name.</param>
+        /// <param name="className">Optional class name.</param>
+        /// <param name="text">Optional initial content, encoded as text unless <paramref name="isHtml"/> is <see langword="true"/>.</param>
+        /// <param name="isHtml">When true, treats <paramref name="text"/> as raw trusted markup; it is not sanitized or encoded.</param>
         public QuerySelection PrependElement(string tagName, string? className = null, string? text = null, bool isHtml = false)
         {
             var results = new List<string>();
@@ -1148,6 +1171,11 @@ namespace Reflections.Blazor.Query
             return PushResolved(results);
         }
 
+        /// <summary>Creates a library-owned sibling immediately before each selected element.</summary>
+        /// <param name="tagName">The element tag name.</param>
+        /// <param name="className">Optional class name.</param>
+        /// <param name="text">Optional initial content, encoded as text unless <paramref name="isHtml"/> is <see langword="true"/>.</param>
+        /// <param name="isHtml">When true, treats <paramref name="text"/> as raw trusted markup; it is not sanitized or encoded.</param>
         public QuerySelection InsertElementBefore(string tagName, string? className = null, string? text = null, bool isHtml = false)
         {
             var results = new List<string>();
@@ -1156,6 +1184,11 @@ namespace Reflections.Blazor.Query
             return PushResolved(results);
         }
 
+        /// <summary>Creates a library-owned sibling immediately after each selected element.</summary>
+        /// <param name="tagName">The element tag name.</param>
+        /// <param name="className">Optional class name.</param>
+        /// <param name="text">Optional initial content, encoded as text unless <paramref name="isHtml"/> is <see langword="true"/>.</param>
+        /// <param name="isHtml">When true, treats <paramref name="text"/> as raw trusted markup; it is not sanitized or encoded.</param>
         public QuerySelection InsertElementAfter(string tagName, string? className = null, string? text = null, bool isHtml = false)
         {
             var results = new List<string>();

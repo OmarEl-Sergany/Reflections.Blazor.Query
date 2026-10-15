@@ -9,7 +9,7 @@ namespace Reflections.Blazor.Query
     /// Query operations update library-owned render state. They do not mutate the browser DOM directly;
     /// selected elements must be represented by registered <see cref="QueryElement"/> instances.
     /// </remarks>
-    public class Query
+    public class BlazorQuery
     {
         private readonly QueryRenderState _state;
         private readonly QueryElementRegistry? _registry;
@@ -21,7 +21,7 @@ namespace Reflections.Blazor.Query
         /// <param name="registry">Resolves selectors to registered element keys when available.</param>
         /// <param name="measurements">Provides read-only browser measurements for geometry-dependent operations.</param>
         /// <param name="forms">Provides read-only browser values for form operations.</param>
-        public Query(
+        public BlazorQuery(
             QueryRenderState state,
             QueryElementRegistry? registry = null,
             QueryMeasurementCoordinator? measurements = null,
@@ -67,7 +67,7 @@ namespace Reflections.Blazor.Query
 namespace Reflections.Blazor.Query
 {
     /// <summary>Query facade for state owned by a persistent application layout.</summary>
-    public sealed class LayoutQuery : Query
+    public sealed class LayoutQuery : BlazorQuery
     {
         public LayoutQuery(
             LayoutQueryRenderState state,
@@ -87,7 +87,7 @@ namespace Reflections.Blazor.Query
     /// Query facade for application-lifetime state. Mount a QueryHost with this state and
     /// <c>ClearOnNavigation="false"</c> around the application content it owns.
     /// </summary>
-    public sealed class ApplicationQuery : Query
+    public sealed class ApplicationQuery : BlazorQuery
     {
         public ApplicationQuery(
             ApplicationQueryRenderState state,

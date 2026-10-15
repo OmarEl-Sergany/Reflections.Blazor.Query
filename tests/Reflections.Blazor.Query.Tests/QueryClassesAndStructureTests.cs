@@ -412,11 +412,11 @@ public sealed class QueryClassesAndStructureTests
         Assert.Equal(1, liveCount);
     }
 
-    private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
+    private static (BlazorQuery Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
-        return (new Query(state, registry), registry, state);
+        return (new BlazorQuery(state, registry), registry, state);
     }
 
     [Fact]

@@ -9,7 +9,7 @@ public sealed class QueryScopeTests
     {
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         var firstScope = query.CreateScope();
         var secondScope = query.CreateScope();
         registry.RegisterWithParentAndScope("first-root", null, firstScope.Key, ".root");
@@ -27,7 +27,7 @@ public sealed class QueryScopeTests
     {
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         var outerScope = query.CreateScope();
         var nestedScope = query.CreateScope();
         registry.RegisterWithParentAndScope("outer", null, outerScope.Key, ".outer");
@@ -45,7 +45,7 @@ public sealed class QueryScopeTests
         var page = new QueryRenderState();
         var layout = new LayoutQueryRenderState();
 
-        new Query(page).Select(".page").Css("color", "red");
+        new BlazorQuery(page).Select(".page").Css("color", "red");
         new LayoutQuery(layout).Select(".sidebar").Css("background", "black");
 
         Assert.Equal(1, page.RuleCountForTest());

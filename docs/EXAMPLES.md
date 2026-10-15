@@ -34,6 +34,19 @@ private void Approve()
 
 `QueryElement` keys identify owned render elements. Selectors resolve against registered metadata, not arbitrary DOM nodes.
 
+## Text versus trusted markup
+
+`Text`, `Append`, `Prepend`, and element creation with the default `isHtml: false` render values as encoded text. The raw-markup APIs (`Html`, `AppendHtml`, `PrependHtml`, and `isHtml: true`) do not sanitize or encode their input.
+
+For CMS or user-controlled content, use an approved HTML allow-list sanitizer at the application trust boundary before passing the result to a raw-markup API. If rich HTML is not required, use the text APIs instead:
+
+```csharp
+Query.Select(".cms-title").Text(cmsTitle);
+Query.Select(".status").Append(untrustedStatus);
+```
+
+Do not treat `QueryElement` ownership as content sanitization; Blazor still receives raw markup from the explicit HTML APIs.
+
 ## Isolated reusable control
 
 Place a reusable control under `QueryScopeHost`; the host cascades `IQueryScope` to child components, not back to the component that declares the host. The caller:
@@ -63,7 +76,7 @@ Place a reusable control under `QueryScopeHost`; the host cascades `IQueryScope`
 }
 ```
 
-In a parameterized reusable component, derive element keys from a required unique instance key rather than hard-coding `billing-42-*`. Scope isolation is logical API isolation, not a security boundary; keep the unscoped `Query` service for deliberate cross-component orchestration only. Structural operations require correct `ParentElementKey` metadata.
+In a parameterized reusable component, derive element keys from a required unique instance key rather than hard-coding `billing-42-*`. Scope isolation is logical API isolation, not a security boundary; keep the unscoped `BlazorQuery` service (often injected as `Query`) for deliberate cross-component orchestration only. Structural operations require correct `ParentElementKey` metadata.
 
 ## Preserve layout state across navigation
 

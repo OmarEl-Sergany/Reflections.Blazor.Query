@@ -22,7 +22,7 @@ Descendant `QueryElement` components inherit the scope key unless they explicitl
 
 `IQueryScope.Select` filters initial selector resolution and subsequent selection/traversal results to the same scope key. It also constrains structural operations and cleanup so a scoped selection cannot take ownership of or remove an element registered to a different scope. Nested `QueryScopeHost` instances establish a separate scope; an outer query does not absorb nested-scope elements.
 
-The scope is a **logical API isolation boundary**, not a security boundary. Code that can resolve the unrestricted `Query` or state services can still intentionally orchestrate outside the component scope. Use the scoped capability in reusable controls and reserve `Query`, `LayoutQuery`, and `ApplicationQuery` for deliberate broader orchestration.
+The scope is a **logical API isolation boundary**, not a security boundary. Code that can resolve the unrestricted `BlazorQuery` or state services can still intentionally orchestrate outside the component scope. Use the scoped capability in reusable controls and reserve `BlazorQuery`, `LayoutQuery`, and `ApplicationQuery` for deliberate broader orchestration.
 
 ## Ownership and lifecycle
 

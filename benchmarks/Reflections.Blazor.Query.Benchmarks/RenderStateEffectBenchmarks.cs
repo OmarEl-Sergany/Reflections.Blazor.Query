@@ -32,7 +32,7 @@ public class RenderStateEffectBenchmarks
         for (var index = 0; index < SelectionSize; index++)
             registry.Register($"effect-target-{index}", ".effect-target");
 
-        _selection = new Query(state, registry).Select(".effect-target");
+        _selection = new BlazorQuery(state, registry).Select(".effect-target");
         if (_selection.Length != SelectionSize)
             throw new InvalidOperationException($"Expected {SelectionSize} selected elements, observed {_selection.Length}.");
     }

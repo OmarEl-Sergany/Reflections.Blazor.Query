@@ -17,7 +17,7 @@ public sealed class QueryEffectsTests
         registry.Register("first", ".fade");
         registry.Register("second", ".fade");
 
-        var result = new Query(state, registry).Select(".fade").FadeTo(TimeSpan.FromMilliseconds(250), 0.35);
+        var result = new BlazorQuery(state, registry).Select(".fade").FadeTo(TimeSpan.FromMilliseconds(250), 0.35);
 
         Assert.Equal(2, result.Length);
         AssertCss(state, "first", "transition", "opacity 250ms ease");
@@ -35,7 +35,7 @@ public sealed class QueryEffectsTests
         registry.Register("fade-in", ".fade-in");
         registry.Register("transition", ".transition");
         registry.Register("custom", ".custom");
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         query.Select(".fade-out").FadeOut(TimeSpan.FromSeconds(5));
         query.Select(".fade-in").FadeIn(TimeSpan.FromSeconds(5));
         query.Select(".transition").Animate(
@@ -77,7 +77,7 @@ public sealed class QueryEffectsTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
 
-        new Query(state, registry).Select(".fade").FadeTo(TimeSpan.Zero, opacity);
+        new BlazorQuery(state, registry).Select(".fade").FadeTo(TimeSpan.Zero, opacity);
 
         AssertCss(state, "first", "transition", "opacity 0ms ease");
         AssertCss(state, "first", "opacity", opacity.ToString("0.#################", CultureInfo.InvariantCulture));
@@ -93,7 +93,7 @@ public sealed class QueryEffectsTests
         var changedCount = 0;
         state.Changed += () => changedCount++;
 
-        new Query(state, registry).Select(".fade").FadeTo(TimeSpan.FromSeconds(1), 0.5);
+        new BlazorQuery(state, registry).Select(".fade").FadeTo(TimeSpan.FromSeconds(1), 0.5);
 
         Assert.Equal(1, changedCount);
         Assert.Equal(4, state.Rules.Count);
@@ -105,7 +105,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
 
-        var result = new Query(state, registry).Select(".missing").FadeTo(TimeSpan.FromMilliseconds(100), 0.5);
+        var result = new BlazorQuery(state, registry).Select(".missing").FadeTo(TimeSpan.FromMilliseconds(100), 0.5);
 
         Assert.Equal(0, result.Length);
         Assert.Empty(state.Rules);
@@ -122,7 +122,7 @@ public sealed class QueryEffectsTests
             var registry = new QueryElementRegistry();
             registry.Register("first", ".fade");
 
-            new Query(state, registry).Select(".fade").FadeTo(TimeSpan.FromTicks(1), 0.25);
+            new BlazorQuery(state, registry).Select(".fade").FadeTo(TimeSpan.FromTicks(1), 0.25);
 
             AssertCss(state, "first", "transition", "opacity 0.0001ms ease");
             AssertCss(state, "first", "opacity", "0.25");
@@ -145,7 +145,7 @@ public sealed class QueryEffectsTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => new Query(state, registry)
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BlazorQuery(state, registry)
             .Select(".fade")
             .FadeTo(TimeSpan.FromMilliseconds(100), opacity));
 
@@ -159,7 +159,7 @@ public sealed class QueryEffectsTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => new Query(state, registry)
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BlazorQuery(state, registry)
             .Select(".fade")
             .FadeTo(TimeSpan.FromMilliseconds(-1), 0.5));
 
@@ -184,7 +184,7 @@ public sealed class QueryEffectsTests
         var changedCount = 0;
         state.Changed += () => changedCount++;
 
-        var selection = new Query(state, registry).Select(".fade");
+        var selection = new BlazorQuery(state, registry).Select(".fade");
         if (effect == "FadeIn") selection.FadeIn(TimeSpan.FromMilliseconds(125));
         else selection.FadeOut(TimeSpan.FromMilliseconds(125));
 
@@ -200,7 +200,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
-        var selection = new Query(state, registry).Select(".fade");
+        var selection = new BlazorQuery(state, registry).Select(".fade");
         selection.Hide();
 
         selection.FadeIn(TimeSpan.Zero);
@@ -215,7 +215,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
 
-        var selection = new Query(state, registry).Select(".missing");
+        var selection = new BlazorQuery(state, registry).Select(".missing");
         selection.FadeIn(TimeSpan.Zero).FadeOut(TimeSpan.Zero);
 
         Assert.Empty(state.Rules);
@@ -227,7 +227,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
-        var selection = new Query(state, registry).Select(".fade");
+        var selection = new BlazorQuery(state, registry).Select(".fade");
 
         selection.FadeToggle(TimeSpan.FromMilliseconds(180));
         AssertCss(state, "first", "animation", "rbq-fade-out 180ms ease both");
@@ -244,7 +244,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
-        var selection = new Query(state, registry).Select(".fade");
+        var selection = new BlazorQuery(state, registry).Select(".fade");
         selection.Hide();
 
         selection.FadeToggle(TimeSpan.Zero);
@@ -267,14 +267,14 @@ public sealed class QueryEffectsTests
         var changedCount = 0;
         state.Changed += () => changedCount++;
 
-        new Query(state, registry).Select(".fade").FadeToggle(TimeSpan.FromMilliseconds(50));
+        new BlazorQuery(state, registry).Select(".fade").FadeToggle(TimeSpan.FromMilliseconds(50));
         Assert.Equal(1, changedCount);
         AssertCss(state, "first", "animation", "rbq-fade-out 50ms ease both");
         AssertCss(state, "second", "animation", "rbq-fade-out 50ms ease both");
 
         state.Clear();
         changedCount = 0;
-        new Query(state, registry).Select(".missing").FadeToggle(TimeSpan.Zero);
+        new BlazorQuery(state, registry).Select(".missing").FadeToggle(TimeSpan.Zero);
         Assert.Equal(0, changedCount);
         Assert.Empty(state.Rules);
     }
@@ -285,7 +285,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
-        var selection = new Query(state, registry).Select(".fade");
+        var selection = new BlazorQuery(state, registry).Select(".fade");
 
         Assert.Throws<ArgumentOutOfRangeException>(() => selection.FadeToggle(TimeSpan.FromTicks(-1)));
         Assert.Empty(state.Rules);
@@ -316,7 +316,7 @@ public sealed class QueryEffectsTests
             ["transform"] = "scale(0.9)"
         };
 
-        var selection = new Query(state, registry).Select(".animated").Animate(targets, TimeSpan.FromMilliseconds(300));
+        var selection = new BlazorQuery(state, registry).Select(".animated").Animate(targets, TimeSpan.FromMilliseconds(300));
 
         Assert.Equal(2, selection.Length);
         foreach (var key in new[] { "first", "second" })
@@ -334,7 +334,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".animated");
-        var selection = new Query(state, registry).Select(".animated");
+        var selection = new BlazorQuery(state, registry).Select(".animated");
 
         Assert.Throws<ArgumentOutOfRangeException>(() => selection.Animate(
             new Dictionary<string, string> { ["opacity"] = "0" }, TimeSpan.FromTicks(-1)));
@@ -356,9 +356,9 @@ public sealed class QueryEffectsTests
         var changedCount = 0;
         state.Changed += () => changedCount++;
 
-        new Query(state, registry).Select(".animated").Animate(
+        new BlazorQuery(state, registry).Select(".animated").Animate(
             new Dictionary<string, string>(), TimeSpan.FromMilliseconds(50));
-        new Query(state, registry).Select(".missing").Animate(
+        new BlazorQuery(state, registry).Select(".missing").Animate(
             new Dictionary<string, string> { ["opacity"] = "0" }, TimeSpan.FromMilliseconds(50));
 
         Assert.Empty(state.Rules);
@@ -381,7 +381,7 @@ public sealed class QueryEffectsTests
                 ["--offset"] = "1px"
             };
 
-            new Query(state, registry).Select(".animated").Animate(targets, TimeSpan.FromTicks(1));
+            new BlazorQuery(state, registry).Select(".animated").Animate(targets, TimeSpan.FromTicks(1));
 
             AssertCss(state, "first", "transition", "--offset 0.0001ms ease, z-index 0.0001ms ease");
         }
@@ -403,7 +403,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
-        var selection = new Query(state, registry).Select(".fade");
+        var selection = new BlazorQuery(state, registry).Select(".fade");
 
         selection.FadeOut(TimeSpan.FromMilliseconds(200));
 
@@ -421,7 +421,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
-        var selection = new Query(state, registry).Select(".fade");
+        var selection = new BlazorQuery(state, registry).Select(".fade");
         selection.FadeOut(TimeSpan.FromMilliseconds(200));
         state.SetCss("[data-rbq-key=\"first\"]", "animation", "custom 1s linear");
 
@@ -441,7 +441,7 @@ public sealed class QueryEffectsTests
         var bridge = new FakeMeasurementBridge([new MeasurementReading("first", MeasurementKind.ScrollHeight, 84)]);
         var measurements = new QueryMeasurementCoordinator(bridge);
         measurements.Requested += () => _ = measurements.FlushAsync();
-        var selection = new Query(state, registry, measurements).Select(".slide");
+        var selection = new BlazorQuery(state, registry, measurements).Select(".slide");
 
         var slide = selection.SlideDown(TimeSpan.FromMilliseconds(180)).AsTask();
         await WaitForRuleAsync(state, "animation", "rbq-slide-down 180ms ease both");
@@ -469,7 +469,7 @@ public sealed class QueryEffectsTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".slide");
         var measurements = CreateMeasurements("first", 62);
-        var selection = new Query(state, registry, measurements).Select(".slide");
+        var selection = new BlazorQuery(state, registry, measurements).Select(".slide");
         var slide = selection.SlideUp(TimeSpan.FromMilliseconds(90)).AsTask();
         await WaitForRuleAsync(state, "animation", "rbq-slide-up 90ms ease both");
         Assert.False(state.IsHidden("first"));
@@ -489,7 +489,7 @@ public sealed class QueryEffectsTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".slide");
         var measurements = CreateMeasurements("first", 47);
-        var selection = new Query(state, registry, measurements).Select(".slide");
+        var selection = new BlazorQuery(state, registry, measurements).Select(".slide");
         state.Hide("first");
         var slideDown = selection.SlideToggle(TimeSpan.FromMilliseconds(75)).AsTask();
         await WaitForRuleAsync(state, "animation", "rbq-slide-down 75ms ease both");
@@ -512,7 +512,7 @@ public sealed class QueryEffectsTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".slide");
         state.Hide("first");
-        var selection = new Query(state, registry, CreateMeasurements("first", 100)).Select(".slide");
+        var selection = new BlazorQuery(state, registry, CreateMeasurements("first", 100)).Select(".slide");
         var slide = selection.SlideDown(TimeSpan.FromSeconds(1)).AsTask();
 
         await selection.Finish();
@@ -529,7 +529,7 @@ public sealed class QueryEffectsTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".slide");
         state.Hide("first");
-        var selection = new Query(state, registry, CreateMeasurements("first", 100)).Select(".slide");
+        var selection = new BlazorQuery(state, registry, CreateMeasurements("first", 100)).Select(".slide");
         var slide = selection.SlideDown(TimeSpan.FromSeconds(1)).AsTask();
         await WaitForRuleAsync(state, "animation", "rbq-slide-down 1000ms ease both");
 
@@ -548,7 +548,7 @@ public sealed class QueryEffectsTests
         registry.Register("first", ".slide");
         state.Hide("first");
         var measurements = CreateMeasurements("first", 100);
-        var selection = new Query(state, registry, measurements).Select(".slide");
+        var selection = new BlazorQuery(state, registry, measurements).Select(".slide");
         var slide = selection.SlideDown(TimeSpan.FromSeconds(1)).AsTask();
         await WaitForRuleAsync(state, "animation", "rbq-slide-down 1000ms ease both");
 
@@ -566,7 +566,7 @@ public sealed class QueryEffectsTests
         var registry = new QueryElementRegistry();
         registry.Register("first", ".slide");
         state.Hide("first");
-        var selection = new Query(state, registry, CreateMeasurements("first", 100)).Select(".slide");
+        var selection = new BlazorQuery(state, registry, CreateMeasurements("first", 100)).Select(".slide");
         var slide = selection.SlideDown(TimeSpan.FromSeconds(1)).AsTask();
         await WaitForRuleAsync(state, "animation", "rbq-slide-down 1000ms ease both");
 
@@ -587,7 +587,7 @@ public sealed class QueryEffectsTests
         state.SetCss(selector, "height", "auto");
         state.SetCss(selector, "overflow", "visible");
         state.SetCss(selector, "animation", "caller-animation 2s linear");
-        var selection = new Query(state, registry, CreateMeasurements("first", 35)).Select(".slide");
+        var selection = new BlazorQuery(state, registry, CreateMeasurements("first", 35)).Select(".slide");
         var slide = selection.SlideUp(TimeSpan.FromMilliseconds(40)).AsTask();
         await WaitForRuleAsync(state, "animation", "rbq-slide-up 40ms ease both");
 
@@ -605,7 +605,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".slide");
-        var selection = new Query(state, registry, CreateMeasurements("first", 20)).Select(".slide");
+        var selection = new BlazorQuery(state, registry, CreateMeasurements("first", 20)).Select(".slide");
 
         Assert.Throws<ArgumentOutOfRangeException>(() => selection.SlideDown(TimeSpan.FromTicks(-1)));
         Assert.Throws<ArgumentException>(() => selection.QueueSlideUp(TimeSpan.Zero, " "));
@@ -618,11 +618,11 @@ public sealed class QueryEffectsTests
         Assert.Contains("QueueSlideToggle", QueryGeneratedMetadata.SupportedOperations);
         Assert.Empty(state.Rules);
 
-        var emptySelection = new Query(state, registry).Select(".missing");
+        var emptySelection = new BlazorQuery(state, registry).Select(".missing");
         Assert.Same(emptySelection, await emptySelection.SlideDown(TimeSpan.Zero));
         Assert.Same(emptySelection, await emptySelection.SlideUp(TimeSpan.Zero));
         Assert.Same(emptySelection, await emptySelection.SlideToggle(TimeSpan.Zero));
-        Assert.Throws<InvalidOperationException>(() => new Query(state, registry).Select(".slide").SlideDown(TimeSpan.Zero));
+        Assert.Throws<InvalidOperationException>(() => new BlazorQuery(state, registry).Select(".slide").SlideDown(TimeSpan.Zero));
     }
 
 
@@ -667,7 +667,7 @@ public sealed class QueryEffectsTests
         var state = new QueryRenderState();
         var registry = new QueryElementRegistry();
         registry.Register("first", ".fade");
-        var selection = new Query(state, registry).Select(".fade");
+        var selection = new BlazorQuery(state, registry).Select(".fade");
 
         Assert.Throws<ArgumentOutOfRangeException>(() =>
         {

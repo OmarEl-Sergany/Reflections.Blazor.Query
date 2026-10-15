@@ -33,7 +33,7 @@ public sealed class QueryEffectsComponentTests
                 builder.CloseComponent();
             }));
 
-        new Query(renderState, registry).Select(".fade").FadeTo(TimeSpan.FromMilliseconds(375), 0.25);
+        new BlazorQuery(renderState, registry).Select(".fade").FadeTo(TimeSpan.FromMilliseconds(375), 0.25);
 
         host.WaitForAssertion(() =>
         {
@@ -63,7 +63,7 @@ public sealed class QueryEffectsComponentTests
                 builder.AddAttribute(2, nameof(QueryElement.Class), "fade");
                 builder.CloseComponent();
             }));
-        var selection = new Query(renderState, registry).Select(".fade");
+        var selection = new BlazorQuery(renderState, registry).Select(".fade");
 
         selection.FadeOut(TimeSpan.FromMilliseconds(300));
         host.WaitForAssertion(() =>
@@ -101,7 +101,7 @@ public sealed class QueryEffectsComponentTests
                 builder.AddAttribute(2, nameof(QueryElement.Class), "fade-toggle");
                 builder.CloseComponent();
             }));
-        var selection = new Query(renderState, registry).Select(".fade-toggle");
+        var selection = new BlazorQuery(renderState, registry).Select(".fade-toggle");
 
         selection.FadeToggle(TimeSpan.FromMilliseconds(225));
         host.WaitForAssertion(() => Assert.Contains(
@@ -138,7 +138,7 @@ public sealed class QueryEffectsComponentTests
                 builder.CloseComponent();
             }));
 
-        new Query(renderState, registry).Select(".animated").Animate(
+        new BlazorQuery(renderState, registry).Select(".animated").Animate(
             new Dictionary<string, string> { ["opacity"] = "0.4", ["transform"] = "scale(0.8)" },
             TimeSpan.FromMilliseconds(400));
 
@@ -180,7 +180,7 @@ public sealed class QueryEffectsComponentTests
                 builder.AddAttribute(6, nameof(QueryElement.Class), "slide-child");
                 builder.CloseComponent();
             }));
-        var query = new Query(renderState, registry, measurements);
+        var query = new BlazorQuery(renderState, registry, measurements);
         var parent = query.Select(".slide-parent");
         var child = query.Select(".slide-child");
         var parentDrain = parent.SlideUp(TimeSpan.FromMilliseconds(300)).AsTask();

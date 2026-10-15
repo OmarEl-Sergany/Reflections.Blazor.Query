@@ -29,6 +29,9 @@ foreach ($expected in $expectedPackages) {
         if ($expected.Analyzer -and 'analyzers/dotnet/cs/Reflections.Blazor.Query.Generators.dll' -notin $entries) {
             throw "Package '$($packageFile.Name)' is missing the source generator analyzer."
         }
+        if ($expected.Id -eq 'Reflections.Blazor.Query' -and @($entries | Where-Object { $_ -match '(^|/)reflectionsBlazorQuery\.js$' }).Count -gt 0) {
+            throw "Package '$($packageFile.Name)' contains the legacy arbitrary-selector DOM style helper."
+        }
 
         $nuspecEntry = $archive.Entries | Where-Object FullName -Like '*.nuspec' | Select-Object -First 1
         if (-not $nuspecEntry) {

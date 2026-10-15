@@ -19,7 +19,7 @@ public static class QueryServiceCollectionExtensions
         services.AddScoped<QueryMeasurementCoordinator>();
         services.AddScoped<IQueryFormBridge, JsQueryFormBridge>();
         services.AddScoped<QueryFormCoordinator>();
-        services.AddScoped<Query>();
+        services.AddScoped<BlazorQuery>();
         services.AddScoped<LayoutQueryRenderState>();
         services.AddScoped<LayoutQuery>();
         services.AddScoped<ApplicationQueryRenderState>();

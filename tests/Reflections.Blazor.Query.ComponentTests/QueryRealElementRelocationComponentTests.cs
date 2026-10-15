@@ -68,7 +68,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(12, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "moving-content")));
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
 
         // Declaring ParentElementKey only affects registry traversal (Parent()/Children()), never actual
         // DOM nesting for a real, Razor-declared element — it still renders exactly where written above,
@@ -111,7 +111,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(9, nameof(QueryElement.Class), "host");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
 
         query.Select(".mover").AppendTo(query.Select(".host"));
         cut.WaitForAssertion(() =>
@@ -151,7 +151,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(9, nameof(QueryElement.Class), "root");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         var host = query.Select(".root").AppendElement("div", "host");
 
         query.Select(".mover").AppendTo(host);
@@ -184,7 +184,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(3, nameof(QueryElement.Class), "parent");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         var child = query.Select(".parent").AppendElement("div", "child");
 
         Assert.Throws<InvalidOperationException>(() => query.Select(".parent").AppendTo(child));
@@ -210,7 +210,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(8, nameof(QueryElement.ParentElementKey), "root");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
 
         var wrapper = query.Select(".item").Wrap("figure", "wrapper");
 
@@ -244,7 +244,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(12, nameof(QueryElement.Class), "mover");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
 
         query.Select(".anchor").Before(query.Select(".mover"));
 
@@ -284,7 +284,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(14, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "replacement-content")));
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
 
         query.Select(".target").ReplaceWith(query.Select(".replacement"));
 
@@ -327,7 +327,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(15, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "second-content")));
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
 
         var wrapper = query.Select(".item").WrapAll("section", "wrapper");
 
@@ -367,7 +367,7 @@ public sealed class QueryRealElementRelocationComponentTests
             }));
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         query.Select(".panel").AppendElement("em", "managed", "managed-content");
 
         query.Select(".panel").WrapInner("section", "inner");
@@ -393,7 +393,7 @@ public sealed class QueryRealElementRelocationComponentTests
 
         var cut = context.Render<HostReparentTestHost>(parameters => parameters
             .Add(c => c.HostParentKey, "p1"));
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         query.Select(".mover").AppendTo(query.Select(".host"));
         cut.WaitForAssertion(() => AssertMoverIsNestedInsideHost(cut.Markup));
 
@@ -450,7 +450,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(17, nameof(QueryElement.Class), "mover");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
 
         Assert.Throws<InvalidOperationException>(() => query.Select(".row").Before(query.Select(".mover")));
     }
@@ -479,7 +479,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(11, nameof(QueryElement.Class), "mover");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
 
         // Simulates a relocation triggered from a background service / timer / SignalR callback rather
         // than a UI event handler — the exact scenario the dispatch fix (QueryRenderState.RegisterDispatch,
@@ -511,7 +511,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(4, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "click me")));
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         var count = 0;
 
         query.Select(".button").On("click", () => count++);
@@ -533,7 +533,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(3, nameof(QueryElement.Class), "button");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         MouseEventArgs? observed = null;
         query.Select(".button").On<MouseEventArgs>("click", args => observed = args);
 
@@ -559,7 +559,7 @@ public sealed class QueryRealElementRelocationComponentTests
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         MouseEventArgs? observed = null;
         var completed = false;
-        new Query(state, registry).Select(".button").Click(async args =>
+        new BlazorQuery(state, registry).Select(".button").Click(async args =>
         {
             observed = args;
             started.SetResult();
@@ -591,7 +591,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(3, nameof(QueryElement.Class), "form");
             builder.CloseComponent();
         });
-        var query = new Query(state, registry);
+        var query = new BlazorQuery(state, registry);
         EventArgs? observed = null;
         query.Select(".form").On<EventArgs>("submit", args => observed = args);
 
@@ -613,7 +613,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.AddComponentParameter(3, nameof(QueryElement.Class), "surface");
             builder.CloseComponent();
         });
-        var selection = new Query(state, registry).Select(".surface");
+        var selection = new BlazorQuery(state, registry).Select(".surface");
         MouseEventArgs? mouse = null;
         KeyboardEventArgs? keyboard = null;
         ChangeEventArgs? change = null;
@@ -643,7 +643,7 @@ public sealed class QueryRealElementRelocationComponentTests
         });
         MouseEventArgs? entered = null;
         MouseEventArgs? left = null;
-        new Query(state, registry).Select(".surface").Hover(args => entered = args, args => left = args);
+        new BlazorQuery(state, registry).Select(".surface").Hover(args => entered = args, args => left = args);
 
         cut.Find("div").MouseEnter(new MouseEventArgs { ClientX = 12 });
         cut.Find("div").MouseLeave(new MouseEventArgs { ClientX = 34 });
@@ -666,7 +666,7 @@ public sealed class QueryRealElementRelocationComponentTests
             builder.CloseComponent();
         });
         EventArgs? observed = null;
-        new Query(state, registry).Select(".input").SelectJS(args => observed = args);
+        new BlazorQuery(state, registry).Select(".input").SelectJS(args => observed = args);
 
         cut.Find("input").Select();
 

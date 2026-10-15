@@ -23,7 +23,7 @@ public sealed class QueryClassesAndStructureComponentTests
             .Add(component => component.ElementKey, "card")
             .Add(component => component.TagName, "div")
             .Add(component => component.Class, "card base"));
-        var selection = new Query(renderState, registry).Select(".card");
+        var selection = new BlazorQuery(renderState, registry).Select(".card");
 
         selection.AddClass("active");
         cut.WaitForAssertion(() => Assert.Contains("class=\"card base active\"", cut.Markup, StringComparison.Ordinal));
@@ -47,7 +47,7 @@ public sealed class QueryClassesAndStructureComponentTests
             .Add(component => component.ElementKey, "banner")
             .Add(component => component.TagName, "div")
             .Add(component => component.Class, "banner"));
-        var selection = new Query(renderState, registry).Select(".banner");
+        var selection = new BlazorQuery(renderState, registry).Select(".banner");
 
         selection.Hide();
         cut.WaitForAssertion(() => Assert.Contains("display: none;", cut.Markup, StringComparison.Ordinal));
@@ -72,7 +72,7 @@ public sealed class QueryClassesAndStructureComponentTests
             .Add(component => component.TagName, "div")
             .Add(component => component.Class, "list")
             .AddChildContent("middle"));
-        var selection = new Query(renderState, registry).Select(".list");
+        var selection = new BlazorQuery(renderState, registry).Select(".list");
 
         selection.Append("after").AppendHtml("<b>trusted-after</b>");
         selection.Prepend("before");
@@ -107,7 +107,7 @@ public sealed class QueryClassesAndStructureComponentTests
             .Add(component => component.Class, "panel")
             .Add(component => component.AdditionalAttributes, new Dictionary<string, object> { ["style"] = "color: red;" }));
 
-        new Query(renderState, registry).Select(".panel").Hide();
+        new BlazorQuery(renderState, registry).Select(".panel").Hide();
 
         cut.WaitForAssertion(() =>
         {
@@ -131,7 +131,7 @@ public sealed class QueryClassesAndStructureComponentTests
             .Add(component => component.ElementKey, "list")
             .Add(component => component.TagName, "ul")
             .Add(component => component.Class, "list"));
-        var list = new Query(renderState, registry).Select(".list");
+        var list = new BlazorQuery(renderState, registry).Select(".list");
 
         var firstItem = list.AppendElement("li", "item", "first");
         list.AppendElement("li", "item", "second");
@@ -175,7 +175,7 @@ public sealed class QueryClassesAndStructureComponentTests
             builder.AddComponentParameter(7, nameof(QueryElement.Class), "listB");
             builder.CloseComponent();
         });
-        var query = new Query(renderState, registry);
+        var query = new BlazorQuery(renderState, registry);
         var item = query.Select(".listA").AppendElement("li", text: "roaming");
 
         cut.WaitForAssertion(() =>
@@ -210,7 +210,7 @@ public sealed class QueryClassesAndStructureComponentTests
             .Add(component => component.TagName, "div")
             .Add(component => component.Class, "toast"));
 
-        new Query(renderState, registry).Select(".toast").Remove();
+        new BlazorQuery(renderState, registry).Select(".toast").Remove();
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("data-rbq-key=\"toast\"", cut.Markup, StringComparison.Ordinal));
     }

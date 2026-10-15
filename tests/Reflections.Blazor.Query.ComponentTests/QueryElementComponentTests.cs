@@ -27,13 +27,13 @@ public sealed class QueryElementComponentTests
             .Add(component => component.TagName, "p")
             .Add(component => component.Class, "child"));
 
-        Assert.Equal(["child"], new Query(new QueryRenderState(), registry).Select("p.child").ToArray());
-        Assert.Equal(["parent-one"], new Query(new QueryRenderState(), registry).Select(".child").Parent().ToArray());
+        Assert.Equal(["child"], new BlazorQuery(new QueryRenderState(), registry).Select("p.child").ToArray());
+        Assert.Equal(["parent-one"], new BlazorQuery(new QueryRenderState(), registry).Select(".child").Parent().ToArray());
 
-        new Query(renderState, registry).Select(".child").Attr("title", "registered");
+        new BlazorQuery(renderState, registry).Select(".child").Attr("title", "registered");
         cut.WaitForAssertion(() => Assert.Contains("title=\"registered\"", cut.Markup, StringComparison.Ordinal));
 
-        new Query(renderState, registry).Select(".child").Prop("hidden", true);
+        new BlazorQuery(renderState, registry).Select(".child").Prop("hidden", true);
         cut.WaitForAssertion(() => Assert.Contains("hidden", cut.Markup, StringComparison.Ordinal));
 
         cut.Render(parameters => parameters
@@ -42,13 +42,13 @@ public sealed class QueryElementComponentTests
             .Add(component => component.TagName, "p")
             .Add(component => component.Class, "updated"));
 
-        Assert.Empty(new Query(new QueryRenderState(), registry).Select(".child").ToArray());
-        Assert.Equal(["renamed-child"], new Query(new QueryRenderState(), registry).Select("p.updated").ToArray());
-        Assert.Equal(["parent-two"], new Query(new QueryRenderState(), registry).Select(".updated").Parent().ToArray());
+        Assert.Empty(new BlazorQuery(new QueryRenderState(), registry).Select(".child").ToArray());
+        Assert.Equal(["renamed-child"], new BlazorQuery(new QueryRenderState(), registry).Select("p.updated").ToArray());
+        Assert.Equal(["parent-two"], new BlazorQuery(new QueryRenderState(), registry).Select(".updated").Parent().ToArray());
 
         await context.DisposeAsync();
 
-        Assert.Empty(new Query(new QueryRenderState(), registry).Select(".updated").ToArray());
+        Assert.Empty(new BlazorQuery(new QueryRenderState(), registry).Select(".updated").ToArray());
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public sealed class QueryElementComponentTests
             .Add(component => component.ElementKey, "input")
             .Add(component => component.TagName, "input")
             .Add(component => component.Class, "field"));
-        var selection = new Query(renderState, registry).Select(".field");
+        var selection = new BlazorQuery(renderState, registry).Select(".field");
 
         selection.Val("chosen");
         cut.WaitForAssertion(() => Assert.Contains("value=\"chosen\"", cut.Markup, StringComparison.Ordinal));
@@ -76,7 +76,7 @@ public sealed class QueryElementComponentTests
             .Add(component => component.TagName, "div")
             .Add(component => component.Class, "content")
             .AddChildContent("Initial"));
-        selection = new Query(renderState, registry).Select(".content");
+        selection = new BlazorQuery(renderState, registry).Select(".content");
         selection.Text("<strong>encoded</strong>");
         cut.WaitForAssertion(() => Assert.Contains("&lt;strong&gt;encoded&lt;/strong&gt;", cut.Markup, StringComparison.Ordinal));
 
@@ -98,7 +98,7 @@ public sealed class QueryElementComponentTests
             .Add(component => component.ElementKey, "root")
             .Add(component => component.TagName, "div")
             .Add(component => component.Class, "root"));
-        var selection = new Query(renderState, registry).Select(".root");
+        var selection = new BlazorQuery(renderState, registry).Select(".root");
         selection.On("click", () => { }).On<Microsoft.AspNetCore.Components.Web.MouseEventArgs>("click", _ => { }).DelegateJS(".item", "click", _ => { });
 
         cut.Instance.Dispose();

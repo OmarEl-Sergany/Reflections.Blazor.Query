@@ -37,11 +37,11 @@ Add the namespace to `_Imports.razor` if it is not already present:
 
 ## 4. Host queryable elements and update their state
 
-`QueryHost` provides the render-state and after-render lifecycle. `QueryElement` declares a library-owned element that can be resolved by `Query`; ordinary HTML outside a `QueryElement` is not part of the query registry.
+`QueryHost` provides the render-state and after-render lifecycle. `QueryElement` declares a library-owned element that can be resolved by the injected `BlazorQuery` service; ordinary HTML outside a `QueryElement` is not part of the query registry.
 
 ```razor
 @page "/query-demo"
-@inject Query Query
+@inject BlazorQuery Query
 
 <QueryHost>
     <QueryElement TagName="article" ElementKey="release-card" Class="release-card">
@@ -72,6 +72,8 @@ Add the namespace to `_Imports.razor` if it is not already present:
 ```
 
 The operation changes library-owned render state; Blazor renders the result. It does not write styles or attributes directly into the browser DOM. See [Examples](EXAMPLES.md) for component isolation, layout persistence, measurements, effects, and queues.
+
+This does not make ordinary HTML or third-party/CMS component output queryable. Targets must be registered `QueryElement`s under a `QueryHost`. See [Integration fit](INTEGRATION-FIT.md) before adapting an existing component or CMS-rendered block tree.
 
 ## State lifetime
 
@@ -125,7 +127,11 @@ Inside `AccountPanel.razor`, receive the cascaded scope and declare the owned el
 }
 ```
 
-Supply unique element keys for repeated control instances. Set `ParentElementKey` for registered descendants when an operation depends on structural parent/child relationships (for example, delegated event roots or traversal). This is an API isolation boundary, not a security boundary: code with access to the unscoped `Query` service can still perform page/layout orchestration. See [Component Query Scoping](COMPONENT-SCOPING.md).
+Supply unique element keys for repeated control instances. Set `ParentElementKey` for registered descendants when an operation depends on structural parent/child relationships (for example, delegated event roots or traversal). This is an API isolation boundary, not a security boundary: code with access to the unscoped `BlazorQuery` service can still perform page/layout orchestration. See [Component Query Scoping](COMPONENT-SCOPING.md).
+
+## Raw HTML and untrusted content
+
+`Html`, `AppendHtml`, `PrependHtml`, and virtual-element creation with `isHtml: true` emit raw markup through Blazor; the library does not sanitize it. If content originates from a CMS, a user, or another untrusted source, sanitize it with the application's approved HTML allow-list policy before using these APIs. Prefer `Text`, `Append`, `Prepend`, or the default `isHtml: false` when the value should be displayed as text. See [Text versus trusted markup](EXAMPLES.md#text-versus-trusted-markup).
 
 ## Delegated browser events (optional)
 

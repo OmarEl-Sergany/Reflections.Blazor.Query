@@ -2,13 +2,17 @@
 
 Reflections.Blazor.Query is still pre-release and has no published NuGet package. This guide describes the architectural mapping for teams moving jQuery-oriented UI code into Blazor; it is not a promise of drop-in jQuery compatibility.
 
+## Breaking API change
+
+The injectable service type was renamed from `Query` to `BlazorQuery` to avoid the confusing `Query.Query` naming. Update registrations only if you manually registered the service; `AddBlazorQuery()` now registers `BlazorQuery` automatically. In Razor, change `@inject Query Query` to `@inject BlazorQuery Query`. Existing fluent calls such as `Query.Select(...)` do not change.
+
 ## Change the rendering model
 
 The central migration is from “select any live DOM node and mutate it” to “declare a queryable `QueryElement`, update its library-owned state, and let Blazor render it.”
 
 | Existing jQuery pattern | Reflections.Blazor.Query pattern |
 | --- | --- |
-| `$(selector)` | Inject `Query` and use `Query.Select(selector)` |
+| `$(selector)` | Inject `BlazorQuery` (commonly as `Query`) and use `Query.Select(selector)` |
 | Select arbitrary document elements | Register queryable nodes with `QueryElement` inside `QueryHost` |
 | `.css()`, `.attr()`, `.addClass()` | Fluent state operations such as `.Css()`, `.Attr()`, `.AddClass()` |
 | `$(document).ready(...)` | Use Blazor component lifecycle methods and event callbacks |
@@ -32,7 +36,7 @@ The complete setup and examples are in [Getting Started](GETTING-STARTED.md) and
 - **Scopes:** `IQueryScope` constrains resolution and traversal for reusable controls. It is logical API isolation, not a security boundary. Unscoped `Query` is still available for deliberate broader orchestration.
 - **Metrics:** use asynchronous `WidthAsync`, `HeightAsync`, `OffsetAsync`, `PositionAsync`, and related methods. Browser layout values exist only after rendering and may be `null` when an element is not currently measurable.
 - **Effects:** measured slide effects are awaitable. Queued effects and callbacks do not run until `Dequeue()`; `Promise()` observes queue completion but does not start work.
-- **HTML:** `Text` is encoded text. `Html` and the HTML fragment methods are explicit trusted-markup boundaries; do not pass untrusted content.
+- **HTML:** `Text`, `Append`, and `Prepend` render encoded text. `Html`, `AppendHtml`, `PrependHtml`, and element-creation methods with `isHtml: true` render raw markup without sanitizing it. Sanitize CMS/user-controlled HTML under the application's allow-list policy first; use text APIs when markup is unnecessary.
 - **Events:** handlers are library-owned state rendered as Blazor event bindings. `DelegateJS` is a constrained bubbling-event bridge and requires the host initializer before Blazor starts.
 - **Lifecycle:** page render state clears on navigation. Layout state persists while its owning layout host remains mounted. Disposal removes registrations and cancels token-aware asynchronous work.
 
