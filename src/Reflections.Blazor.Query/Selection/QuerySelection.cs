@@ -5,6 +5,11 @@ using System.Text;
 
 namespace Reflections.Blazor.Query
 {
+    /// <summary>A fluent operation target representing registered elements matching a query selector.</summary>
+    /// <remarks>
+    /// Selection methods update Blazor-owned render state. An unresolved selector has a length of zero and
+    /// operations do not affect arbitrary DOM nodes outside a Query host.
+    /// </remarks>
     public sealed class QuerySelection
     {
         private readonly QueryRenderState _state;
@@ -35,10 +40,16 @@ namespace Reflections.Blazor.Query
             _resolvedKeys = resolvedKeys;
         }
 
+        /// <summary>Gets the selector used to create this selection.</summary>
         public string Selector { get; }
 
+        /// <summary>Gets the number of currently resolved registered elements in this selection.</summary>
         public int Length => RequireResolvedKeys().Count;
 
+        /// <summary>Sets a CSS property in the selected elements' Blazor-owned render state.</summary>
+        /// <param name="property">CSS property name.</param>
+        /// <param name="value">CSS value to render.</param>
+        /// <returns>This selection for fluent composition.</returns>
         public QuerySelection Css(
             string property,
             string value)

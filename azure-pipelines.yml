@@ -67,8 +67,43 @@ steps:
     ArtifactName: PlaywrightDiagnostics
     publishLocation: Container
 - script: dotnet pack src/Reflections.Blazor.Query/Reflections.Blazor.Query.csproj --configuration $(BuildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/packages
+  displayName: Pack runtime library with source generator
+- script: dotnet pack src/Reflections.Blazor.Query.Generators/Reflections.Blazor.Query.Generators.csproj --configuration $(BuildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/packages
+  displayName: Pack standalone source generator
+- task: PowerShell@2
+  displayName: Verify NuGet package contents and release metadata
+  inputs:
+    targetType: filePath
+    filePath: eng/verify-packages.ps1
+    arguments: -PackageDirectory "$(Build.ArtifactStagingDirectory)/packages" -RequireLicense
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: $(Build.ArtifactStagingDirectory)
     ArtifactName: Reflections.Blazor.Query
+    publishLocation: Container
+- script: dotnet tool restore
+  displayName: Restore documentation build tool
+- script: dotnet tool run docfx -- docs/docfx.json
+  displayName: Build documentation site and API reference
+- task: PowerShell@2
+  displayName: Verify generated documentation site
+  inputs:
+    targetType: inline
+    script: |
+      $requiredFiles = @(
+        'docs/_site/index.html',
+        'docs/_site/index.json',
+        'docs/_site/api/Reflections.Blazor.Query.Query.html',
+        'docs/_site/api/Reflections.Blazor.Query.QuerySelection.html'
+      )
+      $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) }
+      if ($missingFiles) {
+        Write-Error "Documentation output is incomplete: $($missingFiles -join ', ')"
+        exit 1
+      }
+- task: PublishBuildArtifacts@1
+  displayName: Publish documentation site for review
+  inputs:
+    PathtoPublish: docs/_site
+    ArtifactName: Reflections.Blazor.Query.Docs
     publishLocation: Container

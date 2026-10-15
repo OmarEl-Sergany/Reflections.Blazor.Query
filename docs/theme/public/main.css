@@ -1,0 +1,61 @@
+:root {
+  --rbq-ink: #142238;
+  --rbq-muted: #526277;
+  --rbq-accent: #0b7c86;
+  --rbq-accent-strong: #075d66;
+  --rbq-soft: #eaf5f4;
+}
+
+body {
+  --bs-link-color-rgb: 11, 124, 134;
+  --bs-link-hover-color-rgb: 7, 93, 102;
+}
+
+.navbar-brand {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.55rem;
+  white-space: nowrap;
+}
+
+.navbar-brand img {
+  display: block;
+  height: 2rem;
+  object-fit: contain;
+  width: 2rem;
+}
+
+article h1 {
+  color: var(--rbq-ink);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+article h2 {
+  color: var(--rbq-ink);
+  margin-top: 2.25rem;
+  letter-spacing: -0.02em;
+}
+
+article blockquote {
+  border-left-color: var(--rbq-accent);
+  background: var(--rbq-soft);
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: var(--rbq-ink);
+  padding: 0.85rem 1rem;
+}
+
+article table {
+  --bs-table-striped-bg: rgba(11, 124, 134, 0.045);
+}
+
+article pre {
+  border-radius: 0.65rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  article h1,
+  article h2 {
+    scroll-margin-top: 5rem;
+  }
+}

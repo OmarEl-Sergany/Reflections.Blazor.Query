@@ -5,6 +5,23 @@ using Microsoft.AspNetCore.Components.Web;
 namespace Reflections.Blazor.Query;
 
 [EventHandler("onrbqanimationend", typeof(EventArgs), enableStopPropagation: true, enablePreventDefault: false)]
+[EventHandler("onrbqclick", typeof(QueryEventTarget))]
+[EventHandler("onrbqchange", typeof(QueryEventTarget))]
+[EventHandler("onrbqsubmit", typeof(QueryEventTarget))]
+[EventHandler("onrbqfocusin", typeof(QueryEventTarget))]
+[EventHandler("onrbqfocusout", typeof(QueryEventTarget))]
+[EventHandler("onrbqselect", typeof(QueryEventTarget))]
+[EventHandler("onrbqkeydown", typeof(QueryEventTarget))]
+[EventHandler("onrbqkeyup", typeof(QueryEventTarget))]
+[EventHandler("onrbqkeypress", typeof(QueryEventTarget))]
+[EventHandler("onrbqmousedown", typeof(QueryEventTarget))]
+[EventHandler("onrbqmouseup", typeof(QueryEventTarget))]
+[EventHandler("onrbqmousemove", typeof(QueryEventTarget))]
+[EventHandler("onrbqmouseover", typeof(QueryEventTarget))]
+[EventHandler("onrbqmouseout", typeof(QueryEventTarget))]
+[EventHandler("onrbqcontextmenu", typeof(QueryEventTarget))]
+[EventHandler("onrbqdblclick", typeof(QueryEventTarget))]
+[EventHandler("onrbqscroll", typeof(QueryEventTarget))]
 public static class QueryCustomEventHandlers
 {
 }

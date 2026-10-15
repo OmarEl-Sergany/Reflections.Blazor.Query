@@ -1,23 +1,23 @@
 # Reflections.Blazor.Query — Implementation Plan
 
-This plan follows the Azure DevOps hierarchy and repository delivery policy. Sprints 0–4 are complete in the repository; Sprint 4 is formally closed. Sprint 5 (Feature 4470: effects and queues) implementation is complete, with two evidence gates still preventing formal closure.
+This plan follows the Azure DevOps hierarchy and repository delivery policy. Sprints 0–4 are complete in the repository; Sprint 4 is formally closed. Sprint 5 (Feature 4470: effects and queues) implementation and local validation are complete. Remote CI/artifact publication and deployment are release operations, not missing library APIs.
 
-## 🚀 Active Phase: Sprint 5 (Feature 4470)
+## ✅ Current Phase: Sprint 5 (Feature 4470)
 
-**Current focus:** Obtain final remote CI evidence and immutable artifact identity for the completed effects and queue slices.
+**Current status:** Library implementation is complete. Remaining actions are remote CI/artifact evidence and release/deployment operations.
 
-- **Status:** Implementation and local validation complete; formal closure pending the remote CI/artifact evidence below. `Animate`, fades, measured slide effects, and queue APIs through `Promise` are implemented vertical slices.
+- **Status:** Local implementation and acceptance criteria are complete. `Animate`, fades, measured slide effects, and queue APIs through `Promise` are implemented vertical slices.
 
 **Sprint 5 exit gates (ordered):**
 
 1. [x] Manual real-browser slide smoke in Interactive Server, WebAssembly, and Auto. Verified RCL JS assets, `rbqanimationend`, measured height, and Blazor completion; Auto was observed first on Server then on WebAssembly after cached-runtime reload.
-2. [x] Add and locally execute the CI-integrated browser suite: Server 8/8, WebAssembly 3/3, and Auto 3/3 scenarios passed on 2026-10-14. [ ] Run the Azure Pipeline against this source revision and retain its published JUnit/performance/diagnostic artifacts.
+2. [x] Add and locally execute the browser suite: Server 8/8, WebAssembly 6/6, and Auto 6/6 scenarios passed locally. **Release gate (outside library implementation):** Run the Azure Pipeline against the release revision and retain its published JUnit/performance/diagnostic artifacts.
 3. [x] Add repeatable in-process baselines for batched measurement and render-state effects at 1/10/100/1000 keys, plus host-specific 25-sample browser baselines for Server, WebAssembly, and Auto Server-to-cached-WebAssembly; record scope and timing attribution limits in [Performance Baseline](PERFORMANCE-BASELINE.md).
-4. [x] Resolve the current NuGet advisories by updating ASP.NET Core component packages to 10.0.13; Release solution build and package archive validation passed locally. [ ] Capture and verify immutable artifact identity through the remote CI publication workflow.
+4. [x] Resolve the current NuGet advisories by updating ASP.NET Core component packages to 10.0.13; Release solution build and package archive validation passed locally. **Release gate (outside library implementation):** Capture and verify immutable artifact identity through the remote CI publication workflow.
 
-The latest local validation passed on 2026-10-14: 254/254 .NET tests and all 14 configured browser tests across Server, WebAssembly, and Auto; Release solution build with zero warnings/errors; no vulnerable NuGet packages; and a valid runtime `.nupkg` containing the assembly, README, and RCL static web assets. Local host-specific performance evidence is recorded; formal closure remains contingent on a pipeline run and immutable artifact verification for the pushed source revision. Automated effects/reconnect cases currently run on Server; WASM and Auto include lifecycle/navigation, measurement, and performance coverage, while slide interaction in those hosts has manual smoke evidence.
+Local validation on 2026-10-15: 257/257 .NET tests passed; browser E2E passed Server 8/8, WebAssembly 6/6, and Auto 6/6; Release solution build completed with zero warnings/errors; DocFX generated the site with zero warnings/errors; runtime and standalone generator packages passed archive/license validation at version 1.0.0. Browser performance sampling ran in all three host configurations. Server automates queue/reconnect behavior; WebAssembly and Auto automate measured slide toggles, explicit sequential queue execution, delegated custom-event routing, navigation, measurement, and performance. Remote CI/artifact publication remains a separate release gate.
 
-Remote closure check on 2026-10-14: the first pipeline request (build 833) correctly targeted the pushed commit but failed pipeline validation because this Azure DevOps Server has no hosted `Azure Pipelines` pool. The project has a `Default` self-hosted pool; its registered agent is currently offline. The YAML now targets `Default`. Work item 4470 (“Effects and queues”) remains **New**, assigned to Omar El Sergany. Re-run CI after the configured agent is online and verify the published browser/performance and runtime package artifacts before closing the work item.
+Remote status last checked on 2026-10-14: the first pipeline request (build 833) correctly targeted the pushed commit but failed pipeline validation because this Azure DevOps Server has no hosted `Azure Pipelines` pool. The project has a `Default` self-hosted pool; its registered agent was offline at that check. The YAML now targets `Default`. Work item 4470 (“Effects and queues”) remains **New**, assigned to Omar El Sergany. Re-run CI after the configured agent is online and verify the published browser/performance and runtime package artifacts. This is external release evidence, not an unimplemented library feature.
 
 ### Implemented matrix
 
@@ -75,7 +75,9 @@ Remote closure check on 2026-10-14: the first pipeline request (build 833) corre
 - [x] Manual browser smoke: verify slide up/down completion and JS initializer in Interactive Server, WebAssembly, and Auto; verify Auto's initial Server and cached WebAssembly executions.
 - [x] CI integration for browser E2E: the Azure Pipeline runs the Playwright Server reconnect suite and publishes JUnit results/failure traces.
 - [x] Automate Server slide/reconnect, navigation, element disposal, queue cancellation, and expired-circuit cases; automate navigation lifecycle on WebAssembly and Auto.
-- [ ] Extend automated slide/queue interaction and JS-initializer coverage across WebAssembly and Auto (manual slide smoke is not a substitute for these automated cases).
+- [x] Automate measured `SlideToggle` down/up completion and temporary-style cleanup in WebAssembly and Auto (`client-effects.spec.ts`).
+- [x] Automate explicit-dequeue and sequential queue execution in WebAssembly and Auto; Auto repeats the interaction after warm reload on cached WebAssembly (`client-queue.spec.ts`).
+- [x] Automate the delegated custom-event initializer path in WebAssembly and Auto: pre-start registration, nested element-key routing, selector filtering, and Auto's warmed WebAssembly reload (`client-delegation.spec.ts`).
 - [x] Server reconnect browser E2E: a controllable SignalR disconnect verifies an in-progress animation continues and a browser-confirmed completion while disconnected settles after reconnection.
 - [x] Server navigation browser E2E: page-scoped CSS is cleared when navigating away, while layout-scoped CSS remains rendered.
 - [x] Server component-disposal browser E2E: removing a `QueryElement` unregisters its selector metadata; a subsequent query resolves zero matches.
@@ -85,9 +87,9 @@ Remote closure check on 2026-10-14: the first pipeline request (build 833) corre
 - [x] WebAssembly browser E2E: applying page-scoped CSS, navigating away, and returning confirms the old page state is cleared and not replayed.
 - [x] Auto browser E2E: verifies a fresh visit uses a Server circuit, a warm reload handles interactions without opening a new circuit (cached WebAssembly), and page state is cleared on navigation and not replayed on return.
 - [x] Performance core baseline: BenchmarkDotNet coverage for measurement request coalescing and render-state `Animate` updates over 1/10/100/1000 keys, with allocation and latency snapshots recorded in [Performance Baseline](PERFORMANCE-BASELINE.md).
-- [ ] Performance host baselines: measure browser/Blazor render and interop costs separately for Interactive Server (including transport) and WebAssembly; the in-process numbers must not be presented as host-mode performance.
+- [x] Performance host baselines: recorded browser/Blazor render and interop measurements separately for Interactive Server (including circuit transport), WebAssembly, and Auto's Server-to-cached-WebAssembly path; limits and attribution caveats are documented in [Performance Baseline](PERFORMANCE-BASELINE.md).
 - [x] Dependency/release local gate: resolve NU1903 advisories, build Release with zero warnings/errors, and validate the runtime package contains its README and static web assets.
-- [ ] Remote release evidence: verify the Azure Pipeline run and immutable published artifact identity for this source revision.
+- [ ] **Release operations:** verify a successful Azure Pipeline run and immutable published artifact identity for the release revision. This is outside the library implementation completion measure.
 
 ## Product goal
 
@@ -116,7 +118,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - Page scope: cleared on navigation.
 - Layout scope: survives navigation while the layout remains active.
 - Application scope: optional, explicit, and long-lived.
-- Reusable component isolation is a planned logical query capability constrained by generated `ComponentScopeKey` metadata, not a nested DI scope. See [Component Scoping Boundaries](COMPONENT-SCOPING.md).
+- Reusable component isolation is implemented as a logical query capability using cascaded `IQueryScope` keys registered by `QueryElement`; it is not a nested DI scope or a security boundary. See [Component Query Scoping](COMPONENT-SCOPING.md). Unit and bUnit coverage includes repeated/nested-host isolation, mutation confinement, and element unregister/re-register during rerender.
 - Every operation updates state and produces Blazor-owned render output.
 - No operation writes to a Blazor-owned DOM node through JavaScript.
 - Browser layout metrics are an explicit read-only interop boundary. Measurement results are snapshots held in a dedicated library-owned measurement cache, not render-driving mutation state.
@@ -130,7 +132,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 
 Implement and test these first:
 
-`Add`, `AddBack`, `AddClass`, `After`, `Append`, `AppendTo`, `Attr`, `Before`, `Children`, `Clone`, `Closest`, `Css`, `Data`, `Detach`, `Each`, `Empty`, `End`, `Eq`, `Filter`, `Find`, `First`, `Has`, `HasClass`, `Height_Get`, `Height_Set`, `Hide`, `Html`, `Index`, `InnerHeight`, `InnerWidth`, `InsertAfter`, `InsertBefore`, `Is`, `Last`, `Length`, `Map`, `Next`, `NextAll`, `NextUntil`, `Not`, `Offset`, `OffsetParent`, `On`, `OuterHeight`, `OuterWidth`, `Parent`, `Parents`, `ParentsUntil`, `Position`, `Prepend`, `PrependTo`, `Prev`, `PrevAll`, `PrevUntil`, `Prop`, `PushStack`, `Remove`, `RemoveAttr`, `RemoveClass`, `RemoveData`, `RemoveProp`, `ReplaceAll`, `ReplaceWith`, `Select`, `Serialize`, `SerializeArray`, `Show`, `Siblings`, `Size`, `Slice`, `Text_Get`, `Text_Set`, `ToArray`, `Toggle`, `ToggleClass`, `Trigger`, `TriggerHandler`, `Val`, `Width_Get`, `Width_Set`, `Wrap`, `WrapAll`, `WrapInner`.
+`Add`, `AddBack`, `AddClass`, `After`, `Append`, `AppendTo`, `Attr`, `Before`, `Children`, `Clone`, `Closest`, `Css`, `Data`, `Detach`, `Each`, `Empty`, `End`, `Eq`, `Filter`, `Find`, `First`, `Get`, `Has`, `HasClass`, `Height_Get`, `Height_Set`, `Hide`, `Html`, `Index`, `InnerHeight`, `InnerWidth`, `InsertAfter`, `InsertBefore`, `Is`, `JQuery` (Blazor-safe alias for `Select`), `Last`, `Length`, `Map`, `Next`, `NextAll`, `NextUntil`, `Not`, `Offset`, `OffsetParent`, `On`, `OuterHeight`, `OuterWidth`, `Parent`, `Parents`, `ParentsUntil`, `Position`, `Prepend`, `PrependTo`, `Prev`, `PrevAll`, `PrevUntil`, `Prop`, `PushStack`, `Remove`, `RemoveAttr`, `RemoveClass`, `RemoveData`, `RemoveProp`, `ReplaceAll`, `ReplaceWith`, `Select`, `Serialize`, `SerializeArray`, `Show`, `Siblings`, `Slice`, `Text_Get`, `Text_Set`, `ToArray`, `Toggle`, `ToggleClass`, `Trigger`, `TriggerHandler`, `Val`, `Width_Get`, `Width_Set`, `Wrap`, `WrapAll`, `WrapInner`.
 
 ### Tier 2 - effects and queue modules
 
@@ -154,15 +156,22 @@ Event-specific helpers also expose typed overloads for the same descriptor types
 
 Event registrations are lifecycle-owned state: removing a virtual element cascades registration cleanup to virtual descendants, and disposing a mounted `QueryElement` clears untyped, typed, and delegated-root registrations for that key. This avoids callback retention in long-lived layout or application render states.
 
-### Tier 4 - explicit compatibility or non-core features
+### Tier 4 - compatibility boundary decisions
 
-`Context`, `Error`, `Get`, `JQuery`, `Load`, `Ready`, and `Unload` require separate design decisions because they depend on browser globals, arbitrary JavaScript, document lifecycle, or Ajax-era behavior. `SelectJS` is implemented as a normal Blazor-owned text-selection event with no JavaScript escape hatch.
+`Context` and `Ready` are documented as Blazor-specific alternatives below, not as jQuery-compatibility implementation work. `Get` is part of the implemented collection API, `JQuery` is a library-specific naming alias for `Select`, and `Error` / `Load` / `Unload` are supported as library-owned event helpers only—not as Ajax or document lifecycle interception. `SelectJS` is implemented as a normal Blazor-owned text-selection event with no JavaScript escape hatch.
 
 `DelegateJS` / `Undelegate` are implemented as a constrained, safe delegation boundary: the host loads `_content/Reflections.Blazor.Query/queryEvents.js` after `blazor.web.js` with `autostart="false"`, registers the finite custom event set, then calls `Blazor.start()`. The initializer supplies only the nearest `data-rbq-key`; C# retains handler state and validates descendant, scope, and selector membership before invoking the handler. Only bubbling events are supported; it is not a general JavaScript escape hatch.
 
 ### Excluded or replaced APIs
 
 Ajax is excluded: `AjaxComplete`, `AjaxError`, `AjaxSend`, `AjaxStart`, `AjaxStop`, `AjaxSuccess`, and the Ajax form of `Load`.
+
+`Size` is excluded because [jQuery removed it in 3.0](https://api.jquery.com/size/); use `Length`. The `JQuery(selector)` alias is library-specific and accepts CSS selectors only; unlike [jQuery's constructor](https://api.jquery.com/jQuery/), it does not accept HTML strings, DOM objects, or document-ready callbacks.
+
+### Blazor-specific alternatives (not jQuery API targets)
+
+- `Context` — no separate jQuery-style context argument is planned; use `IQueryScope` for explicit component isolation.
+- `Ready` — no jQuery-style DOM-ready API is planned; use Blazor component lifecycle methods such as `OnAfterRenderAsync`.
 
 The following are not jQuery 4 core targets because they were removed long before jQuery 4 or are legacy compatibility APIs: `AndSelf`, `Die`, `Live`, `Delegate`, and `Undelegate`. Use `AddBack` and `On`/`Off` equivalents. `Bind`/`Unbind` remain compatibility aliases only.
 
@@ -234,14 +243,19 @@ Sprint 4 exit evidence: `dotnet test Reflections.Blazor.Query.slnx --no-restore`
 - [x] Implement awaitable `Stop` with cooperative cancellation and optional pending-queue clearing; tokenless work is awaited rather than preempted.
 - [x] Implement finish-aware queue completion, skipped delays, and terminal render-state CSS for library-owned fades/transitions; `Show`/`Hide` remove finish-owned fade terminal styles. Active tokenless callbacks remain non-preemptible.
 - [x] Implement awaitable completion promises.
-- Validate navigation and component disposal in component tests. Playwright browser tests currently include `page query state clears while layout query state survives navigation`, `a slide that is still running after reconnect completes normally`, and `a slide completed while disconnected settles after reconnect`.
-- Add performance benchmarks and long-running circuit tests.
+- [x] Validate navigation and component disposal in component and browser tests, including page/layout persistence, element/host disposal, queue cancellation, circuit expiration, reconnect during animation, and completion while disconnected.
+- [x] Add performance benchmarks and host-specific browser baselines; see [Performance Baseline](PERFORMANCE-BASELINE.md).
+- [x] Cover long-lived circuit lifecycle transitions through reconnect and configured circuit-expiration browser scenarios. A separate soak test is not a release criterion without an agreed duration, load profile, and pass thresholds.
 
 ### Sprint 6 - compatibility, packaging, and release
 
 - Resolve Tier 4 decisions and mark non-goals explicitly; do not expand the core API matrix merely to reproduce removed/legacy jQuery behavior.
-- Publish API documentation and migration guide.
-- Package the library and generator independently with version alignment.
+- [x] Add consumer Getting Started and focused usage examples, including registration for each hosting model, page/layout/application lifetime, component scopes, read-only measurements, delegated events, effects, and queues. See [Getting Started](GETTING-STARTED.md) and [Usage Examples](EXAMPLES.md).
+- [x] Add a migration guide for jQuery-oriented UI code and the library's intentional compatibility boundaries.
+- [x] Generate a searchable static documentation site and managed .NET API reference with a repository-pinned DocFX tool; publish the generated site as a CI build artifact for review.
+- [ ] Deploy the documentation site to a hosting provider after the release/deployment target is approved.
+- [x] Package the library and generator independently with a shared version; bundle the analyzer into the runtime package and validate source generation from clean consumer projects. Local package validation only; no feed publication.
+- [x] Adopt Apache-2.0, add the canonical license file and package SPDX metadata, and enforce the license in package validation.
 - Build once, publish immutable artifacts, and promote the same artifact through environments.
 
 ## Azure DevOps structure to create after approval

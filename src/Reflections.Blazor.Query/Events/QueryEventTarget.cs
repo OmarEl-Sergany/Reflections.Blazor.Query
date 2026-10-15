@@ -4,4 +4,7 @@ namespace Reflections.Blazor.Query;
 /// Read-only event target identity supplied by the Blazor custom-event argument factory.
 /// The browser provides no selector result or handler state; those remain library-owned.
 /// </summary>
-public sealed record QueryEventTarget(string? ElementKey);
+public sealed class QueryEventTarget(string? elementKey) : EventArgs
+{
+    public string? ElementKey { get; } = elementKey;
+}

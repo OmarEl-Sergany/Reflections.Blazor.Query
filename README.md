@@ -4,8 +4,10 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Build passing](https://img.shields.io/badge/build-passing-success)
-![Tests 254/254 passed](https://img.shields.io/badge/tests-254%2F254%20passed-success)
-![License MIT](https://img.shields.io/badge/license-MIT-blue)
+![Tests 257/257 passed](https://img.shields.io/badge/tests-257%2F257%20passed-success)
+![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
+
+Copyright 2026 Reflections Digital Agency. Licensed under [Apache-2.0](LICENSE); see [NOTICE](NOTICE).
 
 Reflections.Blazor.Query brings familiar fluent query patterns to Blazor without treating the browser DOM as an escape hatch. It is an orchestration layer for library-owned elements: concise C# selection and state operations, rendered by Blazor itself.
 
@@ -33,15 +35,26 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - `docs/MEASUREMENT-BOUNDARY.md` — the read-only, queued, coalesced JS measurement contract.
 - `docs/PERFORMANCE-BASELINE.md` — reproducible in-process performance baselines and their measurement boundaries.
 - `docs/COMPONENT-SCOPING.md` — component-level query scoping design.
+- `docs/GETTING-STARTED.md` — host registration, first query, scope lifetime, and delegated-event setup.
+- `docs/EXAMPLES.md` — focused examples for state updates, scoped controls, layout persistence, measurement, effects, and queues.
+- `docs/index.md` — documentation site landing page and architecture summary.
+- `docs/docfx.json` — pinned DocFX site and generated .NET API reference configuration.
+- `docs/DOCS-SITE.md` — pinned DocFX build, preview, CI artifact, and deployment boundary.
+- `docs/MIGRATION.md` — migration guidance from jQuery-oriented UI code.
+- `docs/NUGET-PACKAGING.md` — package composition, local validation, and the publication gate.
 
 ## Current status (validated 2026-10-14, `feature/4468-lifecycle-hardening`)
 
-- **Completed:** Sprint 3 — Classes and DOM structure (Feature 4468), and Sprint 4 — Events and Forms (Feature 4469). Sprint 5 (Effects and Queues, Feature 4470) is in progress; `Animate`, fade effects, slide effects, and queue APIs through `Promise` are implemented slices.
+- **License:** Apache-2.0; see [LICENSE](LICENSE).
+
+- **Completed:** Sprint 3 — Classes and DOM structure (Feature 4468), Sprint 4 — Events and Forms (Feature 4469), and Sprint 5 — Effects and Queues (Feature 4470) implementation/local validation. Formal release closure still requires an Azure Pipeline run and immutable artifact evidence.
 - **Clone contract:** `Clone()` supports library-created virtual elements only. It does not duplicate a live Razor component instance.
-- **Automated validation:** 254/254 .NET unit/component tests and all 14 local Playwright cases pass. Playwright covers Server, WebAssembly, and Auto lifecycle scenarios plus real-browser measurement metrics and host-path performance in every runtime. Auto performance is measured first on Server and again after warm reload on cached WebAssembly. Manual slide smoke checks passed in Server, WebAssembly, and Auto.
+- **Automated validation:** 257/257 .NET unit/component tests and all 20 configured local Playwright cases pass across Server, WebAssembly, and Auto, including real-browser measurements, host-path performance, measured slide-toggle down/up, explicit queue execution, and delegated custom-event routing in WebAssembly and Auto. Auto queue and delegated-event behavior are exercised on the initial Server render and again after warm reload on cached WebAssembly. Manual slide smoke checks also passed in all three hosts.
 - **Sprint 5 validation:** The latest Release solution build has 0 warnings/errors. NuGet audit reports no vulnerable packages, and the runtime package includes its README and RCL static assets. ASP.NET Core component packages were updated to 10.0.13 to address the current advisories.
-- **Sprint 5 closure:** implementation and local validation are complete. Formal closure still requires an Azure Pipeline run on this source revision with its published artifact evidence, plus host-specific browser performance measurements (Server transport/browser and WebAssembly client/render/interop). Automated slide/queue interactions are Server-covered; WebAssembly and Auto currently have lifecycle/navigation browser coverage plus manual slide smoke evidence.
+- **Sprint 5 closure:** implementation and local validation are complete. Formal release closure still requires an Azure Pipeline run on this source revision with published artifact evidence. Host-specific performance baselines are recorded for Server, WebAssembly, and Auto. Automated measured slide-toggle, explicit queue-interaction, and delegated custom-event coverage run in WebAssembly and Auto.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
+- **Documentation:** searchable DocFX site and generated API reference build locally and are emitted as a CI artifact; public hosting/deployment remains pending approval.
+- **NuGet release:** both packages are locally packable and consumer-tested under Apache-2.0. CI validates package metadata before publishing build artifacts; no NuGet push is configured.
 
 ### Implemented capabilities
 
@@ -52,6 +65,7 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] Shared DI registration for the library.
 - [x] Server, WebAssembly, and Auto demo hosts with working proof-of-concept pages.
 - [x] `Select`
+- [x] `JQuery(selector)` — familiar naming alias for `Select(selector)`; it resolves only library-registered elements and does not parse HTML strings.
 - [x] `Length`
 - [x] `Eq`
 - [x] `First`
@@ -181,9 +195,9 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [x] `SlideDown(TimeSpan)`, `SlideToggle(TimeSpan)`, and `SlideUp(TimeSpan)` — await measured-height slides directly; completion restores natural height, and slide-up hides only after animation end.
 - [x] `QueueSlideDown`, `QueueSlideToggle`, and `QueueSlideUp` — enqueue the same measured effects for callers who need explicit queue control.
 - [x] `Stop`
-- [ ] Independent NuGet packaging for the library and generator (Feature 4471)
-- [ ] Migration guide (Feature 4471)
-- [ ] Public documentation and developer experience site (Feature 4472)
+- [x] Independent NuGet packaging for the library and generator with a shared version; the runtime package also carries the analyzer so a single package reference activates generation (Feature 4471). Packages are locally validated and not published.
+- [x] Migration guide for jQuery-oriented Blazor adoption (Feature 4471)
+- [x] Public documentation site and generated API reference; CI publishes a review artifact (Feature 4472). Hosting deployment remains pending approval of a target.
 
 ### Explicitly deferred, legacy, or excluded
 
@@ -198,19 +212,22 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - [ ] `Die` — legacy removed API.
 - [ ] `Live` — legacy removed API.
 - [ ] `Undelegate` — legacy removed API.
-- [ ] `Context` — review required or deferred.
+- [ ] `Context` — excluded; jQuery removed this collection property in 3.0. Query scope is exposed explicitly through `IQueryScope` instead.
 - [x] `DelegateJS` / `Undelegate` — delegated, bubbling browser events. The host must load the supplied pre-start custom-event initializer; it returns only the closest library-owned `data-rbq-key`, then C# validates the root, scope, and selector before dispatch. No JS handler registry or DOM mutation is used.
-- [ ] `Error` — review required or deferred.
-- [ ] `JQuery` — review required or deferred.
-- [ ] `Load` (non-Ajax) — review required or deferred.
-- [ ] `Ready` — review required or deferred.
+- [x] `Error` — event helper over the library-owned Blazor event pipeline; this does not imply Ajax error handling.
+- [x] `Load` — event helper over the library-owned Blazor event pipeline. Ajax-form `Load` remains excluded.
+- [ ] `Ready` — no jQuery-style document-ready callback; Blazor component lifecycle (`OnInitialized` / `OnAfterRender`) owns readiness.
 - [x] `SelectJS` — Blazor-owned text-selection event helper with typed `EventArgs` and parameterless synthetic trigger overloads.
-- [ ] `Size` — review required or deferred.
-- [ ] `Unload` — review required or deferred.
+- [ ] `Size` — excluded; removed from jQuery 3.0. Use `Length`.
+- [x] `Unload` — event helper over the library-owned Blazor event pipeline; this does not imply page-unload interception or Ajax behavior.
 
 See [docs/PROJECT-PLAN.md](docs/PROJECT-PLAN.md) for the full API tiering, sprint breakdown, and acceptance criteria behind each item.
 
+The searchable documentation site and generated API reference are built from [docs/docfx.json](docs/docfx.json). See [Building the docs site](docs/DOCS-SITE.md) for local preview instructions.
+
 ## Quick start
+
+This is a compact API preview. For complete setup, hosting-model notes, and executable patterns, see [Getting Started](docs/GETTING-STARTED.md) and the [Examples](docs/EXAMPLES.md).
 
 Register the library once in the host application:
 
@@ -294,4 +311,4 @@ Questions, design critiques, and well-scoped feature proposals are welcome. The 
 
 ## License
 
-Licensed under the MIT License.
+Licensed under the [Apache License, Version 2.0](LICENSE).

@@ -12,7 +12,7 @@ if (!selectedHost)
 
 const baseURL = `http://127.0.0.1:${selectedHost.port}`;
 const testIgnore = host === "server"
-  ? ["**/client-lifecycle.spec.ts", "**/auto-lifecycle.spec.ts"]
+  ? ["**/client-lifecycle.spec.ts", "**/client-effects.spec.ts", "**/client-queue.spec.ts", "**/client-delegation.spec.ts", "**/auto-lifecycle.spec.ts"]
   : host === "wasm"
     ? ["**/slide-reconnect.spec.ts", "**/auto-lifecycle.spec.ts"]
     : ["**/slide-reconnect.spec.ts", "**/client-lifecycle.spec.ts"];

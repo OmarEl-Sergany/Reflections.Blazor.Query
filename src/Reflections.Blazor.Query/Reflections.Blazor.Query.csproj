@@ -4,6 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <PackageId>Reflections.Blazor.Query</PackageId>
+    <Title>Reflections.Blazor.Query</Title>
+    <Authors>Reflections Digital Agency</Authors>
+    <Description>A Blazor-native fluent query and element orchestration library that applies updates through library-owned render state and Blazor rendering.</Description>
+    <PackageTags>Blazor;Razor;query;DOM;source-generator</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
@@ -19,6 +25,12 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" PackageReadmeFile="README.md" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\Reflections.Blazor.Query.Generators\bin\$(Configuration)\netstandard2.0\Reflections.Blazor.Query.Generators.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs/Reflections.Blazor.Query.Generators.dll"
+          Visible="false" />
   </ItemGroup>
 
 </Project>

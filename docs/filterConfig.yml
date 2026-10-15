@@ -1,0 +1,3 @@
+apiRules:
+- exclude:
+    uidRegex: ^Reflections\.Blazor\.Query\.(Component1|ExampleJsInterop|_Imports)$

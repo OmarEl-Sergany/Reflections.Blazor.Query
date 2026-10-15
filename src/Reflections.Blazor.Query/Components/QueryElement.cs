@@ -95,42 +95,51 @@ public sealed class QueryElement : ComponentBase, IDisposable
         builder.AddAttribute(2, "data-rbq-key", ElementKey);
         if (!string.IsNullOrWhiteSpace(Id))
             builder.AddAttribute(3, "id", Id);
-        var sequence = 4;
         var className = BuildClassName(renderState);
         if (!string.IsNullOrEmpty(className))
-            builder.AddAttribute(sequence++, "class", className);
+            builder.AddAttribute(4, "class", className);
         if (renderState.IsHidden(ElementKey))
-            builder.AddAttribute(sequence++, "style", BuildHiddenStyle());
+            builder.AddAttribute(5, "style", BuildHiddenStyle());
         foreach (var attribute in renderState.AttributesFor(ElementKey))
-            builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
+            builder.AddAttribute(6, attribute.Key, attribute.Value);
         foreach (var property in renderState.PropertiesFor(ElementKey))
-            builder.AddAttribute(sequence++, property.Key, property.Value);
+            builder.AddAttribute(7, property.Key, property.Value);
         foreach (var eventName in renderState.EventNamesFor(ElementKey))
         {
-            var framesAdded = QueryEventDescriptors.AddBinding(builder, sequence, this, renderState, ElementKey, eventName);
+            var framesAdded = QueryEventDescriptors.AddBinding(builder, 8, this, renderState, ElementKey, eventName);
             if (framesAdded == 0)
-                builder.AddAttribute(sequence++, eventName, EventCallback.Factory.Create(this, () => renderState.TriggerAsync(ElementKey, eventName)));
-            else
-                sequence += framesAdded;
+                builder.AddAttribute(8, eventName, EventCallback.Factory.Create(this, () => renderState.TriggerAsync(ElementKey, eventName)));
         }
         foreach (var eventName in renderState.DelegatedEventNamesFor(ElementKey))
-            builder.AddAttribute(sequence++, QueryDelegatedEvents.AttributeName(eventName),
+            builder.AddAttribute(9, QueryDelegatedEvents.AttributeName(eventName),
                 EventCallback.Factory.Create<QueryEventTarget>(this, target => renderState.TriggerDelegated(ElementKey, eventName, target, Registry)));
         foreach (var fragment in renderState.PrependedFor(ElementKey))
-            AddFragment(builder, ref sequence, fragment);
+            AddFragment(builder, 10, fragment);
         var content = renderState.ContentFor(ElementKey);
         if (content is { IsHtml: true })
-            builder.AddMarkupContent(sequence++, content.Value);
+            builder.AddMarkupContent(11, content.Value);
         else if (content is not null)
-            builder.AddContent(sequence++, content.Value);
+            builder.AddContent(11, content.Value);
         else if (renderState.InnerWrapperFor(ElementKey) is { } innerWrapperKey)
+        {
+            var sequence = 12;
             RenderVirtualNode(builder, ref sequence, renderState, innerWrapperKey);
+        }
         else
-            builder.AddContent(sequence++, ChildContent);
+            builder.AddContent(11, ChildContent);
         foreach (var fragment in renderState.AppendedFor(ElementKey))
-            AddFragment(builder, ref sequence, fragment);
-        RenderChildren(builder, ref sequence, renderState, ElementKey, renderState.InnerWrapperFor(ElementKey));
+            AddFragment(builder, 13, fragment);
+        var childrenSequence = 14;
+        RenderChildren(builder, ref childrenSequence, renderState, ElementKey, renderState.InnerWrapperFor(ElementKey));
         builder.CloseElement();
+    }
+
+    private static void AddFragment(RenderTreeBuilder builder, int sequence, QueryContent fragment)
+    {
+        if (fragment.IsHtml)
+            builder.AddMarkupContent(sequence, fragment.Value);
+        else
+            builder.AddContent(sequence, fragment.Value);
     }
 
     private static void AddFragment(RenderTreeBuilder builder, ref int sequence, QueryContent fragment)

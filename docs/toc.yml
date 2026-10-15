@@ -1,0 +1,29 @@
+items:
+- name: Start here
+  items:
+  - name: Overview
+    href: index.md
+  - name: Getting started
+    href: GETTING-STARTED.md
+  - name: Usage examples
+    href: EXAMPLES.md
+- name: Architecture
+  items:
+  - name: Component scoping
+    href: COMPONENT-SCOPING.md
+  - name: Measurement boundary
+    href: MEASUREMENT-BOUNDARY.md
+  - name: Performance baseline
+    href: PERFORMANCE-BASELINE.md
+- name: API reference
+  href: api/toc.yml
+- name: Project
+  items:
+  - name: Implementation plan and API matrix
+    href: PROJECT-PLAN.md
+  - name: Migration guide
+    href: MIGRATION.md
+  - name: NuGet packaging
+    href: NUGET-PACKAGING.md
+  - name: Building the documentation site
+    href: DOCS-SITE.md
