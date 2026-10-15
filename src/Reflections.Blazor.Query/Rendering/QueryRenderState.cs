@@ -4,6 +4,11 @@ namespace Reflections.Blazor.Query;
 public class QueryRenderState
 {
     private readonly Dictionary<(string, string), string> _styles = new();
+    private readonly Dictionary<(string, string), string> _slideEffectStyles = new();
+    private readonly Dictionary<string, QuerySlideEffectState> _slideEffects = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _effectAnimationSelectors = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _effectTransitionSelectors = new(StringComparer.Ordinal);
+    private readonly HashSet<(string Selector, string Property)> _finishedFadeStyles = new();
     private readonly Dictionary<(string Key, string Name), string> _attributes = new();
     private readonly Dictionary<(string Key, string Name), object> _properties = new();
     private readonly Dictionary<(string Key, string Name), System.Text.Json.JsonElement> _data = new();
@@ -11,19 +16,33 @@ public class QueryRenderState
     private readonly Dictionary<string, HashSet<string>> _addedClasses = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _removedClasses = new(StringComparer.Ordinal);
     private readonly HashSet<string> _hiddenKeys = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _fadeOutKeys = new(StringComparer.Ordinal);
     private readonly HashSet<string> _removedKeys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<QueryContent>> _prepended = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<QueryContent>> _appended = new(StringComparer.Ordinal);
     private readonly Dictionary<string, QueryVirtualNode> _virtualNodes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _virtualChildKeys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RenderFragment> _realElementFragments = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RenderFragment> _innerContentByOwner = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _innerWrapperByOwner = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _contentWrapperByOwner = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RenderFragment> _innerContentByWrapper = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Key, string EventName), List<QueryEventHandler>> _eventHandlers = new();
+    private readonly Dictionary<(string Key, string EventName), List<QueryTypedEventHandler>> _typedEventHandlers = new();
+    private readonly Dictionary<(string Key, string EventName), List<QueryAsyncEventHandler>> _asyncEventHandlers = new();
+    private readonly Dictionary<(string Key, string EventName), List<QueryTypedAsyncEventHandler>> _typedAsyncEventHandlers = new();
+    private readonly Dictionary<(string RootKey, string EventName), List<QueryDelegatedEventHandler>> _delegatedEventHandlers = new();
+    private readonly Dictionary<(string ElementKey, string QueueName), QueryEffectQueue> _effectQueues = new();
     private readonly Dictionary<string, string> _relocatedParent = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _relocatedChildrenByHost = new(StringComparer.Ordinal);
     private readonly List<Func<Action, Task>> _dispatchers = [];
     private int _batchDepth;
     private bool _dirty;
     public event Action? Changed;
-    internal IReadOnlyList<QueryStyleRule> Rules => _styles.Select(x => new QueryStyleRule(x.Key.Item1, x.Key.Item2, x.Value)).ToArray();
+    internal IReadOnlyList<QueryStyleRule> Rules => _styles
+        .Select(x => new QueryStyleRule(x.Key.Item1, x.Key.Item2, x.Value))
+        .Concat(_slideEffectStyles.Select(x => new QueryStyleRule(x.Key.Item1, x.Key.Item2, x.Value)))
+        .ToArray();
     internal IReadOnlyDictionary<string, string> AttributesFor(string elementKey) => _attributes
         .Where(attribute => string.Equals(attribute.Key.Key, elementKey, StringComparison.Ordinal))
         .OrderBy(attribute => attribute.Key.Name, StringComparer.Ordinal)
@@ -42,6 +61,7 @@ public class QueryRenderState
     internal IReadOnlySet<string> RemovedClassesFor(string elementKey) =>
         _removedClasses.TryGetValue(elementKey, out var classes) ? classes : (IReadOnlySet<string>)new HashSet<string>();
     internal bool IsHidden(string elementKey) => _hiddenKeys.Contains(elementKey);
+    internal bool IsEffectHidden(string elementKey) => _hiddenKeys.Contains(elementKey) || _fadeOutKeys.Contains(elementKey);
     internal bool IsRemoved(string elementKey) => _removedKeys.Contains(elementKey);
     internal IReadOnlyList<QueryContent> PrependedFor(string elementKey) =>
         _prepended.TryGetValue(elementKey, out var fragments) ? fragments : [];
@@ -57,7 +77,591 @@ public class QueryRenderState
     internal bool IsRelocatedElsewhere(string elementKey) => _relocatedParent.ContainsKey(elementKey);
     internal RenderFragment? RealElementFragmentFor(string elementKey) =>
         _realElementFragments.TryGetValue(elementKey, out var fragment) ? fragment : null;
+    internal string? InnerWrapperFor(string elementKey) =>
+        _innerWrapperByOwner.TryGetValue(elementKey, out var wrapperKey) ? wrapperKey : null;
+    internal RenderFragment? InnerContentForWrapper(string wrapperKey) =>
+        _innerContentByWrapper.TryGetValue(wrapperKey, out var fragment) ? fragment : null;
+    internal IReadOnlyList<string> EventNamesFor(string elementKey) => _eventHandlers.Keys
+        .Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal))
+        .Select(key => key.EventName)
+        .Concat(_typedEventHandlers.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).Select(key => key.EventName))
+        .Concat(_asyncEventHandlers.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).Select(key => key.EventName))
+        .Concat(_typedAsyncEventHandlers.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).Select(key => key.EventName))
+        .Distinct(StringComparer.Ordinal).ToArray();
+    internal IReadOnlyList<string> DelegatedEventNamesFor(string rootKey) => _delegatedEventHandlers.Keys
+        .Where(key => string.Equals(key.RootKey, rootKey, StringComparison.Ordinal))
+        .Select(key => key.EventName)
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
+    internal void On(string elementKey, string eventName, Action handler, bool once)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        (_eventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _eventHandlers[(elementKey, eventName)] = []).Add(new(handler, once));
+        NotifyChanged();
+    }
+    internal void Off(string elementKey, string eventName, Action? handler = null)
+    {
+        eventName = NormalizeEventName(eventName);
+        var key = (elementKey, eventName);
+        if (handler is null)
+        {
+            _eventHandlers.Remove(key);
+            _asyncEventHandlers.Remove(key);
+        }
+        else if (_eventHandlers.TryGetValue(key, out var handlers))
+        {
+            handlers.RemoveAll(entry => entry.Handler == handler);
+            if (handlers.Count == 0) _eventHandlers.Remove(key);
+        }
+        NotifyChanged();
+    }
+    internal void On(string elementKey, string eventName, Func<Task> handler, bool once)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        (_asyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _asyncEventHandlers[(elementKey, eventName)] = []).Add(new(handler, once));
+        NotifyChanged();
+    }
+    internal void OffAsync(string elementKey, string eventName, Func<Task> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        if (!_asyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers)) return;
+        handlers.RemoveAll(entry => entry.Handler == handler);
+        if (handlers.Count == 0) _asyncEventHandlers.Remove((elementKey, eventName));
+        NotifyChanged();
+    }
+    internal void On<TEventArgs>(string elementKey, string eventName, Action<TEventArgs> handler, bool once) where TEventArgs : EventArgs
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        QueryEventDescriptors.Validate<TEventArgs>(eventName);
+        (_typedEventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _typedEventHandlers[(elementKey, eventName)] = [])
+            .Add(new(args => handler((TEventArgs)args), handler, typeof(TEventArgs), once));
+        NotifyChanged();
+    }
+    internal void Off<TEventArgs>(string elementKey, string eventName, Action<TEventArgs>? handler = null) where TEventArgs : EventArgs
+    {
+        eventName = NormalizeEventName(eventName);
+        var key = (elementKey, eventName);
+        if (handler is null)
+        {
+            _typedEventHandlers.Remove(key);
+            _typedAsyncEventHandlers.Remove(key);
+        }
+        else if (_typedEventHandlers.TryGetValue(key, out var handlers))
+        {
+            handlers.RemoveAll(entry => entry.ArgumentType == typeof(TEventArgs) && entry.OriginalHandler.Equals(handler));
+            if (handlers.Count == 0) _typedEventHandlers.Remove(key);
+        }
+        NotifyChanged();
+    }
+    internal void On<TEventArgs>(string elementKey, string eventName, Func<TEventArgs, Task> handler, bool once) where TEventArgs : EventArgs
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        QueryEventDescriptors.Validate<TEventArgs>(eventName);
+        (_typedAsyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers) ? handlers : _typedAsyncEventHandlers[(elementKey, eventName)] = [])
+            .Add(new(args => handler((TEventArgs)args), handler, typeof(TEventArgs), once));
+        NotifyChanged();
+    }
+    internal void OffAsync<TEventArgs>(string elementKey, string eventName, Func<TEventArgs, Task> handler) where TEventArgs : EventArgs
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeEventName(eventName);
+        if (!_typedAsyncEventHandlers.TryGetValue((elementKey, eventName), out var handlers))
+            return;
+        handlers.RemoveAll(entry => entry.ArgumentType == typeof(TEventArgs)
+            && entry.OriginalHandler.Equals(handler));
+        if (handlers.Count == 0)
+            _typedAsyncEventHandlers.Remove((elementKey, eventName));
+        NotifyChanged();
+    }
+    internal void Trigger(string elementKey, string eventName, EventArgs? eventArgs = null)
+    {
+        eventName = NormalizeEventName(eventName);
+        if (_eventHandlers.TryGetValue((elementKey, eventName), out var handlers))
+        {
+            foreach (var entry in handlers.ToArray())
+            {
+                entry.Handler();
+                if (entry.Once) handlers.Remove(entry);
+            }
+            if (handlers.Count == 0) _eventHandlers.Remove((elementKey, eventName));
+        }
+        if (eventArgs is not null && _typedEventHandlers.TryGetValue((elementKey, eventName), out var typedHandlers))
+        {
+            foreach (var entry in typedHandlers.ToArray())
+            {
+                if (entry.ArgumentType.IsInstanceOfType(eventArgs))
+                {
+                    entry.Handler(eventArgs);
+                    if (entry.Once) typedHandlers.Remove(entry);
+                }
+            }
+            if (typedHandlers.Count == 0) _typedEventHandlers.Remove((elementKey, eventName));
+        }
+        NotifyChanged();
+    }
+    internal void TriggerTyped<TEventArgs>(string elementKey, string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs
+    {
+        ArgumentNullException.ThrowIfNull(eventArgs);
+        eventName = NormalizeEventName(eventName);
+        QueryEventDescriptors.Validate<TEventArgs>(eventName);
+        if (!_typedEventHandlers.TryGetValue((elementKey, eventName), out var handlers))
+            return;
+        foreach (var entry in handlers.ToArray())
+        {
+            if (entry.ArgumentType != typeof(TEventArgs))
+                continue;
+            entry.Handler(eventArgs);
+            if (entry.Once)
+                handlers.Remove(entry);
+        }
+        if (handlers.Count == 0)
+            _typedEventHandlers.Remove((elementKey, eventName));
+        NotifyChanged();
+    }
+    internal async Task TriggerAsync(string elementKey, string eventName, EventArgs? eventArgs = null)
+    {
+        eventName = NormalizeEventName(eventName);
+        var key = (elementKey, eventName);
+        if (_eventHandlers.TryGetValue(key, out var synchronous))
+        {
+            foreach (var entry in synchronous.ToArray())
+            {
+                if (entry.Once) synchronous.Remove(entry);
+                entry.Handler();
+            }
+            if (synchronous.Count == 0) _eventHandlers.Remove(key);
+        }
+        if (_asyncEventHandlers.TryGetValue(key, out var asynchronous))
+        {
+            foreach (var entry in asynchronous.ToArray())
+            {
+                if (entry.Once) asynchronous.Remove(entry);
+                await entry.Handler();
+            }
+            if (asynchronous.Count == 0) _asyncEventHandlers.Remove(key);
+        }
+        if (eventArgs is not null)
+        {
+            if (_typedEventHandlers.TryGetValue(key, out var typed))
+            {
+                foreach (var entry in typed.ToArray())
+                {
+                    if (!entry.ArgumentType.IsInstanceOfType(eventArgs)) continue;
+                    if (entry.Once) typed.Remove(entry);
+                    entry.Handler(eventArgs);
+                }
+                if (typed.Count == 0) _typedEventHandlers.Remove(key);
+            }
+            if (_typedAsyncEventHandlers.TryGetValue(key, out var typedAsync))
+            {
+                foreach (var entry in typedAsync.ToArray())
+                {
+                    if (!entry.ArgumentType.IsInstanceOfType(eventArgs)) continue;
+                    if (entry.Once) typedAsync.Remove(entry);
+                    await entry.Handler(eventArgs);
+                }
+                if (typedAsync.Count == 0) _typedAsyncEventHandlers.Remove(key);
+            }
+        }
+        NotifyChanged();
+    }
+    internal async Task TriggerAsync<TEventArgs>(string elementKey, string eventName, TEventArgs eventArgs) where TEventArgs : EventArgs
+    {
+        ArgumentNullException.ThrowIfNull(eventArgs);
+        eventName = NormalizeEventName(eventName);
+        QueryEventDescriptors.Validate<TEventArgs>(eventName);
+        var key = (elementKey, eventName);
+        if (_typedEventHandlers.TryGetValue(key, out var synchronous))
+        {
+            foreach (var entry in synchronous.ToArray())
+            {
+                if (entry.ArgumentType != typeof(TEventArgs)) continue;
+                if (entry.Once) synchronous.Remove(entry);
+                entry.Handler(eventArgs);
+            }
+            if (synchronous.Count == 0) _typedEventHandlers.Remove(key);
+        }
+        if (_typedAsyncEventHandlers.TryGetValue(key, out var asynchronous))
+        {
+            foreach (var entry in asynchronous.ToArray())
+            {
+                if (entry.ArgumentType != typeof(TEventArgs)) continue;
+                if (entry.Once) asynchronous.Remove(entry);
+                await entry.Handler(eventArgs);
+            }
+            if (asynchronous.Count == 0) _typedAsyncEventHandlers.Remove(key);
+        }
+        NotifyChanged();
+    }
+    internal void Delegate(string rootKey, string selector, string eventName, Action<QueryEventTarget> handler)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(selector);
+        ArgumentNullException.ThrowIfNull(handler);
+        eventName = NormalizeDelegatedEventName(eventName);
+        (_delegatedEventHandlers.TryGetValue((rootKey, eventName), out var handlers)
+            ? handlers
+            : _delegatedEventHandlers[(rootKey, eventName)] = [])
+            .Add(new(selector, handler));
+        NotifyChanged();
+    }
+    internal void Undelegate(string rootKey, string selector, string eventName, Action<QueryEventTarget>? handler = null)
+    {
+        eventName = NormalizeDelegatedEventName(eventName);
+        if (!_delegatedEventHandlers.TryGetValue((rootKey, eventName), out var handlers))
+            return;
+
+        handlers.RemoveAll(entry => string.Equals(entry.Selector, selector, StringComparison.Ordinal)
+            && (handler is null || entry.Handler == handler));
+        if (handlers.Count == 0)
+            _delegatedEventHandlers.Remove((rootKey, eventName));
+        NotifyChanged();
+    }
+    internal void TriggerDelegated(string rootKey, string eventName, QueryEventTarget target, QueryElementRegistry registry)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(registry);
+        eventName = NormalizeDelegatedEventName(eventName);
+        if (target.ElementKey is not { Length: > 0 } targetKey
+            || !_delegatedEventHandlers.TryGetValue((rootKey, eventName), out var handlers)
+            || !registry.IsDescendantInSameScope(targetKey, rootKey))
+            return;
+
+        foreach (var entry in handlers.ToArray())
+            if (registry.MatchesKey(targetKey, entry.Selector))
+                entry.Handler(target);
+        NotifyChanged();
+    }
     public IDisposable BeginBatch() { _batchDepth++; return new Batch(this); }
+    internal void QueueEffect(
+        string elementKey,
+        string queueName,
+        Func<CancellationToken, Task> callback,
+        Func<CancellationToken, Task>? finish = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+        ArgumentNullException.ThrowIfNull(callback);
+        var key = (elementKey, queueName);
+        if (!_effectQueues.TryGetValue(key, out var queue))
+            _effectQueues[key] = queue = new QueryEffectQueue();
+        queue.Pending.Enqueue(new QueryEffectWorkItem(callback, finish));
+    }
+    internal void PrepareSlideEffect(string elementKey, bool wasHidden, bool concealForMeasurement)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        _slideEffects[elementKey] = new QuerySlideEffectState(wasHidden);
+        if (!concealForMeasurement)
+            return;
+
+        using (BeginBatch())
+        {
+            SetSlideEffectStyle(elementKey, "height", "0px");
+            SetSlideEffectStyle(elementKey, "overflow", "hidden");
+            SetSlideEffectStyle(elementKey, "visibility", "hidden");
+        }
+    }
+    internal void StartSlideEffect(string elementKey, string animationName, string durationCss, double targetHeight)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(animationName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(durationCss);
+        if (!_slideEffects.ContainsKey(elementKey))
+            throw new InvalidOperationException("The slide effect was canceled before it could start.");
+
+        using (BeginBatch())
+        {
+            SetSlideEffectStyle(elementKey, "--rbq-slide-height", $"{targetHeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}px");
+            SetSlideEffectStyle(elementKey, "height", "var(--rbq-slide-height)");
+            SetSlideEffectStyle(elementKey, "overflow", "hidden");
+            SetSlideEffectStyle(elementKey, "visibility", "visible");
+            SetSlideEffectStyle(elementKey, "animation", $"{animationName} {durationCss}ms ease both");
+        }
+    }
+    internal void CompleteSlideEffect(string elementKey, bool hide)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        using (BeginBatch())
+        {
+            ClearSlideEffectStyles(elementKey);
+            if (hide)
+                Hide(elementKey);
+            else
+                Show(elementKey);
+        }
+    }
+    internal void CancelSlideEffect(string elementKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        if (!_slideEffects.Remove(elementKey, out var effect))
+            return;
+
+        using (BeginBatch())
+        {
+            RemoveSlideEffectStyles(elementKey);
+            if (effect.WasHidden)
+                Hide(elementKey);
+            else
+                Show(elementKey);
+        }
+    }
+    private void SetSlideEffectStyle(string elementKey, string property, string value)
+    {
+        _slideEffectStyles[(ElementSelector(elementKey), property)] = value;
+        NotifyChanged();
+    }
+    private void ClearSlideEffectStyles(string elementKey)
+    {
+        _slideEffects.Remove(elementKey);
+        RemoveSlideEffectStyles(elementKey);
+    }
+    private void RemoveSlideEffectStyles(string elementKey)
+    {
+        var selector = ElementSelector(elementKey);
+        foreach (var property in new[] { "--rbq-slide-height", "height", "overflow", "visibility", "animation" })
+            if (_slideEffectStyles.Remove((selector, property)))
+                NotifyChanged();
+    }
+    internal Task DequeueEffects(string elementKey, string queueName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+        if (!_effectQueues.TryGetValue((elementKey, queueName), out var queue)
+            || queue.Pending.Count == 0 && !queue.IsDraining)
+            return Task.CompletedTask;
+        if (queue.IsDraining)
+            return queue.DrainTask!;
+
+        queue.IsDraining = true;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        queue.DrainTask = completion.Task;
+        _ = DrainEffectQueueAsync(elementKey, queueName, queue, completion);
+        return completion.Task;
+    }
+    internal Task WaitForEffectQueueAsync(string elementKey, string queueName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+        return _effectQueues.TryGetValue((elementKey, queueName), out var queue)
+            ? queue.Completion.Task
+            : Task.CompletedTask;
+    }
+    internal void ClearEffectQueue(string elementKey, string queueName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+        if (!_effectQueues.TryGetValue((elementKey, queueName), out var queue))
+            return;
+        queue.Pending.Clear();
+        if (!queue.IsDraining)
+        {
+            _effectQueues.Remove((elementKey, queueName));
+            queue.Completion.TrySetResult();
+            queue.Cancellation.Dispose();
+        }
+    }
+    internal async Task StopEffectQueueAsync(string elementKey, string queueName, bool clearQueue)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+        var key = (elementKey, queueName);
+        if (!_effectQueues.TryGetValue(key, out var queue))
+            return;
+
+        if (clearQueue)
+            queue.Pending.Clear();
+        if (!queue.IsDraining)
+        {
+            if (clearQueue)
+            {
+                _effectQueues.Remove(key);
+                queue.Completion.TrySetResult();
+                queue.Cancellation.Dispose();
+            }
+            return;
+        }
+
+        queue.PreservePendingOnCancellation = !clearQueue;
+        var drainTask = queue.DrainTask;
+        CancelQueue(queue);
+        try
+        {
+            if (drainTask is not null)
+                await drainTask;
+        }
+        catch (OperationCanceledException) when (queue.Cancellation.IsCancellationRequested)
+        {
+            // Stop is complete once the active drain has observed cancellation.
+        }
+    }
+    internal async Task FinishEffectQueueAsync(string elementKey, string queueName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+        if (!_effectQueues.TryGetValue((elementKey, queueName), out var queue))
+            return;
+
+        queue.IsFinishing = true;
+        if (queue.IsDraining)
+        {
+            if (queue.ActiveWorkItem is { Finish: not null } activeWorkItem)
+            {
+                activeWorkItem.FinishRequested = true;
+                CancelActiveWork(queue);
+            }
+        }
+        else if (queue.Pending.Count > 0)
+        {
+            queue.IsDraining = true;
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            queue.DrainTask = completion.Task;
+            _ = DrainEffectQueueAsync(elementKey, queueName, queue, completion);
+        }
+
+        if (queue.DrainTask is not null)
+            await queue.DrainTask;
+    }
+    private async Task DrainEffectQueueAsync(
+        string elementKey,
+        string queueName,
+        QueryEffectQueue queue,
+        TaskCompletionSource completion)
+    {
+        var cancellationToken = queue.Cancellation.Token;
+        Exception? failure = null;
+        var canceled = false;
+        try
+        {
+            while (queue.Pending.TryDequeue(out var workItem))
+            {
+                queue.Cancellation.Token.ThrowIfCancellationRequested();
+                queue.ActiveWorkItem = workItem;
+                var activeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                queue.ActiveCancellation = activeCancellation;
+                var finishAction = workItem.Finish;
+                try
+                {
+                    if (queue.IsFinishing && finishAction is not null)
+                    {
+                        await finishAction(cancellationToken);
+                    }
+                    else
+                    {
+                        await workItem.Execute(activeCancellation.Token);
+                        if (workItem.FinishRequested && finishAction is not null && !queue.Cancellation.IsCancellationRequested)
+                            await finishAction(cancellationToken);
+                    }
+                }
+                catch (OperationCanceledException) when (
+                    queue.IsFinishing
+                    && workItem.FinishRequested
+                    && finishAction is not null
+                    && !queue.Cancellation.IsCancellationRequested)
+                {
+                    await finishAction(cancellationToken);
+                }
+                finally
+                {
+                    activeCancellation.Dispose();
+                    queue.ActiveCancellation = null;
+                    queue.ActiveWorkItem = null;
+                }
+            }
+        }
+        catch (OperationCanceledException exception) when (queue.Cancellation.IsCancellationRequested)
+        {
+            failure = exception;
+            canceled = true;
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+        finally
+        {
+            queue.IsDraining = false;
+            queue.DrainTask = null;
+            var key = (elementKey, queueName);
+            var isCurrentQueue = _effectQueues.TryGetValue(key, out var current) && ReferenceEquals(current, queue);
+            if (isCurrentQueue
+                && queue.Cancellation.IsCancellationRequested
+                && queue.PreservePendingOnCancellation
+                && queue.Pending.Count > 0)
+            {
+                var resumedQueue = new QueryEffectQueue();
+                while (queue.Pending.TryDequeue(out var pending))
+                    resumedQueue.Pending.Enqueue(pending);
+                resumedQueue.Completion = queue.Completion;
+                _effectQueues[key] = resumedQueue;
+                queue.Cancellation.Dispose();
+            }
+            else if (isCurrentQueue && (queue.Cancellation.IsCancellationRequested || queue.Pending.Count == 0))
+            {
+                _effectQueues.Remove(key);
+                queue.Completion.TrySetResult();
+                queue.Cancellation.Dispose();
+            }
+            else if (queue.Cancellation.IsCancellationRequested)
+            {
+                queue.Cancellation.Dispose();
+            }
+
+            if (canceled)
+                completion.TrySetCanceled(cancellationToken);
+            else if (failure is not null)
+                completion.TrySetException(failure);
+            else
+                completion.TrySetResult();
+        }
+    }
+    private void CancelEffectQueues(string elementKey)
+    {
+        _slideEffects.Remove(elementKey);
+        RemoveSlideEffectStyles(elementKey);
+        var queues = _effectQueues
+            .Where(entry => string.Equals(entry.Key.ElementKey, elementKey, StringComparison.Ordinal))
+            .ToArray();
+        foreach (var entry in queues)
+        {
+            _effectQueues.Remove(entry.Key);
+            entry.Value.Pending.Clear();
+            entry.Value.Completion.TrySetCanceled();
+            CancelQueue(entry.Value);
+            if (!entry.Value.IsDraining)
+                entry.Value.Cancellation.Dispose();
+        }
+    }
+    private static void CancelQueue(QueryEffectQueue queue)
+    {
+        try
+        {
+            queue.Cancellation.Cancel();
+        }
+        catch (AggregateException)
+        {
+            // User-registered cancellation callbacks must not prevent render-state teardown.
+        }
+    }
+    private static void CancelActiveWork(QueryEffectQueue queue)
+    {
+        try
+        {
+            queue.ActiveCancellation?.Cancel();
+        }
+        catch (AggregateException)
+        {
+            // A consumer cancellation callback must not prevent the finish delegate from running.
+        }
+    }
     internal void RegisterDispatch(Func<Action, Task> dispatch)
     {
         if (!_dispatchers.Contains(dispatch))
@@ -75,11 +679,46 @@ public class QueryRenderState
         if (_relocatedParent.ContainsKey(key))
             NotifyChanged();
     }
+    internal void RegisterInnerContent(string key, RenderFragment fragment)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(fragment);
+        _innerContentByOwner[key] = fragment;
+        if (_contentWrapperByOwner.TryGetValue(key, out var wrapperKey))
+            _innerContentByWrapper[wrapperKey] = fragment;
+    }
+    internal void UnregisterInnerContent(string key)
+    {
+        _innerContentByOwner.Remove(key);
+        _innerWrapperByOwner.Remove(key);
+        if (_contentWrapperByOwner.Remove(key, out var wrapperKey))
+            _innerContentByWrapper.Remove(wrapperKey);
+    }
+    internal void SetInnerWrapper(string ownerKey, string wrapperKey)
+    {
+        if (!_innerContentByOwner.TryGetValue(ownerKey, out var fragment))
+            throw new InvalidOperationException($"'{ownerKey}' does not have component-owned inner content.");
+
+        _innerWrapperByOwner[ownerKey] = wrapperKey;
+        if (!_contentWrapperByOwner.ContainsKey(ownerKey))
+        {
+            _contentWrapperByOwner[ownerKey] = wrapperKey;
+            _innerContentByWrapper[wrapperKey] = fragment;
+        }
+        NotifyChanged();
+    }
     internal void UnregisterRealElement(string key)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        if (!_realElementFragments.Remove(key))
+        CancelEffectQueues(key);
+        var removedFragment = _realElementFragments.Remove(key);
+        var removedEvents = RemoveEventRegistrations(key);
+        if (!removedFragment)
+        {
+            if (removedEvents)
+                NotifyChanged();
             return;
+        }
         DetachRealChildQuiet(key);
         HandleHostRemoval(key);
         NotifyChanged();
@@ -170,12 +809,34 @@ public class QueryRenderState
     internal void RemoveVirtualNode(string key)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        CancelEffectQueues(key);
         if (!_virtualNodes.Remove(key, out var node))
             return;
+        RemoveEventRegistrations(key);
         HandleHostRemoval(key);
         if (node.ParentKey is not null && _virtualChildKeys.TryGetValue(node.ParentKey, out var siblings))
             siblings.Remove(key);
         NotifyChanged();
+    }
+    private bool RemoveEventRegistrations(string elementKey)
+    {
+        var removed = false;
+        removed |= RemoveEntries(_eventHandlers, elementKey);
+        removed |= RemoveEntries(_typedEventHandlers, elementKey);
+        removed |= RemoveEntries(_asyncEventHandlers, elementKey);
+        removed |= RemoveEntries(_typedAsyncEventHandlers, elementKey);
+        var delegatedKeys = _delegatedEventHandlers.Keys.Where(key => string.Equals(key.RootKey, elementKey, StringComparison.Ordinal)).ToArray();
+        foreach (var key in delegatedKeys)
+            _delegatedEventHandlers.Remove(key);
+        removed |= delegatedKeys.Length > 0;
+        return removed;
+    }
+    private static bool RemoveEntries<TValue>(Dictionary<(string Key, string EventName), TValue> entries, string elementKey)
+    {
+        var keys = entries.Keys.Where(key => string.Equals(key.Key, elementKey, StringComparison.Ordinal)).ToArray();
+        foreach (var key in keys)
+            entries.Remove(key);
+        return keys.Length > 0;
     }
     internal string CreateDetachedVirtualNode(string key, string tagName, string? className, string? text, bool isHtml)
     {
@@ -281,16 +942,29 @@ public class QueryRenderState
     internal void Hide(string elementKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        _fadeOutKeys.Remove(elementKey);
+        ClearFinishedFadeStyles(elementKey);
+        ClearEffectAnimation(ElementSelector(elementKey));
         if (_hiddenKeys.Add(elementKey)) NotifyChanged();
     }
     internal void Show(string elementKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        _fadeOutKeys.Remove(elementKey);
+        ClearFinishedFadeStyles(elementKey);
+        ClearEffectAnimation(ElementSelector(elementKey));
         if (_hiddenKeys.Remove(elementKey)) NotifyChanged();
+    }
+    internal void SetEffectHidden(string elementKey, bool hidden)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        if (hidden ? _fadeOutKeys.Add(elementKey) : _fadeOutKeys.Remove(elementKey))
+            NotifyChanged();
     }
     internal void Remove(string elementKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        CancelEffectQueues(elementKey);
         if (_removedKeys.Add(elementKey)) NotifyChanged();
     }
     internal void Empty(string elementKey)
@@ -300,7 +974,75 @@ public class QueryRenderState
         _appended.Remove(elementKey);
         SetContent(elementKey, new QueryContent(string.Empty, false));
     }
-    internal void SetCss(string selector, string property, string value) { _styles[(selector, property)] = value; NotifyChanged(); }
+    internal void SetCss(string selector, string property, string value)
+    {
+        if (string.Equals(property, "animation", StringComparison.OrdinalIgnoreCase))
+            _effectAnimationSelectors.Remove(selector);
+        if (string.Equals(property, "transition", StringComparison.OrdinalIgnoreCase))
+            _effectTransitionSelectors.Remove(selector);
+        if (string.Equals(property, "opacity", StringComparison.OrdinalIgnoreCase))
+            _finishedFadeStyles.Remove((selector, "opacity"));
+        if (string.Equals(property, "visibility", StringComparison.OrdinalIgnoreCase))
+            _finishedFadeStyles.Remove((selector, "visibility"));
+        _styles[(selector, property)] = value;
+        NotifyChanged();
+    }
+    internal void SetEffectTransition(string selector, string value)
+    {
+        _styles[(selector, "transition")] = value;
+        _effectTransitionSelectors.Add(selector);
+        NotifyChanged();
+    }
+    internal void SetEffectAnimation(string selector, string value)
+    {
+        _styles[(selector, "animation")] = value;
+        _effectAnimationSelectors.Add(selector);
+        NotifyChanged();
+    }
+    internal void ClearEffectAnimation(string selector)
+    {
+        if (_effectAnimationSelectors.Remove(selector) && _styles.Remove((selector, "animation")))
+            NotifyChanged();
+    }
+    internal void FinishEffectStyles(string elementKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
+        var selector = ElementSelector(elementKey);
+        if (_effectAnimationSelectors.Contains(selector)
+            && _styles.TryGetValue((selector, "animation"), out var animation))
+        {
+            ClearEffectAnimation(selector);
+            if (animation.StartsWith("rbq-fade-out ", StringComparison.Ordinal))
+            {
+                SetFinishedFadeStyle(elementKey, "opacity", "0");
+                SetFinishedFadeStyle(elementKey, "visibility", "hidden");
+            }
+            else if (animation.StartsWith("rbq-fade-in ", StringComparison.Ordinal))
+            {
+                SetFinishedFadeStyle(elementKey, "opacity", "1");
+                SetFinishedFadeStyle(elementKey, "visibility", "visible");
+            }
+        }
+
+        if (_effectTransitionSelectors.Remove(selector) && _styles.Remove((selector, "transition")))
+            NotifyChanged();
+    }
+    private void SetFinishedFadeStyle(string elementKey, string property, string value)
+    {
+        var selector = ElementSelector(elementKey);
+        _styles[(selector, property)] = value;
+        _finishedFadeStyles.Add((selector, property));
+        NotifyChanged();
+    }
+    private void ClearFinishedFadeStyles(string elementKey)
+    {
+        var selector = ElementSelector(elementKey);
+        foreach (var property in new[] { "opacity", "visibility" })
+            if (_finishedFadeStyles.Remove((selector, property)) && _styles.Remove((selector, property)))
+                NotifyChanged();
+    }
+    private static string ElementSelector(string elementKey) =>
+        $"[data-rbq-key=\"{QuerySelection.EscapeKey(elementKey)}\"]";
     internal void SetAttribute(string elementKey, string name, string value)
     {
         ValidateAttribute(elementKey, name, value);
@@ -368,12 +1110,19 @@ public class QueryRenderState
     }
     public void Clear()
     {
-        if (_styles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0 && _content.Count == 0
-            && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _removedKeys.Count == 0
+        if (_styles.Count == 0 && _slideEffectStyles.Count == 0 && _slideEffects.Count == 0 && _effectAnimationSelectors.Count == 0 && _effectTransitionSelectors.Count == 0 && _finishedFadeStyles.Count == 0 && _attributes.Count == 0 && _properties.Count == 0 && _data.Count == 0 && _content.Count == 0
+            && _addedClasses.Count == 0 && _removedClasses.Count == 0 && _hiddenKeys.Count == 0 && _fadeOutKeys.Count == 0 && _removedKeys.Count == 0
             && _prepended.Count == 0 && _appended.Count == 0 && _virtualNodes.Count == 0 && _virtualChildKeys.Count == 0
-            && _realElementFragments.Count == 0 && _relocatedParent.Count == 0 && _relocatedChildrenByHost.Count == 0)
+            && _realElementFragments.Count == 0 && _innerContentByOwner.Count == 0 && _innerWrapperByOwner.Count == 0
+            && _contentWrapperByOwner.Count == 0 && _innerContentByWrapper.Count == 0 && _eventHandlers.Count == 0 && _typedEventHandlers.Count == 0 && _asyncEventHandlers.Count == 0 && _typedAsyncEventHandlers.Count == 0 && _delegatedEventHandlers.Count == 0 && _relocatedParent.Count == 0
+            && _relocatedChildrenByHost.Count == 0 && _effectQueues.Count == 0)
             return;
         _styles.Clear();
+        _slideEffectStyles.Clear();
+        _slideEffects.Clear();
+        _effectAnimationSelectors.Clear();
+        _effectTransitionSelectors.Clear();
+        _finishedFadeStyles.Clear();
         _attributes.Clear();
         _properties.Clear();
         _data.Clear();
@@ -381,14 +1130,33 @@ public class QueryRenderState
         _addedClasses.Clear();
         _removedClasses.Clear();
         _hiddenKeys.Clear();
+        _fadeOutKeys.Clear();
         _removedKeys.Clear();
         _prepended.Clear();
         _appended.Clear();
         _virtualNodes.Clear();
         _virtualChildKeys.Clear();
         _realElementFragments.Clear();
+        _innerContentByOwner.Clear();
+        _innerWrapperByOwner.Clear();
+        _contentWrapperByOwner.Clear();
+        _innerContentByWrapper.Clear();
+        _eventHandlers.Clear();
+        _typedEventHandlers.Clear();
+        _asyncEventHandlers.Clear();
+        _typedAsyncEventHandlers.Clear();
+        _delegatedEventHandlers.Clear();
         _relocatedParent.Clear();
         _relocatedChildrenByHost.Clear();
+        foreach (var queue in _effectQueues.Values)
+        {
+            queue.Pending.Clear();
+            queue.Completion.TrySetCanceled();
+            CancelQueue(queue);
+            if (!queue.IsDraining)
+                queue.Cancellation.Dispose();
+        }
+        _effectQueues.Clear();
         NotifyChanged();
     }
     private static void ValidateAttribute(string elementKey, string name, string value)
@@ -404,6 +1172,19 @@ public class QueryRenderState
             throw new ArgumentException("The library-owned data-rbq-key attribute cannot be changed.", nameof(name));
         if (name.StartsWith("on", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Event-like names are reserved for the library event API.", nameof(name));
+    }
+    private static string NormalizeEventName(string eventName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
+        var normalized = eventName.Trim().ToLowerInvariant();
+        return normalized.StartsWith("on", StringComparison.Ordinal) ? normalized : "on" + normalized;
+    }
+    private static string NormalizeDelegatedEventName(string eventName)
+    {
+        var normalized = NormalizeEventName(eventName)[2..];
+        if (!QueryDelegatedEvents.SupportedNames.Contains(normalized, StringComparer.Ordinal))
+            throw new NotSupportedException($"Delegated event '{eventName}' is not supported because it does not bubble to the query root.");
+        return normalized;
     }
     private static void ValidateClassName(string elementKey, string className)
     {
@@ -463,4 +1244,33 @@ public class QueryRenderState
 }
 public sealed record QueryStyleRule(string Selector, string Property, string Value);
 internal sealed record QueryContent(string Value, bool IsHtml);
+internal sealed record QueryEventHandler(Action Handler, bool Once);
+internal sealed record QueryTypedEventHandler(Action<EventArgs> Handler, Delegate OriginalHandler, Type ArgumentType, bool Once);
+internal sealed record QueryAsyncEventHandler(Func<Task> Handler, bool Once);
+internal sealed record QueryTypedAsyncEventHandler(Func<EventArgs, Task> Handler, Delegate OriginalHandler, Type ArgumentType, bool Once);
+internal sealed record QueryDelegatedEventHandler(string Selector, Action<QueryEventTarget> Handler);
+internal sealed class QuerySlideEffectState(bool wasHidden)
+{
+    public bool WasHidden { get; } = wasHidden;
+}
+internal sealed class QueryEffectQueue
+{
+    public Queue<QueryEffectWorkItem> Pending { get; } = new();
+    public CancellationTokenSource Cancellation { get; } = new();
+    public CancellationTokenSource? ActiveCancellation { get; set; }
+    public QueryEffectWorkItem? ActiveWorkItem { get; set; }
+    public Task? DrainTask { get; set; }
+    public TaskCompletionSource Completion { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public bool IsDraining { get; set; }
+    public bool IsFinishing { get; set; }
+    public bool PreservePendingOnCancellation { get; set; }
+}
+internal sealed class QueryEffectWorkItem(
+    Func<CancellationToken, Task> execute,
+    Func<CancellationToken, Task>? finish)
+{
+    public Func<CancellationToken, Task> Execute { get; } = execute;
+    public Func<CancellationToken, Task>? Finish { get; } = finish;
+    public bool FinishRequested { get; set; }
+}
 internal sealed record QueryVirtualNode(string Key, string? ParentKey, string TagName, string? ClassName, string? Text, bool IsHtml);

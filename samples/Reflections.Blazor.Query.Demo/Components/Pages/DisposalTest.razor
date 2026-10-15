@@ -1,0 +1,35 @@
+@page "/disposal-test"
+@inject Query Query
+
+<PageTitle>Query element disposal test</PageTitle>
+<h1>Query element disposal test</h1>
+@if (_showTarget)
+{
+    <QueryElement TagName="p" ElementKey="disposal-test-target" Class="disposal-test-target">This QueryElement will be disposed.</QueryElement>
+}
+<p data-testid="disposal-match-count">@(_matchCount is null ? "waiting" : $"matches:{_matchCount}")</p>
+
+@code {
+    private bool _showTarget = true;
+    private bool _removalRequested;
+    private int? _matchCount;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+            _ = RemoveTargetAsync();
+        else if (_removalRequested && _matchCount is null)
+        {
+            _matchCount = Query.Select(".disposal-test-target").Length;
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RemoveTargetAsync()
+    {
+        await Task.Delay(250);
+        _removalRequested = true;
+        _showTarget = false;
+        await InvokeAsync(StateHasChanged);
+    }
+}

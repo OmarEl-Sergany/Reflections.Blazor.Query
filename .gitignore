@@ -57,11 +57,19 @@ dlldata.c
 
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
+output/benchmarks/
+output/packages/
+output/packages-sprint5/
+output/playwright/
+docs/_site/
+docs/api/
+.playwright-cli/
 
 # .NET Core
 project.lock.json
 project.fragment.lock.json
 artifacts/
+output/playwright/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt

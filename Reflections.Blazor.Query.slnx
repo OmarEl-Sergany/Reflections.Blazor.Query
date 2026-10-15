@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Reflections.Blazor.Query.Benchmarks/Reflections.Blazor.Query.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Reflections.Blazor.Query.Demo/Reflections.Blazor.Query.Demo.csproj" Id="0b49aebd-5c43-4713-a01e-f7b1f9418d60" />
     <Project Path="samples/Reflections.Blazor.Query.Demo.WebAssembly/Reflections.Blazor.Query.Demo.WebAssembly/Reflections.Blazor.Query.Demo.WebAssembly.csproj" />

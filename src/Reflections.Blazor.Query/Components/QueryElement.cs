@@ -10,9 +10,11 @@ public sealed class QueryElement : ComponentBase, IDisposable
     [Inject] private QueryMeasurementCoordinator Measurements { get; set; } = default!;
     [Inject] private QueryFormCoordinator Forms { get; set; } = default!;
     [CascadingParameter] private QueryRenderState? CascadedRenderState { get; set; }
+    [CascadingParameter] private IQueryScope? CascadedQueryScope { get; set; }
 
     [Parameter, EditorRequired] public string ElementKey { get; set; } = string.Empty;
     [Parameter] public string? ParentElementKey { get; set; }
+    [Parameter] public string? ScopeKey { get; set; }
     [Parameter] public string TagName { get; set; } = "div";
     [Parameter] public string? Id { get; set; }
     [Parameter] public string? Class { get; set; }
@@ -51,9 +53,11 @@ public sealed class QueryElement : ComponentBase, IDisposable
             _registeredRenderState?.UnregisterRealElement(_registeredKey);
 
         renderState.RegisterRealElement(ElementKey, RenderSelf);
+        renderState.RegisterInnerContent(ElementKey, ChildContent ?? EmptyContent);
 
         var selectors = BuildSelectors();
-        var signature = $"{ElementKey}\u001f{ParentElementKey}\u001f{string.Join("\u001f", selectors)}";
+        var scopeKey = ScopeKey ?? CascadedQueryScope?.Key;
+        var signature = $"{ElementKey}\u001f{ParentElementKey}\u001f{scopeKey}\u001f{string.Join("\u001f", selectors)}";
         if (!keyChanged && !renderStateChanged && signature == _registrationSignature)
         {
             if (!renderState.IsRelocatedElsewhere(ElementKey))
@@ -64,7 +68,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
         if (_registeredKey is not null)
             Registry.Unregister(_registeredKey); // Registry has no in-place update; always re-add below.
 
-        Registry.RegisterWithParent(ElementKey, ParentElementKey, selectors);
+        Registry.RegisterWithParentAndScope(ElementKey, ParentElementKey, scopeKey, selectors);
         _registeredKey = ElementKey;
         _registeredRenderState = renderState;
         _registrationSignature = signature;
@@ -91,29 +95,51 @@ public sealed class QueryElement : ComponentBase, IDisposable
         builder.AddAttribute(2, "data-rbq-key", ElementKey);
         if (!string.IsNullOrWhiteSpace(Id))
             builder.AddAttribute(3, "id", Id);
-        var sequence = 4;
         var className = BuildClassName(renderState);
         if (!string.IsNullOrEmpty(className))
-            builder.AddAttribute(sequence++, "class", className);
+            builder.AddAttribute(4, "class", className);
         if (renderState.IsHidden(ElementKey))
-            builder.AddAttribute(sequence++, "style", BuildHiddenStyle());
+            builder.AddAttribute(5, "style", BuildHiddenStyle());
         foreach (var attribute in renderState.AttributesFor(ElementKey))
-            builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
+            builder.AddAttribute(6, attribute.Key, attribute.Value);
         foreach (var property in renderState.PropertiesFor(ElementKey))
-            builder.AddAttribute(sequence++, property.Key, property.Value);
+            builder.AddAttribute(7, property.Key, property.Value);
+        foreach (var eventName in renderState.EventNamesFor(ElementKey))
+        {
+            var framesAdded = QueryEventDescriptors.AddBinding(builder, 8, this, renderState, ElementKey, eventName);
+            if (framesAdded == 0)
+                builder.AddAttribute(8, eventName, EventCallback.Factory.Create(this, () => renderState.TriggerAsync(ElementKey, eventName)));
+        }
+        foreach (var eventName in renderState.DelegatedEventNamesFor(ElementKey))
+            builder.AddAttribute(9, QueryDelegatedEvents.AttributeName(eventName),
+                EventCallback.Factory.Create<QueryEventTarget>(this, target => renderState.TriggerDelegated(ElementKey, eventName, target, Registry)));
         foreach (var fragment in renderState.PrependedFor(ElementKey))
-            AddFragment(builder, ref sequence, fragment);
+            AddFragment(builder, 10, fragment);
         var content = renderState.ContentFor(ElementKey);
         if (content is { IsHtml: true })
-            builder.AddMarkupContent(sequence++, content.Value);
+            builder.AddMarkupContent(11, content.Value);
         else if (content is not null)
-            builder.AddContent(sequence++, content.Value);
+            builder.AddContent(11, content.Value);
+        else if (renderState.InnerWrapperFor(ElementKey) is { } innerWrapperKey)
+        {
+            var sequence = 12;
+            RenderVirtualNode(builder, ref sequence, renderState, innerWrapperKey);
+        }
         else
-            builder.AddContent(sequence++, ChildContent);
+            builder.AddContent(11, ChildContent);
         foreach (var fragment in renderState.AppendedFor(ElementKey))
-            AddFragment(builder, ref sequence, fragment);
-        RenderChildren(builder, ref sequence, renderState, ElementKey);
+            AddFragment(builder, 13, fragment);
+        var childrenSequence = 14;
+        RenderChildren(builder, ref childrenSequence, renderState, ElementKey, renderState.InnerWrapperFor(ElementKey));
         builder.CloseElement();
+    }
+
+    private static void AddFragment(RenderTreeBuilder builder, int sequence, QueryContent fragment)
+    {
+        if (fragment.IsHtml)
+            builder.AddMarkupContent(sequence, fragment.Value);
+        else
+            builder.AddContent(sequence, fragment.Value);
     }
 
     private static void AddFragment(RenderTreeBuilder builder, ref int sequence, QueryContent fragment)
@@ -124,10 +150,12 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddContent(sequence++, fragment.Value);
     }
 
-    private static void RenderChildren(RenderTreeBuilder builder, ref int sequence, QueryRenderState renderState, string hostKey)
+    private static void RenderChildren(RenderTreeBuilder builder, ref int sequence, QueryRenderState renderState, string hostKey, string? excludedChildKey = null)
     {
         foreach (var childKey in renderState.VirtualChildKeysFor(hostKey))
         {
+            if (string.Equals(childKey, excludedChildKey, StringComparison.Ordinal))
+                continue;
             var realFragment = renderState.RealElementFragmentFor(childKey);
             if (realFragment is not null)
                 builder.AddContent(sequence++, realFragment);
@@ -158,6 +186,14 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddAttribute(sequence++, attribute.Key, attribute.Value);
         foreach (var property in renderState.PropertiesFor(elementKey))
             builder.AddAttribute(sequence++, property.Key, property.Value);
+        foreach (var eventName in renderState.EventNamesFor(elementKey))
+        {
+            var framesAdded = QueryEventDescriptors.AddBinding(builder, sequence, renderState, renderState, elementKey, eventName);
+            if (framesAdded == 0)
+                builder.AddAttribute(sequence++, eventName, (Action)(() => renderState.Trigger(elementKey, eventName)));
+            else
+                sequence += framesAdded;
+        }
         foreach (var fragment in renderState.PrependedFor(elementKey))
             AddFragment(builder, ref sequence, fragment);
         var content = renderState.ContentFor(elementKey) ?? (node.Text is null ? null : new QueryContent(node.Text, node.IsHtml));
@@ -165,6 +201,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
             builder.AddMarkupContent(sequence++, content.Value);
         else if (content is not null)
             builder.AddContent(sequence++, content.Value);
+        if (renderState.InnerContentForWrapper(elementKey) is { } innerContent)
+            builder.AddContent(sequence++, innerContent);
         foreach (var fragment in renderState.AppendedFor(elementKey))
             AddFragment(builder, ref sequence, fragment);
         RenderChildren(builder, ref sequence, renderState, elementKey);
@@ -178,6 +216,7 @@ public sealed class QueryElement : ComponentBase, IDisposable
             Registry.Unregister(_registeredKey);
             Measurements.InvalidateElement(_subscribedRenderState ?? DefaultRenderState, _registeredKey);
             Forms.InvalidateElement(_subscribedRenderState ?? DefaultRenderState, _registeredKey);
+            _registeredRenderState?.UnregisterInnerContent(_registeredKey);
             _registeredRenderState?.UnregisterRealElement(_registeredKey);
         }
         if (_subscribedRenderState is not null)
@@ -185,6 +224,8 @@ public sealed class QueryElement : ComponentBase, IDisposable
     }
 
     private void OnRenderStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private static readonly RenderFragment EmptyContent = _ => { };
 
     private string BuildHiddenStyle()
     {

@@ -3,8 +3,10 @@ namespace Reflections.Blazor.Query;
 public sealed class QueryFormCoordinator(IQueryFormBridge bridge) : IAsyncDisposable
 {
     private readonly object _gate = new();
+    private readonly SemaphoreSlim _bridgeGate = new(1, 1);
     private readonly Dictionary<SerializationCacheKey, SerializationResult> _cache = new();
     private readonly Dictionary<SerializationCacheKey, PendingSerialization> _pending = new();
+    private Task? _disposeTask;
     private bool _disposed;
 
     public event Action? Requested;
@@ -21,9 +23,9 @@ public sealed class QueryFormCoordinator(IQueryFormBridge bridge) : IAsyncDispos
         IReadOnlyList<string> elementKeys,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(renderState);
         ArgumentNullException.ThrowIfNull(elementKeys);
+        ThrowIfDisposed();
         foreach (var elementKey in elementKeys)
             ArgumentException.ThrowIfNullOrWhiteSpace(elementKey);
 
@@ -49,6 +51,7 @@ public sealed class QueryFormCoordinator(IQueryFormBridge bridge) : IAsyncDispos
         var notify = false;
         lock (_gate)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
             if (_cache.TryGetValue(key, out var cached))
                 return Task.FromResult(cached);
 
@@ -70,37 +73,48 @@ public sealed class QueryFormCoordinator(IQueryFormBridge bridge) : IAsyncDispos
 
     public async ValueTask FlushAsync(CancellationToken cancellationToken = default)
     {
-        PendingSerialization[] batch;
-        lock (_gate)
-        {
-            batch = _pending.Values.Where(item => !item.IsFlushing).ToArray();
-            foreach (var item in batch)
-                item.IsFlushing = true;
-        }
-
-        if (batch.Length == 0)
-            return;
-
-        IReadOnlyList<SerializationResult> results;
+        await _bridgeGate.WaitAsync(cancellationToken);
         try
         {
-            results = await bridge.SerializeAsync(
-                batch.Select(pending => new SerializationRequest(pending.Key.ElementKey)).ToArray(),
-                cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            Cancel(batch);
-            throw;
-        }
-        catch (Exception exception)
-        {
-            Fault(batch, exception);
-            return;
-        }
+            PendingSerialization[] batch;
+            lock (_gate)
+            {
+                if (_disposed)
+                    return;
 
-        var values = results.ToDictionary(result => result.ElementKey, result => result);
-        Complete(batch, values);
+                batch = _pending.Values.Where(item => !item.IsFlushing).ToArray();
+                foreach (var item in batch)
+                    item.IsFlushing = true;
+            }
+
+            if (batch.Length == 0)
+                return;
+
+            IReadOnlyList<SerializationResult> results;
+            try
+            {
+                results = await bridge.SerializeAsync(
+                    batch.Select(pending => new SerializationRequest(pending.Key.ElementKey)).ToArray(),
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                Cancel(batch);
+                throw;
+            }
+            catch (Exception exception)
+            {
+                Fault(batch, exception);
+                return;
+            }
+
+            var values = results.ToDictionary(result => result.ElementKey, result => result);
+            Complete(batch, values);
+        }
+        finally
+        {
+            _bridgeGate.Release();
+        }
     }
 
     public void Invalidate(QueryRenderState renderState)
@@ -119,24 +133,55 @@ public sealed class QueryFormCoordinator(IQueryFormBridge bridge) : IAsyncDispos
 
     public ValueTask DisposeAsync()
     {
-        if (_disposed)
-            return ValueTask.CompletedTask;
-
-        _disposed = true;
         PendingSerialization[] pending;
+        TaskCompletionSource completion;
         lock (_gate)
         {
+            if (_disposeTask is not null)
+                return new ValueTask(_disposeTask);
+
+            _disposed = true;
             pending = _pending.Values.ToArray();
             _pending.Clear();
             _cache.Clear();
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _disposeTask = completion.Task;
         }
 
         foreach (var item in pending)
             item.Completion.TrySetCanceled();
 
-        return bridge is IAsyncDisposable asyncDisposable
-            ? asyncDisposable.DisposeAsync()
-            : ValueTask.CompletedTask;
+        _ = DisposeBridgeAsync(completion);
+        return new ValueTask(completion.Task);
+    }
+
+    private void ThrowIfDisposed()
+    {
+        lock (_gate)
+            ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    private async Task DisposeBridgeAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            await _bridgeGate.WaitAsync();
+            try
+            {
+                if (bridge is IAsyncDisposable asyncDisposable)
+                    await asyncDisposable.DisposeAsync();
+            }
+            finally
+            {
+                _bridgeGate.Release();
+            }
+
+            completion.TrySetResult();
+        }
+        catch (Exception exception)
+        {
+            completion.TrySetException(exception);
+        }
     }
 
     private void Complete(

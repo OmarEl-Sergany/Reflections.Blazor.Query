@@ -1,0 +1,58 @@
+@page "/queue-disposal-test"
+@inject Query Query
+
+<PageTitle>Queue disposal test</PageTitle>
+<h1>Queue disposal test</h1>
+<p data-testid="queue-disposal-ready">@(_ready ? "ready" : "loading")</p>
+@if (_showTarget)
+{
+    <QueryElement TagName="div" ElementKey="queue-disposal-target" Class="queue-disposal-target">Queue owner</QueryElement>
+}
+<button data-testid="start-disposal-queue" @onclick="StartQueueAsync">Start cancellation-aware work</button>
+<p data-testid="queue-disposal-status">@_status</p>
+
+@code {
+    private readonly TaskCompletionSource _callbackStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private bool _ready;
+    private bool _showTarget = true;
+    private string _status = "idle";
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ready = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartQueueAsync()
+    {
+        _status = "running";
+        await InvokeAsync(StateHasChanged);
+
+        var selection = Query.Select(".queue-disposal-target");
+        selection.Queue(async cancellationToken =>
+        {
+            _callbackStarted.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        });
+
+        var drain = selection.Dequeue().AsTask();
+        await _callbackStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _showTarget = false;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await drain;
+            _status = "unexpectedly-completed";
+        }
+        catch (OperationCanceledException)
+        {
+            _status = "cancelled-on-dispose";
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

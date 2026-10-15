@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Reflections Blazor Query</title>
+  <rect width="64" height="64" rx="16" fill="#142238" />
+  <circle cx="29" cy="29" r="15" fill="none" stroke="#70d5cb" stroke-width="6" />
+  <path d="m40 40 11 11" fill="none" stroke="#70d5cb" stroke-linecap="round" stroke-width="6" />
+  <circle cx="29" cy="29" r="4" fill="#fff" />
+</svg>

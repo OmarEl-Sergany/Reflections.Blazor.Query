@@ -16,10 +16,13 @@ The following APIs are asynchronous measurement reads:
 - `InnerHeightAsync`, `InnerWidthAsync` (**implemented**)
 - `OuterHeightAsync`, `OuterWidthAsync` (**implemented; margins excluded**)
 - `OffsetAsync`, `OffsetParentAsync`, `PositionAsync` (**implemented**)
+- Internal `ScrollHeight` observation for queued slide effects (**implemented; not a public DOM metric API**)
 
 The implementation names use `Async` suffixes to make the browser boundary visible to consumers. The implemented APIs return the first resolved owned element's nullable CSS-pixel snapshot; empty or unavailable selections return `null`. `HeightAsync` / `WidthAsync` and outer dimensions use the border box. Inner dimensions exclude border widths. They do not return browser handles.
 
 `Height(double)` and `Width(double)` are implemented as separate render-state write operations. They accept finite non-negative CSS pixel values, emit generated-key CSS rules for each resolved owned element, and never call JavaScript.
+
+Awaitable `SlideDown`, `SlideUp`, and `SlideToggle` use the read-only bridge to observe natural CSS height from `scrollHeight`; `QueueSlideDown`, `QueueSlideUp`, and `QueueSlideToggle` expose explicit queue composition. Effects render temporary height/overflow overlays through Blazor and wait for the `rbqanimationend` event. After a successful Server reconnect, the RCL inspects Query-owned CSS animations and redispatches the completion event only for slide animations whose browser animation is already `finished`; it never changes DOM styles or forces a still-running animation to finish. Completion removes the render-state overlay so natural layout resumes.
 
 ## Form serialization boundary
 
@@ -29,6 +32,8 @@ Form values (checked state, selected options, radio groups, disabled membership)
 - `SerializeAsync` (**implemented**) — returns the jQuery-style URL-encoded query string built from the same field pairs (`name=value&name=value`, `+` for spaces).
 
 The JS module applies jQuery's "successful control" rules read-only: a field is emitted only for a control that has a `name`, is not disabled, is a submittable element, is not a submit/button/image/reset/file control, and (for `checkbox`/`radio`) is checked. Selecting a `<form>`/`<fieldset>` serializes its named controls; selecting a submittable control serializes that control; selecting any other container serializes its descendant controls. The JS module never sets attributes, properties, classes, styles, content, or handlers — it only reads.
+
+The coordinator closes request admission atomically during disposal, cancels pending result tasks, and serializes bridge disposal behind any in-flight browser read. Repeated/concurrent disposal calls share one completion task; requests after disposal throw `ObjectDisposedException`. This prevents late cache population and avoids disposing the JS module while it is servicing a serialization batch.
 
 ## Data flow
 
@@ -73,6 +78,7 @@ No API returns an arbitrary `ElementReference`, DOM node, or JavaScript object r
 - A host flush never reads before its owning scope has rendered.
 - Navigation and `QueryHost` disposal cancel pending requests and invalidate page-scoped snapshots.
 - Layout and application caches follow their respective scope lifetimes.
+- `ApplicationQueryRenderState` / `ApplicationQuery` are explicit opt-in application-lifetime services, scoped to the Blazor circuit/client service provider. Mount a long-lived `QueryHost` with that state and `ClearOnNavigation="false"`; it survives route changes and its disposal invalidates the application snapshots.
 - Future `ResizeObserver` support may invalidate snapshots; it must remain read-only and be disposed with the owning host.
 
 ### Disposal lifecycle rules
@@ -112,4 +118,4 @@ Late JavaScript results must be ignored after their request or host has been can
 
 The initial live validation was performed against local Interactive Server, Interactive WebAssembly, and Interactive Auto demo hosts. Each host rendered a `QueryElement`, invoked the queued `WidthAsync` path through a Blazor event, displayed a browser-calculated result, and produced no console warnings or errors. All three hosts also exercised `OffsetAsync`, `PositionAsync`, and the external-parent `OffsetParentAsync` unavailable result; the Server demo additionally exercised `HeightAsync`.
 
-This is implementation evidence, not a replacement for automated browser coverage. The remaining browser suite must cover every metric plus navigation, disposal, cancellation, and late-result behavior.
+Automated Playwright coverage now exercises all public metrics—Height, Width, Inner/Outer dimensions, Offset, Position, and owned OffsetParent—against real browser layout in Interactive Server, WebAssembly, and Auto. The Auto test repeats after a warm reload and verifies the measurement path works without opening another Server circuit. These tests assert deterministic dimensions/position, an owned offset-parent key, and unchanged element style/class/key attributes. Unit/component tests separately cover page/layout/application cache isolation, navigation/disposal invalidation, cancellation, and late-result rejection; this avoids pretending browser timing can deterministically force an in-flight JS response race.

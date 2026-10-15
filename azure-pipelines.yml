@@ -3,7 +3,7 @@ trigger:
 pr:
 - master
 pool:
-  vmImage: windows-latest
+  name: Default
 variables:
   BuildConfiguration: Release
 steps:
@@ -14,9 +14,96 @@ steps:
 - script: dotnet restore Reflections.Blazor.Query.slnx
 - script: dotnet build Reflections.Blazor.Query.slnx --configuration $(BuildConfiguration) --no-restore
 - script: dotnet test Reflections.Blazor.Query.slnx --configuration $(BuildConfiguration) --no-build
+- task: NodeTool@0
+  displayName: Use Node.js 20
+  inputs:
+    versionSpec: 20.x
+- script: npm ci
+  displayName: Restore browser E2E dependencies
+  workingDirectory: tests/BrowserE2E
+- script: npx playwright install chromium
+  displayName: Install Playwright Chromium
+  workingDirectory: tests/BrowserE2E
+- script: npm test -- --reporter=list,junit
+  displayName: Run Interactive Server browser E2E
+  workingDirectory: tests/BrowserE2E
+  env:
+    CI: 'true'
+    PLAYWRIGHT_JUNIT_OUTPUT_FILE: ../../output/playwright/server/junit.xml
+- script: npm test -- --reporter=list,junit
+  displayName: Run Interactive WebAssembly browser lifecycle E2E
+  workingDirectory: tests/BrowserE2E
+  env:
+    CI: 'true'
+    RBQ_E2E_HOST: wasm
+    PLAYWRIGHT_JUNIT_OUTPUT_FILE: ../../output/playwright/wasm/junit.xml
+- script: npm test -- --reporter=list,junit
+  displayName: Run Interactive Auto browser lifecycle E2E
+  workingDirectory: tests/BrowserE2E
+  env:
+    CI: 'true'
+    RBQ_E2E_HOST: auto
+    PLAYWRIGHT_JUNIT_OUTPUT_FILE: ../../output/playwright/auto/junit.xml
+- task: PublishTestResults@2
+  displayName: Publish browser E2E results
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFormat: JUnit
+    testResultsFiles: output/playwright/*/junit.xml
+    searchFolder: $(Build.SourcesDirectory)
+    failTaskOnFailedTests: true
+- task: PublishBuildArtifacts@1
+  displayName: Publish browser and host performance evidence
+  condition: succeededOrFailed()
+  inputs:
+    PathtoPublish: output/playwright
+    ArtifactName: BrowserE2EAndHostPerformance
+    publishLocation: Container
+- task: PublishBuildArtifacts@1
+  displayName: Publish browser traces
+  condition: failed()
+  inputs:
+    PathtoPublish: output/playwright
+    ArtifactName: PlaywrightDiagnostics
+    publishLocation: Container
 - script: dotnet pack src/Reflections.Blazor.Query/Reflections.Blazor.Query.csproj --configuration $(BuildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/packages
+  displayName: Pack runtime library with source generator
+- script: dotnet pack src/Reflections.Blazor.Query.Generators/Reflections.Blazor.Query.Generators.csproj --configuration $(BuildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/packages
+  displayName: Pack standalone source generator
+- task: PowerShell@2
+  displayName: Verify NuGet package contents and release metadata
+  inputs:
+    targetType: filePath
+    filePath: eng/verify-packages.ps1
+    arguments: -PackageDirectory "$(Build.ArtifactStagingDirectory)/packages" -RequireLicense
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: $(Build.ArtifactStagingDirectory)
     ArtifactName: Reflections.Blazor.Query
+    publishLocation: Container
+- script: dotnet tool restore
+  displayName: Restore documentation build tool
+- script: dotnet tool run docfx -- docs/docfx.json
+  displayName: Build documentation site and API reference
+- task: PowerShell@2
+  displayName: Verify generated documentation site
+  inputs:
+    targetType: inline
+    script: |
+      $requiredFiles = @(
+        'docs/_site/index.html',
+        'docs/_site/index.json',
+        'docs/_site/api/Reflections.Blazor.Query.Query.html',
+        'docs/_site/api/Reflections.Blazor.Query.QuerySelection.html'
+      )
+      $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) }
+      if ($missingFiles) {
+        Write-Error "Documentation output is incomplete: $($missingFiles -join ', ')"
+        exit 1
+      }
+- task: PublishBuildArtifacts@1
+  displayName: Publish documentation site for review
+  inputs:
+    PathtoPublish: docs/_site
+    ArtifactName: Reflections.Blazor.Query.Docs
     publishLocation: Container

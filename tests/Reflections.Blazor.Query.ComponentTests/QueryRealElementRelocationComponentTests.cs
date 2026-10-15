@@ -1,7 +1,9 @@
 using Bunit;
 using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Reflections.Blazor.Query;
 
@@ -256,6 +258,134 @@ public sealed class QueryRealElementRelocationComponentTests
     }
 
     [Fact]
+    public void ReplaceWith_moves_a_real_element_to_the_target_position_without_duplicate_markup()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "root");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "div");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "root");
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(4);
+            builder.AddComponentParameter(5, nameof(QueryElement.ElementKey), "target");
+            builder.AddComponentParameter(6, nameof(QueryElement.TagName), "span");
+            builder.AddComponentParameter(7, nameof(QueryElement.Class), "target");
+            builder.AddComponentParameter(8, nameof(QueryElement.ParentElementKey), "root");
+            builder.AddComponentParameter(9, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "target-content")));
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(10);
+            builder.AddComponentParameter(11, nameof(QueryElement.ElementKey), "replacement");
+            builder.AddComponentParameter(12, nameof(QueryElement.TagName), "span");
+            builder.AddComponentParameter(13, nameof(QueryElement.Class), "replacement");
+            builder.AddComponentParameter(14, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "replacement-content")));
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+
+        query.Select(".target").ReplaceWith(query.Select(".replacement"));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("target-content", cut.Markup, StringComparison.Ordinal);
+            Assert.Equal(1, CountOccurrences(cut.Markup, "replacement-content"));
+            var rootStart = cut.Markup.IndexOf("class=\"root\"", StringComparison.Ordinal);
+            var rootEnd = cut.Markup.IndexOf("</div>", rootStart, StringComparison.Ordinal);
+            var replacementIndex = cut.Markup.IndexOf("replacement-content", StringComparison.Ordinal);
+            Assert.True(replacementIndex > rootStart && replacementIndex < rootEnd);
+        });
+    }
+
+    [Fact]
+    public void WrapAll_moves_real_siblings_under_one_generated_wrapper_without_duplicate_markup()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "root");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "div");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "root");
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(4);
+            builder.AddComponentParameter(5, nameof(QueryElement.ElementKey), "first");
+            builder.AddComponentParameter(6, nameof(QueryElement.TagName), "span");
+            builder.AddComponentParameter(7, nameof(QueryElement.Class), "item");
+            builder.AddComponentParameter(8, nameof(QueryElement.ParentElementKey), "root");
+            builder.AddComponentParameter(9, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "first-content")));
+            builder.CloseComponent();
+            builder.OpenComponent<QueryElement>(10);
+            builder.AddComponentParameter(11, nameof(QueryElement.ElementKey), "second");
+            builder.AddComponentParameter(12, nameof(QueryElement.TagName), "span");
+            builder.AddComponentParameter(13, nameof(QueryElement.Class), "item");
+            builder.AddComponentParameter(14, nameof(QueryElement.ParentElementKey), "root");
+            builder.AddComponentParameter(15, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "second-content")));
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+
+        var wrapper = query.Select(".item").WrapAll("section", "wrapper");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, CountOccurrences(cut.Markup, "class=\"wrapper\""));
+            Assert.Equal(1, CountOccurrences(cut.Markup, "first-content"));
+            Assert.Equal(1, CountOccurrences(cut.Markup, "second-content"));
+            var wrapperStart = cut.Markup.IndexOf("class=\"wrapper\"", StringComparison.Ordinal);
+            var wrapperEnd = cut.Markup.IndexOf("</section>", wrapperStart, StringComparison.Ordinal);
+            var firstIndex = cut.Markup.IndexOf("first-content", StringComparison.Ordinal);
+            var secondIndex = cut.Markup.IndexOf("second-content", StringComparison.Ordinal);
+            Assert.True(firstIndex > wrapperStart && firstIndex < secondIndex && secondIndex < wrapperEnd);
+        });
+
+        Assert.Equal(wrapper.ToArray(), query.Select(".item").Parent().ToArray());
+    }
+
+    [Fact]
+    public void WrapInner_moves_component_owned_Razor_content_and_existing_owned_children_into_one_wrapper()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "panel");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "div");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "panel");
+            builder.AddComponentParameter(4, nameof(QueryElement.ChildContent), (RenderFragment)(b =>
+            {
+                b.OpenElement(0, "span");
+                b.AddAttribute(1, "class", "declared");
+                b.AddContent(2, "declared-content");
+                b.CloseElement();
+            }));
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+        query.Select(".panel").AppendElement("em", "managed", "managed-content");
+
+        query.Select(".panel").WrapInner("section", "inner");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, CountOccurrences(cut.Markup, "class=\"inner\""));
+            Assert.Equal(1, CountOccurrences(cut.Markup, "declared-content"));
+            Assert.Equal(1, CountOccurrences(cut.Markup, "managed-content"));
+            var wrapperStart = cut.Markup.IndexOf("class=\"inner\"", StringComparison.Ordinal);
+            var wrapperEnd = cut.Markup.IndexOf("</section>", wrapperStart, StringComparison.Ordinal);
+            var declaredIndex = cut.Markup.IndexOf("declared-content", StringComparison.Ordinal);
+            var managedIndex = cut.Markup.IndexOf("managed-content", StringComparison.Ordinal);
+            Assert.True(declaredIndex > wrapperStart && declaredIndex < managedIndex && managedIndex < wrapperEnd);
+        });
+    }
+
+    [Fact]
     public void Reparenting_a_real_element_via_an_ordinary_parameter_change_does_not_disturb_children_relocated_onto_it()
     {
         var (context, registry, state) = CreateContext();
@@ -365,5 +495,193 @@ public sealed class QueryRealElementRelocationComponentTests
             var moverIndex = cut.Markup.IndexOf("class=\"mover\"", StringComparison.Ordinal);
             Assert.True(moverIndex > listBStart && moverIndex < listBEnd);
         });
+    }
+
+    [Fact]
+    public void On_renders_a_Blazor_owned_click_binding_that_dispatches_the_registered_handler()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "button");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "button");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "button");
+            builder.AddComponentParameter(4, nameof(QueryElement.ChildContent), (RenderFragment)(b => b.AddContent(0, "click me")));
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+        var count = 0;
+
+        query.Select(".button").On("click", () => count++);
+        cut.Find("button").Click();
+
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public void Typed_On_renders_a_Blazor_owned_click_binding_that_preserves_mouse_event_arguments()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "button");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "button");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "button");
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+        MouseEventArgs? observed = null;
+        query.Select(".button").On<MouseEventArgs>("click", args => observed = args);
+
+        cut.Find("button").Click(new MouseEventArgs { ClientX = 29 });
+
+        Assert.Equal(29, Assert.IsType<MouseEventArgs>(observed).ClientX);
+    }
+
+    [Fact]
+    public async Task Async_typed_event_helper_awaits_handler_completion_and_preserves_native_payload()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "button");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "button");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "button");
+            builder.CloseComponent();
+        });
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        MouseEventArgs? observed = null;
+        var completed = false;
+        new Query(state, registry).Select(".button").Click(async args =>
+        {
+            observed = args;
+            started.SetResult();
+            await release.Task;
+            completed = true;
+        });
+
+        var dispatch = cut.Find("button").ClickAsync(new MouseEventArgs { ClientX = 63 });
+        await started.Task;
+        Assert.False(completed);
+
+        release.SetResult();
+        await dispatch;
+
+        Assert.True(completed);
+        Assert.Equal(63, Assert.IsType<MouseEventArgs>(observed).ClientX);
+    }
+
+    [Fact]
+    public void Typed_Submit_renders_the_framework_event_args_callback_and_dispatches_it()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "form");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "form");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "form");
+            builder.CloseComponent();
+        });
+        var query = new Query(state, registry);
+        EventArgs? observed = null;
+        query.Select(".form").On<EventArgs>("submit", args => observed = args);
+
+        cut.Find("form").Submit();
+
+        Assert.IsType<EventArgs>(observed);
+    }
+
+    [Fact]
+    public void Typed_event_helpers_deliver_mouse_keyboard_and_change_payloads_from_Blazor()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "surface");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "button");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "surface");
+            builder.CloseComponent();
+        });
+        var selection = new Query(state, registry).Select(".surface");
+        MouseEventArgs? mouse = null;
+        KeyboardEventArgs? keyboard = null;
+        ChangeEventArgs? change = null;
+        selection.Click(args => mouse = args).KeyDown(args => keyboard = args).Change(args => change = args);
+
+        cut.Find("button").Click(new MouseEventArgs { ClientX = 42 });
+        cut.Find("button").KeyDown(new KeyboardEventArgs { Key = "K" });
+        cut.Find("button").Change(new ChangeEventArgs { Value = "updated" });
+
+        Assert.Equal(42, Assert.IsType<MouseEventArgs>(mouse).ClientX);
+        Assert.Equal("K", Assert.IsType<KeyboardEventArgs>(keyboard).Key);
+        Assert.Equal("updated", Assert.IsType<ChangeEventArgs>(change).Value);
+    }
+
+    [Fact]
+    public void Typed_Hover_delivers_mouse_enter_and_leave_payloads_from_Blazor()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "surface");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "div");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "surface");
+            builder.CloseComponent();
+        });
+        MouseEventArgs? entered = null;
+        MouseEventArgs? left = null;
+        new Query(state, registry).Select(".surface").Hover(args => entered = args, args => left = args);
+
+        cut.Find("div").MouseEnter(new MouseEventArgs { ClientX = 12 });
+        cut.Find("div").MouseLeave(new MouseEventArgs { ClientX = 34 });
+
+        Assert.Equal(12, Assert.IsType<MouseEventArgs>(entered).ClientX);
+        Assert.Equal(34, Assert.IsType<MouseEventArgs>(left).ClientX);
+    }
+
+    [Fact]
+    public void Typed_SelectJS_delivers_native_select_event_args_from_Blazor()
+    {
+        var (context, registry, state) = CreateContext();
+        using var _ = context;
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent<QueryElement>(0);
+            builder.AddComponentParameter(1, nameof(QueryElement.ElementKey), "input");
+            builder.AddComponentParameter(2, nameof(QueryElement.TagName), "input");
+            builder.AddComponentParameter(3, nameof(QueryElement.Class), "input");
+            builder.CloseComponent();
+        });
+        EventArgs? observed = null;
+        new Query(state, registry).Select(".input").SelectJS(args => observed = args);
+
+        cut.Find("input").Select();
+
+        Assert.NotNull(observed);
+    }
+
+    private static int CountOccurrences(string value, string fragment)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = value.IndexOf(fragment, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += fragment.Length;
+        }
+        return count;
     }
 }

@@ -17,6 +17,22 @@ public sealed class QuerySelectionTests
     }
 
     [Fact]
+    public void JQuery_alias_uses_the_same_library_owned_selector_resolution_as_Select()
+    {
+        var registry = new QueryElementRegistry();
+        registry.Register("first", ".item");
+        registry.Register("second", ".item");
+        var query = new Query(new QueryRenderState(), registry);
+
+        var selection = query.JQuery(".item");
+
+        Assert.Equal(".item", selection.Selector);
+        Assert.Equal(["first", "second"], selection.ToArray());
+        Assert.Equal(query.Select(".item").ToArray(), selection.ToArray());
+        Assert.Contains("JQuery", QueryGeneratedMetadata.SupportedOperations);
+    }
+
+    [Fact]
     public void AddBack_combines_current_and_previous_selections()
     {
         var root = new Query(new QueryRenderState()).Select(".panel");

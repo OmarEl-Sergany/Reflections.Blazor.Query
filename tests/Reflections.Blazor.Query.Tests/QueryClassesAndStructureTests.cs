@@ -1,11 +1,417 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components;
 using Reflections.Blazor.Query;
 
 namespace Reflections.Blazor.Query.Tests;
 
 public sealed class QueryClassesAndStructureTests
 {
+    [Fact]
+    public void On_and_Trigger_invoke_all_library_owned_handlers()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var count = 0;
+
+        query.Select(".button").On("click", () => count++).On("onclick", () => count += 10).Trigger("click");
+
+        Assert.Equal(11, count);
+    }
+
+    [Fact]
+    public void One_removes_its_handler_after_the_first_trigger_and_Off_removes_remaining_handlers()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var count = 0;
+        var selection = query.Select(".button").One("click", () => count++).On("click", () => count += 10);
+
+        selection.Trigger("click").Trigger("click").Off("click").Trigger("click");
+
+        Assert.Equal(21, count);
+    }
+
+    [Fact]
+    public void TriggerHandler_and_legacy_bind_aliases_share_the_same_handler_pipeline()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("button", ".button"); var first = 0; var second = 0;
+        Action firstHandler = () => first++; Action secondHandler = () => second++;
+        query.Select(".button").Bind("click", firstHandler).Bind("click", secondHandler).Unbind("click", firstHandler).TriggerHandler("click");
+        Assert.Equal(0, first); Assert.Equal(1, second);
+    }
+
+    [Fact]
+    public void Typed_Bind_Unbind_and_TriggerHandler_preserve_payload_and_remove_only_the_requested_handler()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var firstCount = 0;
+        MouseEventArgs? observed = null;
+        Action<MouseEventArgs> first = _ => firstCount++;
+        Action<MouseEventArgs> second = args => observed = args;
+        var payload = new MouseEventArgs { ClientX = 91 };
+
+        query.Select(".button").Bind("click", first).Bind("click", second).Unbind("click", first).TriggerHandler("click", payload);
+
+        Assert.Equal(0, firstCount);
+        Assert.Same(payload, Assert.IsType<MouseEventArgs>(observed));
+    }
+
+    [Fact]
+    public void TriggerHandler_without_event_arguments_remains_an_untyped_source_compatible_alias()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var count = 0;
+
+        query.Select(".button").Bind("click", () => count++).TriggerHandler("click");
+
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public void Click_change_and_submit_helpers_bind_and_trigger_their_normalized_events()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("form", ".form"); var count = 0;
+        query.Select(".form").Click(() => count++).Change(() => count += 10).Submit(() => count += 100).Click().Change().Submit();
+        Assert.Equal(111, count);
+    }
+
+    [Fact]
+    public void Focus_keyboard_mouse_and_context_helpers_bind_and_trigger_their_events()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("input", ".input"); var count = 0;
+        query.Select(".input").Focus(() => count++).Blur(() => count += 10).KeyDown(() => count += 100).KeyUp(() => count += 1000)
+            .MouseEnter(() => count += 10000).MouseLeave(() => count += 100000).ContextMenu(() => count += 1000000)
+            .Focus().Blur().KeyDown().KeyUp().MouseEnter().MouseLeave().ContextMenu();
+        Assert.Equal(1111111, count);
+    }
+
+    [Fact]
+    public void Remaining_keyboard_mouse_resize_and_scroll_helpers_bind_and_trigger_their_events()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("surface", ".surface"); var count = 0;
+        query.Select(".surface").KeyPress(() => count++).MouseDown(() => count += 10).MouseUp(() => count += 100)
+            .MouseMove(() => count += 1000).MouseOver(() => count += 10000).MouseOut(() => count += 100000)
+            .Resize(() => count += 1000000).Scroll(() => count += 10000000)
+            .KeyPress().MouseDown().MouseUp().MouseMove().MouseOver().MouseOut().Resize().Scroll();
+        Assert.Equal(11111111, count);
+    }
+
+    [Fact]
+    public void Double_click_hover_load_error_and_unload_helpers_compose_the_event_pipeline()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("surface", ".surface"); var count = 0;
+        query.Select(".surface").DblClick(() => count++).Hover(() => count += 10, () => count += 100)
+            .Load(() => count += 1000).Error(() => count += 10000).Unload(() => count += 100000)
+            .DblClick().MouseEnter().MouseLeave().Load().Error().Unload();
+        Assert.Equal(111111, count);
+    }
+
+    [Fact]
+    public void Focusin_focusout_and_selectjs_helpers_do_not_collide_with_query_selection()
+    {
+        var (query, registry, _) = CreateQuery(); registry.Register("input", ".input"); var count = 0;
+        query.Select(".input").FocusIn(() => count++).FocusOut(() => count += 10).SelectJS(() => count += 100)
+            .FocusIn().FocusOut().SelectJS();
+        Assert.Equal(111, count);
+    }
+
+    [Fact]
+    public void DelegateJS_dispatches_only_matching_descendants_in_the_root_scope()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.RegisterWithParentAndScope("root", null, "scope-a", ".root");
+        registry.RegisterWithParentAndScope("item", "root", "scope-a", ".item");
+        registry.RegisterWithParentAndScope("other", "root", "scope-b", ".item");
+        state.RegisterRealElement("root", _ => { });
+        QueryEventTarget? observed = null;
+
+        query.Select(".root").DelegateJS(".item", "click", target => observed = target);
+        state.TriggerDelegated("root", "click", new("other"), registry);
+        Assert.Null(observed);
+
+        state.TriggerDelegated("root", "click", new("item"), registry);
+        Assert.Equal("item", observed?.ElementKey);
+    }
+
+    [Fact]
+    public void Undelegate_removes_only_the_matching_delegated_handler()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("root", ".root");
+        registry.RegisterWithParent("item", "root", ".item");
+        state.RegisterRealElement("root", _ => { });
+        var first = 0;
+        var second = 0;
+        Action<QueryEventTarget> firstHandler = _ => first++;
+        Action<QueryEventTarget> secondHandler = _ => second++;
+
+        query.Select(".root").DelegateJS(".item", "click", firstHandler).DelegateJS(".item", "click", secondHandler)
+            .Undelegate(".item", "click", firstHandler);
+        state.TriggerDelegated("root", "click", new("item"), registry);
+
+        Assert.Equal(0, first);
+        Assert.Equal(1, second);
+    }
+
+    [Fact]
+    public void DelegateJS_rejects_non_bubbling_events_and_virtual_roots()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("root", ".root");
+        state.RegisterRealElement("root", _ => { });
+
+        Assert.Throws<NotSupportedException>(() => query.Select(".root").DelegateJS(".item", "focus", _ => { }));
+
+        var virtualRoot = query.Select(".root").AppendElement("div", "virtual-root");
+        Assert.Throws<InvalidOperationException>(() => virtualRoot.DelegateJS(".item", "click", _ => { }));
+    }
+
+    [Fact]
+    public void Typed_On_and_Trigger_preserve_the_native_event_payload_without_invoking_untyped_handlers()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        MouseEventArgs? observed = null;
+        var untypedCount = 0;
+        var payload = new MouseEventArgs { ClientX = 37, ClientY = 19 };
+
+        query.Select(".button").On("click", () => untypedCount++).On<MouseEventArgs>("click", args => observed = args).Trigger("click", payload);
+
+        Assert.Equal(0, untypedCount);
+        var captured = Assert.IsType<MouseEventArgs>(observed);
+        Assert.Same(payload, captured);
+        Assert.Equal(37, captured.ClientX);
+    }
+
+    [Fact]
+    public async Task Async_On_and_TriggerAsync_awaits_typed_handler_and_preserves_event_payload()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        MouseEventArgs? observed = null;
+        var completed = false;
+
+        query.Select(".button")
+            .On<MouseEventArgs>("click", async args =>
+            {
+                await Task.Yield();
+                observed = args;
+                completed = true;
+            });
+        var payload = new MouseEventArgs { ClientX = 51 };
+
+        await query.Select(".button").TriggerAsync("click", payload);
+
+        Assert.Same(payload, observed);
+        Assert.Equal(51, observed!.ClientX);
+        Assert.True(completed);
+    }
+
+    [Fact]
+    public async Task Async_One_removes_the_handler_before_awaited_dispatch_and_runs_only_once()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var calls = 0;
+        var selection = query.Select(".button").One("click", async () =>
+        {
+            await Task.Yield();
+            calls++;
+        });
+
+        await selection.TriggerAsync("click");
+        await selection.TriggerAsync("click");
+
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task Async_Off_removes_only_the_matching_handler_and_keeps_sync_trigger_compatible()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var removedCalls = 0;
+        var retainedCalls = 0;
+        Func<Task> removed = async () =>
+        {
+            await Task.Yield();
+            removedCalls++;
+        };
+        Func<Task> retained = async () =>
+        {
+            await Task.Yield();
+            retainedCalls++;
+        };
+        var selection = query.Select(".button").On("click", removed).On("click", retained);
+
+        selection.OffAsync("click", removed);
+        selection.Trigger("click");
+        Assert.Equal(0, removedCalls);
+        Assert.Equal(0, retainedCalls);
+
+        await selection.TriggerAsync("click");
+        Assert.Equal(0, removedCalls);
+        Assert.Equal(1, retainedCalls);
+    }
+
+    [Fact]
+    public async Task Async_event_registrations_are_removed_with_their_virtual_node_and_clear()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("host", ".host");
+        var virtualButton = query.Select(".host").AppendElement("button", "async-button");
+        var key = virtualButton.ToArray().Single();
+        var calls = 0;
+        virtualButton.On("click", () =>
+        {
+            calls++;
+            return Task.CompletedTask;
+        });
+
+        state.RemoveVirtualNode(key);
+        await state.TriggerAsync(key, "click");
+
+        Assert.Empty(state.EventNamesFor(key));
+        Assert.Equal(0, calls);
+    }
+
+    [Fact]
+    public void Typed_On_rejects_an_event_argument_type_that_does_not_match_the_browser_event()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+
+        Assert.Throws<ArgumentException>(() => query.Select(".button").On<KeyboardEventArgs>("click", _ => { }));
+    }
+
+    [Fact]
+    public void Typed_On_rejects_event_names_without_a_typed_Blazor_descriptor()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+
+        Assert.Throws<ArgumentException>(() => query.Select(".button").On<MouseEventArgs>("unknown", _ => { }));
+    }
+
+    [Fact]
+    public void Typed_Off_removes_only_the_matching_typed_handler()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var first = 0;
+        var second = 0;
+        Action<MouseEventArgs> firstHandler = _ => first++;
+        Action<MouseEventArgs> secondHandler = _ => second++;
+
+        query.Select(".button").On("click", firstHandler).On("click", secondHandler).Off("click", firstHandler).Trigger("click", new MouseEventArgs());
+
+        Assert.Equal(0, first);
+        Assert.Equal(1, second);
+    }
+
+    [Fact]
+    public void Typed_Trigger_does_not_dispatch_untyped_handlers_or_silently_skip_an_untyped_only_registration()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var untyped = 0;
+        var typed = 0;
+        var selection = query.Select(".button").On("click", () => untyped++);
+
+        selection.Trigger("click", new MouseEventArgs());
+        Assert.Equal(0, untyped);
+
+        selection.On<MouseEventArgs>("click", _ => typed++).Trigger("click", new MouseEventArgs());
+        Assert.Equal(0, untyped);
+        Assert.Equal(1, typed);
+    }
+
+    [Fact]
+    public void Typed_event_helpers_bind_to_their_native_argument_types_and_keep_synthetic_trigger_overloads()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("button", ".button");
+        var mouse = 0;
+        var keyboard = 0;
+        var change = 0;
+
+        query.Select(".button")
+            .Click((MouseEventArgs _) => mouse++)
+            .KeyDown((KeyboardEventArgs _) => keyboard++)
+            .Change((ChangeEventArgs _) => change++)
+            .Click()
+            .KeyDown()
+            .Change();
+
+        Assert.Equal(0, mouse);
+        Assert.Equal(0, keyboard);
+        Assert.Equal(0, change);
+    }
+
+    [Fact]
+    public void Typed_Hover_composes_mouse_enter_and_leave_callbacks()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("surface", ".surface");
+        var entered = 0;
+        var left = 0;
+        var selection = query.Select(".surface").Hover(_ => entered++, _ => left++);
+
+        selection.Trigger<MouseEventArgs>("mouseenter", new MouseEventArgs());
+        selection.Trigger<MouseEventArgs>("mouseleave", new MouseEventArgs());
+
+        Assert.Equal(1, entered);
+        Assert.Equal(1, left);
+    }
+
+    [Fact]
+    public void Typed_SelectJS_registers_native_event_args_and_keeps_synthetic_trigger()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("input", ".input");
+        var observed = false;
+        var syntheticCount = 0;
+        var selection = query.Select(".input").SelectJS((EventArgs _) => observed = true);
+
+        selection.Trigger<EventArgs>("select", EventArgs.Empty);
+        query.Select(".input").SelectJS(() => syntheticCount++).SelectJS();
+
+        Assert.True(observed);
+        Assert.Equal(1, syntheticCount);
+    }
+
+    [Fact]
+    public void Removing_a_virtual_parent_removes_its_event_registrations_and_those_of_virtual_descendants_only()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("host", ".host");
+        registry.Register("live", ".live");
+        var parent = query.Select(".host").AppendElement("section", "parent");
+        var child = parent.AppendElement("button", "child");
+        var parentKey = parent.ToArray().Single();
+        var childKey = child.ToArray().Single();
+        var removedCount = 0;
+        var liveCount = 0;
+        parent.On("click", () => removedCount++);
+        child.On<MouseEventArgs>("click", _ => removedCount++);
+        query.Select(".live").On("click", () => liveCount++);
+
+        state.RemoveVirtualNode(parentKey);
+        state.Trigger(parentKey, "click");
+        state.Trigger(childKey, "click", new MouseEventArgs());
+        query.Select(".live").Trigger("click");
+
+        Assert.Empty(state.EventNamesFor(parentKey));
+        Assert.Empty(state.EventNamesFor(childKey));
+        Assert.Equal(0, removedCount);
+        Assert.Equal(1, liveCount);
+    }
+
     private static (Query Query, QueryElementRegistry Registry, QueryRenderState State) CreateQuery()
     {
         var state = new QueryRenderState();
@@ -221,6 +627,208 @@ public sealed class QueryClassesAndStructureTests
 
         var order = state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text);
         Assert.Equal(["before", "middle", "after"], order);
+    }
+
+    [Fact]
+    public void InsertBefore_moves_the_receiver_before_its_single_target_anchor_and_preserves_the_receiver_selection()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var anchor = query.Select(".list").AppendElement("li", text: "anchor");
+        var moving = query.Select(".list").AppendElement("li", text: "moving");
+
+        var result = moving.InsertBefore(anchor);
+
+        Assert.Same(moving, result);
+        Assert.Equal(["moving", "anchor"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+    }
+
+    [Fact]
+    public void InsertAfter_moves_the_receiver_after_its_single_target_anchor_and_preserves_the_receiver_selection()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var moving = query.Select(".list").AppendElement("li", text: "moving");
+        var anchor = query.Select(".list").AppendElement("li", text: "anchor");
+
+        var result = moving.InsertAfter(anchor);
+
+        Assert.Same(moving, result);
+        Assert.Equal(["anchor", "moving"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+    }
+
+    [Fact]
+    public void ReplaceWith_moves_a_virtual_replacement_to_the_target_position_and_unregisters_the_target()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        query.Select(".list").AppendElement("li", text: "before");
+        var target = query.Select(".list").AppendElement("li", "target", "target");
+        var replacement = query.Select(".list").AppendElement("li", "replacement", "replacement");
+        replacement.Detach();
+
+        var result = target.ReplaceWith(replacement);
+
+        Assert.Same(target, result);
+        Assert.Equal(["before", "replacement"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+        Assert.Empty(query.Select(".target").ToArray());
+        Assert.Single(query.Select(".replacement").ToArray());
+    }
+
+    [Fact]
+    public void ReplaceAll_moves_the_receiver_to_the_target_position()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var target = query.Select(".list").AppendElement("li", "target", "target");
+        var replacement = query.Select(".list").AppendElement("li", "replacement", "replacement");
+        replacement.Detach();
+
+        var result = replacement.ReplaceAll(target);
+
+        Assert.Same(replacement, result);
+        Assert.Equal(["replacement"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+        Assert.Empty(query.Select(".target").ToArray());
+    }
+
+    [Fact]
+    public void Replace_is_an_alias_for_ReplaceWith()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var target = query.Select(".list").AppendElement("li", "target", "target");
+        var replacement = query.Select(".list").AppendElement("li", "replacement", "replacement");
+        replacement.Detach();
+
+        target.Replace(replacement);
+
+        Assert.Equal(["replacement"], state.VirtualChildKeysFor("list").Select(key => state.VirtualNodeFor(key)!.Text));
+        Assert.Empty(query.Select(".target").ToArray());
+    }
+
+    [Fact]
+    public void ReplaceWith_rejects_self_replacement()
+    {
+        var (query, registry, _) = CreateQuery();
+        registry.Register("card", ".card");
+        var card = query.Select(".card");
+
+        Assert.Throws<InvalidOperationException>(() => card.ReplaceWith(card));
+    }
+
+    [Fact]
+    public void WrapAll_creates_one_wrapper_and_preserves_selected_virtual_sibling_order()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var first = query.Select(".list").AppendElement("li", "item", "first");
+        var second = query.Select(".list").AppendElement("li", "item", "second");
+
+        var wrapper = query.Select(".item").WrapAll("section", "wrapper");
+        var wrapperKey = wrapper.ToArray().Single();
+
+        Assert.Equal([wrapperKey], state.VirtualChildKeysFor("list"));
+        Assert.Equal([first.ToArray().Single(), second.ToArray().Single()], state.VirtualChildKeysFor(wrapperKey));
+        Assert.Equal([wrapperKey], query.Select(".item").Parent().ToArray());
+    }
+
+    [Fact]
+    public void WrapAll_rejects_a_cross_parent_selection_before_creating_a_wrapper()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("listA", ".listA");
+        registry.Register("listB", ".listB");
+        query.Select(".listA").AppendElement("li", "a", "a");
+        query.Select(".listB").AppendElement("li", "b", "b");
+        var virtualCount = state.AllVirtualKeys.Count;
+
+        Assert.Throws<InvalidOperationException>(() => query.Select(".a").Add(".b").WrapAll("section"));
+
+        Assert.Equal(virtualCount, state.AllVirtualKeys.Count);
+        Assert.Single(state.VirtualChildKeysFor("listA"));
+        Assert.Single(state.VirtualChildKeysFor("listB"));
+    }
+
+    [Fact]
+    public void WrapInner_moves_existing_owned_children_under_a_component_owned_wrapper()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("panel", ".panel");
+        state.RegisterRealElement("panel", _ => { });
+        state.RegisterInnerContent("panel", _ => { });
+        var first = query.Select(".panel").AppendElement("span", "item", "first");
+        var second = query.Select(".panel").AppendElement("span", "item", "second");
+
+        var wrapper = query.Select(".panel").WrapInner("section", "inner");
+        var wrapperKey = wrapper.ToArray().Single();
+
+        Assert.Equal([wrapperKey], state.VirtualChildKeysFor("panel"));
+        Assert.Equal([first.ToArray().Single(), second.ToArray().Single()], state.VirtualChildKeysFor(wrapperKey));
+        Assert.Equal([wrapperKey], query.Select(".item").Parent().ToArray().Distinct().ToArray());
+    }
+
+    [Fact]
+    public void WrapInner_rejects_a_virtual_target_before_creating_a_wrapper()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("list", ".list");
+        var item = query.Select(".list").AppendElement("li", "item");
+        var virtualCount = state.AllVirtualKeys.Count;
+
+        Assert.Throws<InvalidOperationException>(() => item.WrapInner("section"));
+
+        Assert.Equal(virtualCount, state.AllVirtualKeys.Count);
+        Assert.Equal([item.ToArray().Single()], state.VirtualChildKeysFor("list"));
+    }
+
+    [Fact]
+    public void Clear_removes_component_owned_inner_wrapper_mappings()
+    {
+        var (query, registry, state) = CreateQuery();
+        registry.Register("panel", ".panel");
+        state.RegisterRealElement("panel", _ => { });
+        state.RegisterInnerContent("panel", _ => { });
+        query.Select(".panel").WrapInner("section");
+
+        state.Clear();
+
+        Assert.Null(state.InnerWrapperFor("panel"));
+    }
+
+    [Fact]
+    public void Generated_metadata_advertises_all_supported_structural_operations()
+    {
+        Assert.Contains("ReplaceWith", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("ReplaceAll", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("Replace", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("InsertBefore", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("InsertAfter", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("WrapAll", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("WrapInner", QueryGeneratedMetadata.SupportedOperations);
+    }
+
+    [Fact]
+    public void Generated_metadata_advertises_typed_event_compatibility_aliases()
+    {
+        Assert.Contains("TriggerHandler", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("Bind", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("Unbind", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedTriggerHandler", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedBind", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedUnbind", QueryGeneratedMetadata.SupportedOperations);
+    }
+
+    [Fact]
+    public void Generated_metadata_advertises_awaitable_event_operations()
+    {
+        Assert.Contains("AsyncOn", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedAsyncOn", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("OffAsync", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("UnbindAsync", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("AsyncOne", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TriggerAsync", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("TypedTriggerAsync", QueryGeneratedMetadata.SupportedOperations);
+        Assert.Contains("AsyncClick", QueryGeneratedMetadata.SupportedOperations);
     }
 
     [Fact]

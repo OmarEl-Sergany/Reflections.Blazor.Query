@@ -1,4 +1,9 @@
 using Reflections.Blazor.Query;
+using Bunit;
+using System;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Reflections.Blazor.Query.Components;
 
 namespace Reflections.Blazor.Query.ComponentTests;
 
@@ -14,6 +19,60 @@ public sealed class QueryHostContractTests
         new LayoutQuery(layoutState).Select(".sidebar").Css("background", "black");
 
         Assert.NotSame(pageState, layoutState);
+    }
+
+    [Fact]
+    public void Registered_application_query_state_survives_navigation_until_application_clear()
+    {
+        using var context = new BunitContext();
+        var navigation = new TestNavigationManager();
+        context.Services.AddSingleton<NavigationManager>(navigation);
+        context.Services.AddSingleton<QueryRenderState>(new QueryRenderState());
+        context.Services.AddSingleton<QueryElementRegistry>(new QueryElementRegistry());
+        context.Services.AddSingleton(new QueryMeasurementCoordinator(new TestMeasurementBridge()));
+        context.Services.AddSingleton(new QueryFormCoordinator(new TestFormBridge()));
+
+        var registrations = new ServiceCollection();
+        registrations.AddBlazorQuery();
+        Assert.Contains(registrations, descriptor => descriptor.ServiceType == typeof(ApplicationQueryRenderState)
+            && descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(registrations, descriptor => descriptor.ServiceType == typeof(ApplicationQuery)
+            && descriptor.Lifetime == ServiceLifetime.Scoped);
+
+        var state = new ApplicationQueryRenderState();
+        var query = new ApplicationQuery(state);
+        query.Select(".application-scope").Css("color", "purple");
+
+        var host = context.Render<QueryHost>(parameters => parameters
+            .Add(component => component.RenderState, state)
+            .Add(component => component.ClearOnNavigation, false)
+            .AddChildContent("<div class='application-scope'>App content</div>"));
+        Assert.Contains(".application-scope { color: purple; }", host.Markup, StringComparison.Ordinal);
+
+        navigation.Navigate("next");
+        host.WaitForAssertion(() => Assert.Contains(".application-scope { color: purple; }", host.Markup, StringComparison.Ordinal));
+
+        state.Clear();
+        host.WaitForAssertion(() => Assert.DoesNotContain(".application-scope { color: purple; }", host.Markup, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Application_query_state_is_scoped_to_each_Blazor_application_service_scope()
+    {
+        var services = new ServiceCollection();
+        services.AddBlazorQuery();
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(ApplicationQueryRenderState)
+            && descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(ApplicationQuery)
+            && descriptor.Lifetime == ServiceLifetime.Scoped);
+
+        using var provider = services.BuildServiceProvider();
+        using var firstScope = provider.CreateScope();
+        using var secondScope = provider.CreateScope();
+        var firstState = firstScope.ServiceProvider.GetRequiredService<ApplicationQueryRenderState>();
+
+        Assert.Same(firstState, firstScope.ServiceProvider.GetRequiredService<ApplicationQueryRenderState>());
+        Assert.NotSame(firstState, secondScope.ServiceProvider.GetRequiredService<ApplicationQueryRenderState>());
     }
 
     [Fact]
@@ -61,6 +120,19 @@ public sealed class QueryHostContractTests
         new Query(state).Select(".page").Css("color", "blue");
 
         Assert.Equal(1, changes);
+    }
+
+    private sealed class TestNavigationManager : NavigationManager
+    {
+        public TestNavigationManager() => Initialize("https://query.test/", "https://query.test/");
+
+        public void Navigate(string relativeUri) => NavigateTo(relativeUri);
+
+        protected override void NavigateToCore(string uri, NavigationOptions options)
+        {
+            Uri = ToAbsoluteUri(uri).AbsoluteUri;
+            NotifyLocationChanged(isInterceptedLink: false);
+        }
     }
 }
 

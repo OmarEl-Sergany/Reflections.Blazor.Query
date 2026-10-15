@@ -13,8 +13,13 @@ namespace Reflections.Blazor.Query.Demo
                 Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider>();
 
             // Add services to the container.
+            var browserE2e = builder.Configuration["RBQ_E2E"] == "true";
             builder.Services.AddRazorComponents()
-                .AddInteractiveServerComponents();
+                .AddInteractiveServerComponents(options =>
+                {
+                    if (browserE2e)
+                        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(30);
+                });
             builder.Services.AddBlazorQuery();
 
             var app = builder.Build();

@@ -17,7 +17,9 @@
 <body>
     <Routes />
     <ReconnectModal />
-    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["_framework/blazor.web.js"]" autostart="false"></script>
+    <script src="_content/Reflections.Blazor.Query/queryEvents.js"></script>
+    <script>ReflectionsBlazorQuery.registerDelegatedEvents(); Blazor.start();</script>
 </body>
 
 </html>

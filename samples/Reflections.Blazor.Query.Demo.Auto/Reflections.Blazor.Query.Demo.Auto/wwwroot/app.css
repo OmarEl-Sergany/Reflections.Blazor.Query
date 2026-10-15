@@ -58,3 +58,21 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.host-perf-fixtures {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+}
+
+.host-perf-target {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-sizing: content-box;
+    width: 120px;
+    height: 80px;
+    padding: 10px;
+    border: 5px solid black;
+    overflow: auto;
+}

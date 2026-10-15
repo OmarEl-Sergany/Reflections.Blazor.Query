@@ -9,6 +9,18 @@
     <button class="btn btn-primary" @onclick="ApplyStyle">Apply CSS</button>
     <button class="btn btn-outline-primary ms-2" @onclick="MeasureAsync">Measure target</button>
     <button class="btn btn-outline-secondary ms-2" @onclick="MeasurePositionAsync">Measure position</button>
+    <button class="btn btn-outline-info ms-2" @onclick="ToggleSlide">Toggle slide</button>
+    <button class="btn btn-outline-dark ms-2" @onclick="QueueSequence">Queue sequence</button>
+    <button class="btn btn-outline-dark ms-2" @onclick="DequeueSequence">Dequeue sequence</button>
+    <button class="btn btn-outline-dark ms-2" @onclick="EnableDelegation">Enable delegated click</button>
+    <QueryElement TagName="p" ElementKey="wasm-slide-target" Class="slide-target">This paragraph exercises measured slide animation and Blazor-owned completion in WebAssembly.</QueryElement>
+    <QueryElement TagName="p" ElementKey="wasm-queue-target" Class="queue-target">Queue lifecycle probe.</QueryElement>
+    <QueryElement TagName="div" ElementKey="wasm-delegation-root" Class="delegation-root">
+        <QueryElement TagName="button" ElementKey="wasm-delegation-child" ParentElementKey="wasm-delegation-root" Class="delegation-child">Delegated child</QueryElement>
+        <QueryElement TagName="button" ElementKey="wasm-delegation-nonmatch" ParentElementKey="wasm-delegation-root" Class="delegation-nonmatch">Non-matching child</QueryElement>
+    </QueryElement>
+    <p data-testid="queue-status">@_queueStatus</p>
+    <p data-testid="delegation-status">@_delegationStatus</p>
     @if (_applied)
     {
         <p role="status">Style applied in Interactive WebAssembly.</p>
@@ -29,6 +41,51 @@
     private QueryPoint? _offset;
     private QueryPoint? _position;
     private string? _offsetParent;
+    private readonly List<string> _queueEvents = [];
+    private string _queueStatus = "idle";
+    private string _delegationStatus = "not-enabled";
+
+    private async Task ToggleSlide() => await Query.Select(".slide-target").SlideToggle(TimeSpan.FromMilliseconds(600));
+
+    private void QueueSequence()
+    {
+        _queueEvents.Clear();
+        Query.Select(".queue-target")
+            .Queue(async cancellationToken =>
+            {
+                _queueEvents.Add("first-start");
+                await InvokeAsync(() => _queueStatus = "first-start");
+                await Task.Delay(75, cancellationToken);
+                _queueEvents.Add("first-end");
+            })
+            .Queue(cancellationToken =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _queueEvents.Add("second-start");
+                _queueEvents.Add("second-end");
+                return Task.CompletedTask;
+            });
+
+        _queueStatus = "queued";
+    }
+
+    private async Task DequeueSequence()
+    {
+        _queueStatus = "running";
+        await Query.Select(".queue-target").Dequeue();
+        _queueStatus = $"done:{string.Join(",", _queueEvents)}";
+    }
+
+    private void EnableDelegation()
+    {
+        Query.Select(".delegation-root").DelegateJS(".delegation-child", "click", target =>
+        {
+            _delegationStatus = $"delegated:{target.ElementKey}";
+            _ = InvokeAsync(StateHasChanged);
+        });
+
+        _delegationStatus = "enabled";
+    }
 
     private void ApplyStyle()
     {

@@ -10,7 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Reflections.Blazor.Query.Demo.Auto.Client\Reflections.Blazor.Query.Demo.Auto.Client.csproj" />
     <ProjectReference Include="..\..\..\src\Reflections.Blazor.Query\Reflections.Blazor.Query.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
   </ItemGroup>
 
 </Project>

@@ -1,1 +1,33 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>netstandard2.0</TargetFramework><LangVersion>latest</LangVersion><Nullable>enable</Nullable><IsRoslynComponent>true</IsRoslynComponent><EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules></PropertyGroup><ItemGroup><PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" PrivateAssets="all" /></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <PackageId>Reflections.Blazor.Query.Generators</PackageId>
+    <Title>Reflections.Blazor.Query source generator</Title>
+    <Authors>Reflections Digital Agency</Authors>
+    <PackageType>Analyzer</PackageType>
+    <Description>Roslyn source generator for Reflections.Blazor.Query.</Description>
+    <PackageTags>Roslyn;source-generator;Blazor;analyzer</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" PrivateAssets="all" />
+    <None Include="$(OutputPath)$(AssemblyName).dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs/Reflections.Blazor.Query.Generators.dll"
+          Visible="false" />
+    <None Include="README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildProjectDirectory)\_._"
+          Pack="true"
+          PackagePath="lib/netstandard2.0/_._"
+          Visible="false" />
+  </ItemGroup>
+</Project>

@@ -5,7 +5,13 @@
 @inject QueryFormCoordinator Forms
 @inject QueryElementRegistry Registry
 <CascadingValue Value="ActiveState" IsFixed="true">@ChildContent</CascadingValue>
-<style data-reflections-blazor-query="true">@foreach (var rule in ActiveState.Rules){<text>@rule.Selector { @rule.Property: @rule.Value; }</text>}</style>
+<style data-reflections-blazor-query="true">
+    @@keyframes rbq-fade-in { from { opacity: 0; visibility: hidden; } to { opacity: 1; visibility: visible; } }
+    @@keyframes rbq-fade-out { from { opacity: 1; visibility: visible; } to { opacity: 0; visibility: hidden; } }
+    @@keyframes rbq-slide-down { from { height: 0; } to { height: var(--rbq-slide-height); } }
+    @@keyframes rbq-slide-up { from { height: var(--rbq-slide-height); } to { height: 0; } }
+    @foreach (var rule in ActiveState.Rules){<text>@rule.Selector { @rule.Property: @rule.Value; }</text>}
+</style>
 @code {
     [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
     [Parameter] public QueryRenderState? RenderState { get; set; }

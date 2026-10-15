@@ -10,7 +10,8 @@ public enum MeasurementKind
     OuterWidth,
     Offset,
     Position,
-    OffsetParent
+    OffsetParent,
+    ScrollHeight
 }
 
 public sealed record MeasurementRequest(string ElementKey, MeasurementKind Kind);
