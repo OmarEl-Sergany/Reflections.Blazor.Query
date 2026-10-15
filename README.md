@@ -3,7 +3,6 @@
 > A Blazor-native, jQuery 4-aligned fluent query library for .NET 10.
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
-![Build passing](https://img.shields.io/badge/build-passing-success)
 ![Tests 257/257 passed](https://img.shields.io/badge/tests-257%2F257%20passed-success)
 ![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
@@ -43,15 +42,16 @@ Ajax is explicitly out of scope. Blazor `HttpClient`, forms, routing, and event 
 - `docs/MIGRATION.md` — migration guidance from jQuery-oriented UI code.
 - `docs/NUGET-PACKAGING.md` — package composition, local validation, and the publication gate.
 
-## Current status (validated 2026-10-14, `feature/4468-lifecycle-hardening`)
+## Current status (validated 2026-10-15, `master`)
 
 - **License:** Apache-2.0; see [LICENSE](LICENSE).
 
-- **Completed:** Sprint 3 — Classes and DOM structure (Feature 4468), Sprint 4 — Events and Forms (Feature 4469), and Sprint 5 — Effects and Queues (Feature 4470) implementation/local validation. Formal release closure still requires an Azure Pipeline run and immutable artifact evidence.
+- **Merged:** PR #83 (`feature/4468-lifecycle-hardening`) is completed and merged into `master`; the remote feature branch has been deleted. The local checkout is synchronized with `origin/master`.
+- **Completed:** Sprint 3 — Classes and DOM structure (Feature 4468), Sprint 4 — Events and Forms (Feature 4469), and Sprint 5 — Effects and Queues (Feature 4470) implementation/local validation. Formal release closure still requires a successful Azure Pipeline run on `master` and immutable artifact evidence.
 - **Clone contract:** `Clone()` supports library-created virtual elements only. It does not duplicate a live Razor component instance.
-- **Automated validation:** 257/257 .NET unit/component tests and all 20 configured local Playwright cases pass across Server, WebAssembly, and Auto, including real-browser measurements, host-path performance, measured slide-toggle down/up, explicit queue execution, and delegated custom-event routing in WebAssembly and Auto. Auto queue and delegated-event behavior are exercised on the initial Server render and again after warm reload on cached WebAssembly. Manual slide smoke checks also passed in all three hosts.
+- **Automated validation (2026-10-15):** 257/257 .NET unit/component tests pass. The 20 configured local Playwright cases pass across Server, WebAssembly, and Auto, including real-browser measurements, host-path performance, measured slide-toggle down/up, explicit queue execution, and delegated custom-event routing in WebAssembly and Auto. Auto queue and delegated-event behavior are exercised on the initial Server render and again after warm reload on cached WebAssembly. Manual slide smoke checks also passed in all three hosts.
 - **Sprint 5 validation:** The latest Release solution build has 0 warnings/errors. NuGet audit reports no vulnerable packages, and the runtime package includes its README and RCL static assets. ASP.NET Core component packages were updated to 10.0.13 to address the current advisories.
-- **Sprint 5 closure:** implementation and local validation are complete. Formal release closure still requires an Azure Pipeline run on this source revision with published artifact evidence. Host-specific performance baselines are recorded for Server, WebAssembly, and Auto. Automated measured slide-toggle, explicit queue-interaction, and delegated custom-event coverage run in WebAssembly and Auto.
+- **CI/release evidence:** the latest Azure Pipeline validation on `master` has not completed successfully; successful CI and published artifact evidence remain outstanding. Local validation is not a substitute for that release gate. Host-specific performance baselines are recorded for Server, WebAssembly, and Auto. Automated measured slide-toggle, explicit queue-interaction, and delegated custom-event coverage run in WebAssembly and Auto.
 - **Hosting models:** Blazor Interactive Server, Interactive WebAssembly, and Interactive Auto.
 - **Documentation:** searchable DocFX site and generated API reference build locally and are emitted as a CI artifact; public hosting/deployment remains pending approval.
 - **NuGet release:** both packages are locally packable and consumer-tested under Apache-2.0. CI validates package metadata before publishing build artifacts; no NuGet push is configured.
