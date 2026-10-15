@@ -13,7 +13,17 @@ steps:
     version: 10.x
 - script: dotnet restore Reflections.Blazor.Query.slnx
 - script: dotnet build Reflections.Blazor.Query.slnx --configuration $(BuildConfiguration) --no-restore
-- script: dotnet test Reflections.Blazor.Query.slnx --configuration $(BuildConfiguration) --no-build
+- script: dotnet test Reflections.Blazor.Query.slnx --configuration $(BuildConfiguration) --no-build --logger "trx;LogFileName=Reflections.Blazor.Query.trx" --results-directory "$(Agent.TempDirectory)/TestResults"
+  displayName: Run unit and component test plan
+- task: PublishTestResults@2
+  displayName: Publish unit and component test results
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFormat: VSTest
+    testResultsFiles: '**/*.trx'
+    searchFolder: $(Agent.TempDirectory)/TestResults
+    failTaskOnFailedTests: true
+    testRunTitle: Reflections.Blazor.Query unit and component tests
 - task: NodeTool@0
   displayName: Use Node.js 20
   inputs:

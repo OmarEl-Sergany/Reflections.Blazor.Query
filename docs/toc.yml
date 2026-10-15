@@ -21,6 +21,8 @@ items:
   href: api/toc.yml
 - name: Project
   items:
+  - name: Automated test plan
+    href: TEST-PLAN.md
   - name: Implementation plan and API matrix
     href: PROJECT-PLAN.md
   - name: Migration guide
